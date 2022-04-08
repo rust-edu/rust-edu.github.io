@@ -1,0 +1,3 @@
+[submodule "themes/zola-paper"]
+	path = themes/zola-paper
+	url = https://github.com/schoenenberg/zola-paper.git

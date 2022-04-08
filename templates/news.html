@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}News | Rust Edu{% endblock title %}
+
+{% block content %}
+<h1>News</h1>
+<ul>
+{% for post in section.pages %}
+<li><a href="{{ post.permalink }}">{{ post.title }}</a></li>
+{% endfor %}
+</ul>
+{% endblock content %}
