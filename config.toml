@@ -11,5 +11,16 @@ highlight_code = true
 # Whether to build a search index to be used later on by a JavaScript library
 build_search_index = true
 
+title = "Rust Edu"
+description = ""
+
+minify_html = false
+
 [extra]
-# Put all your custom variables here
+
+navbar = [
+  { url = "/", name = "Home" },
+  # { url = "/about", name = "About" },
+  { url = "/news", name = "News" },
+  { url = "/resources", name = "Resources" },
+]

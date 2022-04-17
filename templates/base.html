@@ -1,12 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>{% block title %}{% endblock title %} | Rust Edu</title>
-    </head>
-    <body>
-        {% block content %} {% endblock content %}
-    </body>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="{{ get_url(path='style.css') }}" rel="stylesheet" />
+
+    <title>{% block title %}{% endblock title %} - Rust Edu</title>
+</head>
+
+<body>
+    <nav class="navbar is-light" role="navigation" aria-label="main navigation">
+        <div class="container">
+            <div class="navbar-brand">
+                <a class="navbar-item is-size-5 has-text-weight-bold" href="{{ config.base_url }}">{{ config.title }}</a>
+                <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false">
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                </a>
+            </div>
+            <div class="navbar-menu" id="navMenu">
+                <div class="navbar-end has-text-centered">
+                    {% for item in config.extra.navbar %}
+                    <a class="navbar-item has-text-weight-semibold" href="{{ item.url | replace(from='$BASE_URL', to=config.base_url) }}">
+                        {{ item.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="columns is-centered">
+        <div class="column is-half">
+            <section class="section">
+                <div class="container">
+                    {% block content %}{% endblock content %}
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <footer class="footer py-4">
+        <div class="content has-text-centered">
+            <p>
+                Content licensed <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY NC SA 4.0</a>.
+            </p>
+        </div>
+    </footer>
+
+    <script src="{{ get_url(path='js/site.js') }}"></script>
+</body>
+
 </html>
