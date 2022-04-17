@@ -15,13 +15,12 @@
         <div class="container">
             <div class="navbar-brand">
                 <a class="navbar-item" href="{{ config.base_url }}">
-                    <img class="navbar-logo" src="{{ get_url(path='rust-edu-banner.svg')}}" alt="Rust Edu Logo"  />
-                    <!-- <a class="navbar-item is-size-5 has-text-weight-bold" href="{{ config.base_url }}">{{ config.title }}</a> -->
-                </span>
-                <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false">
-                    <span aria-hidden="true"></span>
-                    <span aria-hidden="true"></span>
-                    <span aria-hidden="true"></span>
+                    <img class="navbar-logo" src="{{ get_url(path='rust-edu-banner.svg')}}" alt="Rust Edu Logo" />
+                    <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false">
+                        <span aria-hidden="true"></span>
+                        <span aria-hidden="true"></span>
+                        <span aria-hidden="true"></span>
+                    </a>
                 </a>
             </div>
             <div class="navbar-menu" id="navMenu">
@@ -46,9 +45,9 @@
         </div>
     </div>
 
-    <footer class="footer py-4">
+    <footer class="footer mt-auto py-5">
         <div class="content has-text-centered">
-            <p>
+            <p class="is-size-6">
                 Website content licensed <a href="https://creativecommons.org/share-your-work/public-domain/cc0/">CC0</a>.
             </p>
         </div>

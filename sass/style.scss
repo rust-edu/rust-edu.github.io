@@ -1,12 +1,10 @@
 @import "https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css";
 @import "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css";
 
-$gap: 0px;
-
 body {
     display: flex;
-    min-height: 100vh;
     flex-direction: column;
+    height: 100vh;
 }
 
 .section {
