@@ -1,0 +1,47 @@
+{% import "macros.html" as macros %}
+
+{% extends "base.html" %}
+
+{% block title %}{{ section.title }}{% endblock title %}
+
+{% block content %}
+<h1 class="title">{{ section.title }}</h1>
+
+{% for category in section.extra.categories %}
+<h2 class="title is-4 my-5">
+    <a href="#{{ category.title | slugify }}">{{ category.title }}</a>
+</h2>
+
+{% if category.description %}
+<div class="content">
+{{ category.description | markdown | safe }}
+</div>
+{% endif %}
+
+{% if category.resources %}
+<dl class="resources">
+    {% for resource in category.resources %}
+    {{ macros::resource(resource=resource) }}
+    {% endfor %}
+</dl>
+{% endif %}
+
+{% if category.subcategories %}
+{% for subcategory in category.subcategories %}
+<div class="subcategory">
+    <h3 class="subtitle is-5 my-4">{{ subcategory.title }}</h3>
+
+    {% if subcategory.resources %}
+    <dl class="resources">
+        {% for resource in subcategory.resources %}
+        {{ macros::resource(resource=resource) }}
+        {% endfor %}
+    </dl>
+    {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+{% endfor %}
+
+{% endblock content %}

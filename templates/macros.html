@@ -1,0 +1,16 @@
+{% macro resource(resource) %}
+<dt>
+    <a href="{{ resource.url }}" target="_blank">
+        <span class="is-size-5 has-text-weight-semibold">{{ resource.title }}</span>
+        <span class="external-link-icon"><i class="fa-solid fa-arrow-up-right-from-square"></i></span>
+    </a>
+</dt>
+
+{% if resource.author %}
+<dd class="is-italic has-text-grey">{{ resource.author }}</dd>
+{% endif %}
+
+{% if resource.description %}
+<dd class="mt-1">{{ resource.description }}</dd>
+{% endif %}
+{% endmacro resource %}
