@@ -13,6 +13,10 @@ We believe that we can work with the Rust community to provide tools and educati
 
 Success is not cheap: we are extraordinarily grateful to [FutureWei, Inc](https://www.futurewei.com/) for funding this initial work. Just as important as money, though, is people. You. If you are involved in Rust and academia, or would like to be, we would love to have your help.
 
+<div class="buttons is-centered">
+  <a href="/news/announcement" class="is">Read the full announcement</a>
+</div>
+
 ## Our goals
 
 The most immediate goals of the organization are as follows:

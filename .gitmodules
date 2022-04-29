@@ -1,0 +1,7 @@
+
+[submodule "ext/bulma"]
+	path = ext/bulma
+	url = https://github.com/jgthms/bulma.git
+[submodule "ext/bulmaswatch"]
+	path = ext/bulmaswatch
+	url = https://github.com/jenil/bulmaswatch.git

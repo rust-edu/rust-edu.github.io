@@ -1,6 +1,11 @@
-@import "https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css";
-@import "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css";
-@import "https://jenil.github.io/bulmaswatch/lumen/bulmaswatch.min.css";
+@charset "utf-8";
+
+@import "../ext/bulmaswatch/lumen/_variables.scss";
+
+@import "variables";
+
+@import "../ext/bulma/bulma.sass";
+@import "../ext/bulmaswatch/lumen/_overrides.scss";
 
 body {
     display: flex;
