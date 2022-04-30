@@ -12,31 +12,29 @@
 
 <body>
     <nav class="navbar is-light" role="navigation" aria-label="main navigation">
-        <div class="container">
-            <div class="navbar-brand">
-                <a class="navbar-item" href="{{ config.base_url }}">
-                    <img class="navbar-logo" src="{{ get_url(path='rust-edu-banner.svg')}}" alt="Rust Edu Logo" />
-                    <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false">
-                        <span aria-hidden="true"></span>
-                        <span aria-hidden="true"></span>
-                        <span aria-hidden="true"></span>
-                    </a>
+        <div class="navbar-brand">
+            <a class="navbar-item" href="{{ config.base_url }}">
+                <img class="navbar-logo" src="{{ get_url(path='rust-edu-banner.svg')}}" alt="Rust Edu Logo" />
+                <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false">
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
                 </a>
-            </div>
-            <div class="navbar-menu" id="navMenu">
-                <div class="navbar-end has-text-centered">
-                    {% for item in config.extra.navbar %}
-                    <a class="navbar-item has-text-weight-semibold" href="{{ item.url | replace(from='$BASE_URL', to=config.base_url) }}">
-                        {{ item.name }}
-                    </a>
-                    {% endfor %}
-                </div>
+            </a>
+        </div>
+        <div class="navbar-menu" id="navMenu">
+            <div class="navbar-end has-text-centered">
+                {% for item in config.extra.navbar %}
+                <a class="navbar-item has-text-weight-semibold" href="{{ item.url | replace(from='$BASE_URL', to=config.base_url) }}">
+                    {{ item.name }}
+                </a>
+                {% endfor %}
             </div>
         </div>
     </nav>
 
-    <div class="columns is-centered">
-        <div class="column is-half">
+    <div class="main-content columns is-fluid">
+        <div class="column">
             <section class="section">
                 <div class="container">
                     {% block content %}{% endblock content %}
@@ -45,10 +43,33 @@
         </div>
     </div>
 
-    <footer class="footer mt-auto py-5 gray">
-        <div class="content has-text-centered">
-            <p class="is-size-6 has-text-weight-medium">
-                Website content licensed <a href="https://creativecommons.org/share-your-work/public-domain/cc0/">CC0</a>.
+    <footer class="footer mt-auto pt-6 pb-5 gray">
+        <div class="columns is-centered mb-5">
+            <div class="column is-narrow mx-6">
+                <h4 class="title is-5 mb-2">Navigation</h4>
+
+                <ul>
+                    {% for item in config.extra.navbar %}
+                    <li><a href="{{ item.url | replace(from='$BASE_URL', to=config.base_url) }}">{{ item.name }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="column is-narrow mx-6">
+                <h4 class="title is-5 mb-2">Useful links</h4>
+                <ul>
+                    {% for item in config.extra.external %}
+                    <li><a href="{{ item.url | replace(from='$BASE_URL', to=config.base_url) }}" target="_blank">{{ item.name }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-notice content">
+            <p class="is-size-6">
+                The content of this website is licensed <a href="https://creativecommons.org/share-your-work/public-domain/cc0/" target="_blank">CC0</a>.
+            </p>
+            <p class="is-size-6">
+                View the source on <a href="https://github.com/rust-edu/rust-edu.github.io" target="_blank">GitHub</a>.
             </p>
         </div>
     </footer>

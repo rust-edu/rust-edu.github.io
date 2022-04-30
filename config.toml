@@ -19,8 +19,12 @@ minify_html = false
 [extra]
 
 navbar = [
-  { url = "/", name = "Home" },
-  # { url = "/about", name = "About" },
-  { url = "/news", name = "News" },
-  { url = "/resources", name = "Resources" },
+  { name = "Home", url = "/" },
+  { name = "News", url = "/news" },
+  { name = "Resources", url = "/resources" },
+]
+
+external = [
+  { name = "Rust Language Website", url = "https://rust-lang.org" },
+  { name = "Official Rust Book", url = "https://doc.rust-lang.org/book/" }
 ]
