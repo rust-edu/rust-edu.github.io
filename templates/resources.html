@@ -7,6 +7,10 @@
 {% block content %}
 <h1 class="title">{{ section.title }}</h1>
 
+<div class="notification is-info is-light">
+    This page is currently a work-in-progress, but will eventually be home to a sizable, well-curated set of Rust education resources for educators and students alike.
+</div>
+
 {% for category in section.extra.categories %}
 <h2 class="title is-4 my-5">
     <a href="#{{ category.title | slugify }}">{{ category.title }}</a>

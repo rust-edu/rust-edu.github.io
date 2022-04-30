@@ -17,12 +17,16 @@ body {
     flex: 1;
 }
 
-.container {
-    max-width: 960px;
-}
-
 p {
     font-size: 1.1rem;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.navbar {
+    flex-shrink: 0;
 }
 
 .navbar-logo {
@@ -30,20 +34,12 @@ p {
     margin: 0 1rem;
 }
 
-.resources dt {
-    margin: 0.75em 0 0 0;
-}
-
-h2 a {
-    color: inherit;
-}
-
-.external-link-icon {
-    padding: 0 0.1em;
-}
-
-a:not(:hover) .external-link-icon {
-    opacity: 0;
+// TODO probably not the best way of doing this
+.title a,
+.title a:hover,
+a.title,
+a:hover.title {
+    color: $title-color;
 }
 
 .resources {
@@ -51,7 +47,26 @@ a:not(:hover) .external-link-icon {
     border-left: 2px solid hsl(0, 0%, 86%) ;
 }
 
-.resources a:hover {
-    color: #5bb7db;
+.resources dt {
+    margin: 0.75em 0 0 0;
+}
+
+.resources a {
+    color: $gray;
     text-decoration: underline;
+}
+
+.gray {
+    background-color: $gray;
+    color: white;
+
+    a {
+        color: $yellow;
+        text-decoration: none;
+
+        &:hover {
+            color: $yellow;
+            text-decoration: underline;
+        }
+    }
 }
