@@ -1,4 +1,7 @@
-$thickness: 3px;
+@import "../ext/bulma/bulma.sass";
+@import "../ext/bulmaswatch/lumen/_variables.scss";
+
+$thickness: 4px;
 
 $family-sans-serif: "Fira Sans", Helvetica, Arial, sans-serif;
 
@@ -16,3 +19,11 @@ $link: #4299bf;
 $link-hover: darken($link, 10%);
 
 $container-max-width: 800px;
+
+$light-gray: #e1e1db;
+$navbar-background-color: lighten($light-gray, 8%);
+$border: lighten($light-gray, 3%);
+$navbar-item-hover-color: $navbar-item-color;
+$navbar-item-hover-background-color: $border;
+
+$card-content-background-color: lighten($light-gray, 11.5%);
