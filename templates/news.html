@@ -7,16 +7,11 @@
 
 {% for post in section.pages %}
 <div class="card block">
-    <div class="card-content">
-        <a class="title" href="{{ post.permalink }}">
+    <div class="card-content is-flex">
+        <a class="title my-0" href="{{ post.permalink }}">
             {{ post.title }}
         </a>
-        {% if post.subtitle %}
-        <p class="subtitle">
-            {{ post.subtitle }}
-        </p>
-        {% endif %}
-        <p class="subtitle is-pulled-right py-5">
+        <p class="subtitle ml-auto my-auto">
             {{ post.date }}
         </p>
     </div>
