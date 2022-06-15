@@ -1,7 +1,7 @@
 @import "../ext/bulma/bulma.sass";
 @import "../ext/bulmaswatch/lumen/_variables.scss";
 
-$thickness: 4px;
+$thickness: 3px;
 
 $family-sans-serif: "Fira Sans", Helvetica, Arial, sans-serif;
 
@@ -20,7 +20,7 @@ $link-hover: darken($link, 10%);
 
 $container-max-width: 800px;
 
-$light-gray: #dededc;
+$light-gray: #dedede;
 $navbar-background-color: lighten($light-gray, 9%);
 $border: lighten($light-gray, 5%);
 $navbar-item-hover-color: $navbar-item-color;
