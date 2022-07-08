@@ -20,10 +20,4 @@ $link-hover: darken($link, 10%);
 
 $container-max-width: 800px;
 
-$light-gray: #dedede;
-$navbar-background-color: lighten($light-gray, 9%);
-$border: lighten($light-gray, 5%);
 $navbar-item-hover-color: $navbar-item-color;
-$navbar-item-hover-background-color: $border;
-
-$card-content-background-color: lighten($light-gray, 10%);
