@@ -46,15 +46,16 @@ some sort. You may submit one of the following:
   of the Workshop Proceedings.
 
 * PDF of slides for a 20-minute proposed talk on a topic
-  related to Rust education. Applicants will be selected to
-  present their talk at the Workshop.
+  related to Rust education. Selected applicants will be
+  asked to present their talk at the Workshop.
 
 * A PDF paper of up to five pages in
   [ACM Conference Format](https://www.acm.org/publications/proceedings-template)
   to be refereed by the conference organizers. If the paper
-  is accepted, you will be expected to prepare and present a
-  20-minute talk at the Workshop as above. Accepted papers
-  will be published in the Workshop Proceedings.
+  is accepted, you will be expected to prepare a 20-minute
+  talk for the Workshop as above. Selected applicants will
+  be asked to present their talk at the Workshop. Accepted
+  papers will be published in the Workshop Proceedings.
 
 The Workshop will be streamed live to the general public and
 recorded for later viewing; the Workshop Proceedings will be
