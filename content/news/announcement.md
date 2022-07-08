@@ -1,6 +1,6 @@
 +++
 title = "Announcement"
-date = 2022-05-02
+date = 2022-07-08
 
 [extra]
 author = "Bart Massey"
