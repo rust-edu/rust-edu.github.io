@@ -1,6 +1,5 @@
 +++
 title = "Rust Edu"
-# template = "home.html"
 +++
 
 ## Who are we?
@@ -9,9 +8,7 @@ Rust Edu is an organization dedicated to supporting Rust education in the academ
 
 While we are initially focused on colleges and universities, in the longer term we hope to broaden our scope to a full range of Rust-related learning and growth initiatives.
 
-We believe that we can work with the Rust community to provide tools and educational support for technology students and faculty to learn and build in new and better ways, while also helping to drive the adoption of Rust as a key technology for decades to come. We want to take the loose network of people and resources available today and provide focus and support, in an environment that warmly welcomes all of those who wish to work and play in this grand endeavor.
-
-Success is not cheap: we are extraordinarily grateful to [FutureWei, Inc](https://www.futurewei.com/) for funding this initial work. Just as important as money, though, is people. You. If you are involved in Rust and academia, or would like to be, we would love to have your help.
+We believe that we can work with the Rust community to provide tools and educational support for technology students and faculty to learn and build in new and better ways, while also helping to drive the adoption of Rust as a key technology for decades to come. 
 
 <div class="buttons is-centered my-5">
   <a href="/news/announcement" class="is">Read the full announcement</a>
@@ -23,11 +20,7 @@ The most immediate goals of the organization are as follows:
 
 - Design a flexible Rust-based curriculum for higher education.
 - Develop and promote tools and services which assist in this education.
-- Improve the overall learnability of the Rust programming language for students and professionals alike.
-
-## Mission statement
-
-To spread Rust use and development through academic curricula and communities throughout the world. To make Rust the language of choice for "systems programming" in its broadest sense through the shared efforts of faculty, students and the Rust community.
+- Improve the overall learnability of the Rust programming language.
 
 ## How can I help?
 
