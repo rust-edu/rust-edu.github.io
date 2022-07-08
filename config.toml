@@ -21,6 +21,7 @@ minify_html = false
 navbar = [
   { name = "Home", url = "/" },
   { name = "News", url = "/news" },
+  { name = "Workshop", url = "/workshop" },
   { name = "Resources", url = "/resources" },
 ]
 
