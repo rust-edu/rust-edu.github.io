@@ -22,6 +22,10 @@ The most immediate goals of the organization are as follows:
 - Develop and promote tools and services which assist in this education.
 - Improve the overall learnability of the Rust programming language.
 
+## Mission statement
+
+To spread Rust use and development through academic curricula and communities throughout the world. To make Rust the language of choice for "systems programming" in its broadest sense through the shared efforts of faculty, students and the Rust community.
+
 ## How can I help?
 
 We welcome any educators, sponsors, and potential collaborators who share our vision for the future of Rust education to get in touch with us at <a href="mailto:contact@rust-edu.org">contact@rust-edu.org</a>.
