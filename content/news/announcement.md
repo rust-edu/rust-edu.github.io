@@ -1,67 +1,59 @@
 +++
 title = "Announcement"
-date = 2022-07-08
+date = 2022-07-11
 
 [extra]
 author = "Bart Massey"
 +++
 
-I proudly and excitedly write today to announce the
-formation of `rust-edu`: an organization providing a hub and
-a set of initiatives for strongly supporting Rust education
-in the academic environment. While we are initially focused
-on colleges and university learning, in the longer term we
-hope to broaden our scope.
+# Announcement: Rust-Edu
 
-We have identified three types of initiative that we want to
-take on with this project.
+*Bart Massey Jul 11, 2022, on behalf of the Rust-Edu Team*
 
-* Our initial major driver is an effort to create modular
-  turnkey Rust curriculum for University Computer Science
-  courses. This of course includes the teaching of Rust
-  itself, but we want to do more. Specifically, we want to
-  build Rust-based course modules and whole courses covering
-  traditional Computer Science topics such as Operating
-  Systems, Embedded Development, Networking, etc. We are
-  even exploring what a Introductory Programming course in
-  Rust would look like.
+Today we proudly and excitedly announce the formation of
+Rust-Edu, an organization dedicated to Rust education.
 
-  It's going to take a lot of work by a lot of skilled
-  people to make progress. We think the Rust community is up
-  to the challenge, and that this will have an important
-  impact on computing in both the short and long term.
+**MISSION** — We are committed to promote the adoption of Rust
+throughout the academic world. We believe that we can work with the Rust
+community to provide tools and educational support for students and
+faculty to learn and build in new and better ways. In doing so, we will
+drive the adoption of Rust as a key technology for years to come. While
+we are initially focused on college level learning, long term, we hope
+to broaden our scope.
 
-* We want to take advantage of the growing interest in
-  building tools that make learning and mastering Rust
-  easier. We believe that the notorious difficulty curve of
-  the language can be overcome: better tooling for education
-  and development looks like a key thing to do there.
+**GOALS** — We have identified three types of initiative that we want to
+take on:
 
-* We want to feed our insights and work back into the Rust
-  Project itself, helping to make Rust a more learnable
-  language easier for new developers to work with. We would
-  like to identify places where we can help with
-  documentation, learning exercises, error messages, and the
-  like to make Rust a learner-friendly language.
+*   **Create a Rust-based Curriculum** — Our initial effort is focused
+    on creating a modular turnkey Rust curriculum for college-level
+    Computer Science courses. Starting with an Introductory
+    Programming course, we want to build Rust-based modules and entire
+    courses covering traditional Computer Science topics such as
+    Operating Systems, Programming Languages, Embedded Development,
+    and Networking.
 
-The beauty of open source is that working with academia is
-extremely valuable for both sides. We are committed to
-promote the adoption of Rust throughout the academic
-world. We believe that we can work with the Rust community
-to provide tools and educational support for technology
-students and faculty to learn and build in new and better
-ways, while also helping to drive the adoption of Rust as a
-key technology for decades to come. We want to take the
-loose network of people and resources available today and
-provide focus and support, in an environment that warmly
+*   **Make Learning Rust Easier** — We want to leverage the growing
+    interest in building tools that make learning and mastering Rust
+    easier. We believe that the notorious difficult learning curve of
+    the language can be overcome with better tooling for education.
+
+-   **Make Rust More Developer Friendly** — We want to provide feedback
+    to the Rust Project itself, helping to make Rust a more learnable
+    language for developers. We would like to identify places where we
+    can help with syntax, tooling, documentation, exercises,
+    and error messages.
+
+**WHO WE ARE** — We are a group of academics and community
+members wanting to make progress and provide focus and
+support for Rust Education, in an environment that warmly
 welcomes all of those who wish to work and play in this
 grand endeavor.
 
-Success is not cheap: we are extraordinarily grateful to
-FutureWei, Inc for funding this initial work. Just as
-important as money, though, is people. You. If you are
+**GET INVOLVED** — We are extraordinarily grateful to
+Futurewei, Inc for funding this initial work: if you want to
+contribute financially, please let us know. Also, if you are
 involved in Rust and academia, or would like to be, we would
-love to have your help. Please visit our web home at
-<https://rust-edu.org> or reach out by email at
-[contact@rust-edu.org](mailto:contact@rust-edu.org).
-
+love to have your help. Please visit us at
+[https://rust-edu.org](https://rust-edu.org/) or reach out
+by email at
+&lt;[contact@rust-edu.org](email:contact@rust-edu.org)&gt;.
