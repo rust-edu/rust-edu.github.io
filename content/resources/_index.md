@@ -42,6 +42,11 @@ title = "By topic"
   [[extra.categories.subcategories]]
   title = "Embedded"
 
+      [[extra.categories.subcategories.embedded]]
+      title = "The Embedded Rust Book"
+      url = "https://docs.rust-embedded.org/book/"
+      description = "Introductory book about using the Rust Programming Language on "Bare Metal" embedded systems, such as Microcontrollers."
+
   [[extra.categories.subcategories]]
   title = "Macros"
 
