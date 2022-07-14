@@ -18,7 +18,11 @@ developers looking to improve learnability, and anyone
 trying to expand the scope and quality of Rust learning and
 teaching are especially welcome.
 
-# Topics
+The Workshop will be streamed live to the general public and
+recorded for later viewing; the Workshop Proceedings will be
+published online.
+
+### Topics
 
 Topics of interest to us include (but are not limited to):
 
@@ -39,7 +43,7 @@ Topics of interest to us include (but are not limited to):
 * Possible enhancements to the Rust language and Rust
   Project tooling to improve learnability.
 
-# Participating
+### Participating
 
 The Rust Education Workshop is free-of-charge: the price of
 Workshop attendance is a submission describing your
@@ -66,18 +70,15 @@ interests. You may submit one of the following:
   be asked to present their talk at the Workshop. Accepted
   papers will be published in the Workshop Proceedings.
 
-The Workshop will be streamed live to the general public and
-recorded for later viewing; the Workshop Proceedings will be
-published online.
+To participate in the Workshop, please email your name
+including preferred pronouns, contact information including
+email and phone number, submission materials, and agreement
+to abide by the Workshop Code of Conduct (see below) to
+`workshop-f2022-submit@rust-edu.org`.
+
+### Code of Conduct
 
 Please review the [Code of Conduct](code-of-conduct) for
 this Workshop, borrowed from the RustConf Code of Conduct.
 Workshop participants are required to abide by the Code of
 Conduct.
-
-To participate in the Workshop, please email your name
-including preferred pronouns, contact information including
-email and phone number, submission materials, and agreement
-to abide by the Workshop Code of Conduct to
-`workshop-f2022-submit@rust-edu.org`.
-
