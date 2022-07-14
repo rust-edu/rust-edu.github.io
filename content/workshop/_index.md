@@ -76,6 +76,12 @@ email and phone number, submission materials, and agreement
 to abide by the Workshop Code of Conduct (see below) to
 `workshop-f2022-submit@rust-edu.org`.
 
+### Program Committee
+
+* Bart Massey, Portland State University
+* Will Chrichton, Brown University
+* Cyrus Omar, University of Michigan
+
 ### Code of Conduct
 
 Please review the [Code of Conduct](code-of-conduct) for
