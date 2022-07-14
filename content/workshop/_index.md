@@ -4,7 +4,8 @@ title = "Rust Education Workshop 2022"
 
 ## Call For Participation
 
-Saturday 20 August 2022
+*Conference Date:* Saturday 20 August 2022  
+*Submission Deadline (see below):* Wednesday 16 August 2022
 
 The [Rust-Edu](http://rust-edu.org) Org is pleased to
 announce the 2022 Rust Education Workshop, a one-day virtual
@@ -16,6 +17,8 @@ developers of tools supporting Rust learning, Rust language
 developers looking to improve learnability, and anyone
 trying to expand the scope and quality of Rust learning and
 teaching are especially welcome.
+
+# Topics
 
 Topics of interest to us include (but are not limited to):
 
@@ -36,14 +39,20 @@ Topics of interest to us include (but are not limited to):
 * Possible enhancements to the Rust language and Rust
   Project tooling to improve learnability.
 
-The Rust Education Workshop is free-of-charge: the price of
-Workshop attendance is to submit a position statement of
-some sort. You may submit one of the following:
+# Participating
 
-* A one-page PDF position paper on a topic broadly related
-  to Rust education. Position papers will be reviewed for
-  suitability and accepted papers will be published as part
-  of the Workshop Proceedings.
+The Rust Education Workshop is free-of-charge: the price of
+Workshop attendance is a submission describing your
+interests. You may submit one of the following:
+
+* A one-page PDF position statement on a topic broadly
+  related to Rust education. Position statement will be
+  reviewed for suitability and accepted statements will be
+  published as part of the Workshop Proceedings. Statements
+  should have a title and the author(s) name and contact
+  email. We are not too concerned about the format, but it
+  would be good to roughly follow the style of the sample
+  [here](/workshop/statement-template.pdf) when preparing the PDF.
 
 * PDF of slides for a 20-minute proposed talk on a topic
   related to Rust education. Selected applicants will be
