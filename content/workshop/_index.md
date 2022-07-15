@@ -18,9 +18,8 @@ developers looking to improve learnability, and anyone
 trying to expand the scope and quality of Rust learning and
 teaching are especially welcome.
 
-The Workshop will be streamed live to the general public and
-recorded for later viewing; the Workshop Proceedings will be
-published online.
+The Workshop will be recorded for later public viewing; the
+Workshop Proceedings will be published online.
 
 ### Topics
 
@@ -59,16 +58,18 @@ interests. You may submit one of the following:
   [here](/workshop/statement-template.pdf) when preparing the PDF.
 
 * PDF of slides for a 20-minute proposed talk on a topic
-  related to Rust education. Selected applicants will be
-  asked to present their talk at the Workshop.
+  related to Rust education. Applicants may be asked to
+  present their talk at the Workshop, as the Workshop
+  schedule permits.
 
-* A PDF paper of up to five pages in
-  [ACM Conference Format](https://www.acm.org/publications/proceedings-template)
-  to be refereed by the conference organizers. If the paper
-  is accepted, you will be expected to prepare a 20-minute
-  talk for the Workshop as above. Selected applicants will
-  be asked to present their talk at the Workshop. Accepted
-  papers will be published in the Workshop Proceedings.
+* A PDF paper of up to five pages to be refereed by the
+  conference organizers. We are still working on the
+  official paper format and will publish it shortly.
+
+  Applicants of accepted papers will be asked to present a
+  20-minute talk at the Workshop as above if the Workshop
+  schedule permits. Accepted papers will be published in the
+  Workshop Proceedings.
 
 To participate in the Workshop, please email your name
 including preferred pronouns, contact information including
