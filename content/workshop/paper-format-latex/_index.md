@@ -14,3 +14,6 @@ intended for the Rust Workshop 2022.
 
 * [`sample.bib`](sample.bib): BibTeX bibliography for sample
   / template paper.
+
+* [`sample.pdf`](sample.pdf): Formatted sample paper.
+
