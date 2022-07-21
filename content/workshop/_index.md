@@ -64,7 +64,7 @@ interests. You may submit one of the following:
 
 * A PDF paper of up to five pages to be refereed by the
   conference organizers. Please use our LaTeX template and start
-  with our sample paper [here](paper-format-latex/_index.html).
+  with our sample paper [here](paper-format-latex/).
 
   Applicants of accepted papers will be asked to present a
   20-minute talk at the Workshop as above if the Workshop
