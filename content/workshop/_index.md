@@ -63,8 +63,8 @@ interests. You may submit one of the following:
   schedule permits.
 
 * A PDF paper of up to five pages to be refereed by the
-  conference organizers. We are still working on the
-  official paper format and will publish it shortly.
+  conference organizers. Please use our LaTeX template and start
+  with our sample paper [here](paper-format-latex/_index.html).
 
   Applicants of accepted papers will be asked to present a
   20-minute talk at the Workshop as above if the Workshop
@@ -76,6 +76,10 @@ including preferred pronouns, contact information including
 email and phone number, submission materials, and agreement
 to abide by the Workshop Code of Conduct (see below) to
 `workshop-f2022-submit@rust-edu.org`.
+
+By submitting to the Workshop, you agree to grant Rust-Edu
+an unlimited, non-exclusive, perpetual right to publish and
+distribute your submission materials.
 
 ### Program Committee
 
