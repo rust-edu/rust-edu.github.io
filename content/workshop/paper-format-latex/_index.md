@@ -2,7 +2,7 @@
 title = "Rust Education Workshop 2022 Paper Format"
 +++
 
-# LaTeX Refered Paper Format
+# LaTeX Refereed Paper Format
 
 Here lies a super-simplified LaTeX conference paper format
 intended for the Rust Workshop 2022.
