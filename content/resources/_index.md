@@ -16,6 +16,12 @@ title = "Books"
   author = "Jim Blandy, Jason Orendorff, and Leanora F. S. Tindall"
   url = "https://www.oreilly.com/library/view/programming-rust-2nd/9781492052586/"
   description = "Comprehensive Rust textbook with an emphasis on systems programming."
+  
+  [[extra.categories.resources]]
+  title = "The Rust way of programming （Rust 编程之道）"
+  author = "Handong Zhang (张汉东)"
+  url = "https://item.jd.com/12479415.html"
+  description = "A Chinese Rust programming book. Helps Rust learners build a comprehensive Rust knowledge architecture."
 
 [[extra.categories]]
 title = "Exercises"
