@@ -84,7 +84,7 @@ distribute your submission materials.
 ### Program Committee
 
 * Bart Massey, Portland State University
-* Will Chrichton, Brown University
+* Will Crichton, Brown University
 * Cyrus Omar, University of Michigan
 
 ### Code of Conduct
