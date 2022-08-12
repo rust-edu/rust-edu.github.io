@@ -48,14 +48,19 @@ The Rust Education Workshop is free-of-charge: the price of
 Workshop attendance is a submission describing your
 interests. You may submit one of the following:
 
-* A one-page PDF position statement on a topic broadly
-  related to Rust education. Position statement will be
-  reviewed for suitability and accepted statements will be
-  published as part of the Workshop Proceedings. Statements
-  should have a title and the author(s) name and contact
-  email. We are not too concerned about the format, but it
-  would be good to roughly follow the style of the sample
-  [here](/workshop/statement-template.pdf) when preparing the PDF.
+* A maximum one-page PDF on a topic broadly related to Rust
+  education. We are calling it a "statement", but it could
+  be an experience report, could advocate something, could
+  describe your interests: really anything relevant goes.
+
+  The statement will be reviewed for suitability and
+  accepted statements will be published as part of the
+  Workshop Proceedings. Statements should have a title and
+  the author(s) name and contact email. We are not too
+  concerned about the format, but it would be good to
+  roughly follow the style of the sample
+  [here](/workshop/statement-template.pdf) when preparing
+  the PDF.
 
 * PDF of slides for a 20-minute proposed talk on a topic
   related to Rust education. Applicants may be asked to
