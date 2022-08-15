@@ -56,7 +56,7 @@ https://www.inyourowntime.zone/2022-08-20_07.30_America.Los_Angeles
 
 * …
 
-* [13:30 (1:30 PM) PT](https://www.inyourowntime.zone/2022-08-20_13.30_America.Los_Angeles)
+* [13:30 (1:30 PM) PT](https://www.inyourowntime.zone/2022-08-20_13.30_America.Los_Angeles) or earlier: Workshop ends
 
 ### Participating
 
