@@ -5,7 +5,7 @@ title = "Rust Education Workshop 2022"
 ## Call For Participation
 
 *Conference Date:* Saturday 20 August 2022  
-*Submission Deadline (see below):* Tuesday 16 August 2022
+*Registration Deadline (see below):* Tuesday 16 August 2022 (your time)
 
 The [Rust-Edu](http://rust-edu.org) Org is pleased to
 announce the 2022 Rust Education Workshop, a one-day virtual
@@ -41,6 +41,22 @@ Topics of interest to us include (but are not limited to):
 
 * Possible enhancements to the Rust language and Rust
   Project tooling to improve learnability.
+
+### Draft Schedule — Saturday 20 August 2022
+
+* [07:00 AM Pacific Time](https://www.inyourowntime.zone/2022-08-20_07.00_America.Los_Angeles): Conference begins. Brief introductory talk by
+  Bart Massey
+
+https://www.inyourowntime.zone/2022-08-20_07.30_America.Los_Angeles
+https://www.inyourowntime.zone/2022-08-20_07.30_America.Los_Angeles
+
+* [07:30 AM PT](https://www.inyourowntime.zone/2022-08-20_07.30_America.Los_Angeles): First talk, questions, discussion
+
+* [08:30 AM PT](https://www.inyourowntime.zone/2022-08-20_08.30_America.Los_Angeles): Next talk
+
+* …
+
+* [13:30 (1:30 PM) PT](https://www.inyourowntime.zone/2022-08-20_13.30_America.Los_Angeles)
 
 ### Participating
 
