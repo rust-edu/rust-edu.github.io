@@ -5,7 +5,8 @@ title = "Rust Education Workshop 2022"
 ## Call For Participation
 
 *Conference Date:* [Saturday 20 August 2022](#draft-schedule)  
-*[Registration](#participating) Deadline (see below):* Tuesday 16 August 2022 (your time)
+*[Registration](#participating) Paper or Talk Proposal Deadline:* Tuesday 16 August 2022 (your time)  
+*[Registration](#participating) Statement Deadline:* Wednesday 17 August 2022 (your time)
 
 The [Rust-Edu](http://rust-edu.org) Org is pleased to
 announce the 2022 Rust Education Workshop, a one-day virtual
