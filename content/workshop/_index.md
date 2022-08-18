@@ -4,7 +4,7 @@ title = "Rust Education Workshop 2022"
 
 ## Call For Participation
 
-*Conference Date:* [Saturday 20 August 2022](#draft-schedule)  
+*Conference Date:* [Saturday 20 August 2022](#schedule)  
 *[Registration](#participating) Paper or Talk Proposal Deadline:* Tuesday 16 August 2022 (your time)  
 *[Registration](#participating) Statement Deadline:* Wednesday 17 August 2022 (your time)
 
@@ -43,22 +43,55 @@ Topics of interest to us include (but are not limited to):
 * Possible enhancements to the Rust language and Rust
   Project tooling to improve learnability.
 
-### Draft Schedule
-Saturday 20 August 2022
+### Schedule
+Saturday 20 August 2022 [07:00 AM Pacific Time](https://www.inyourowntime.zone/2022-08-20_07.00_America.Los_Angeles)
 
-* [07:00 AM Pacific Time](https://www.inyourowntime.zone/2022-08-20_07.00_America.Los_Angeles): Conference begins. Brief introductory talk by
-  Bart Massey
+* **Introductions (7:00 - 7:30)**
 
-https://www.inyourowntime.zone/2022-08-20_07.30_America.Los_Angeles
-https://www.inyourowntime.zone/2022-08-20_07.30_America.Los_Angeles
+  * 7:00 - 7:10: *Intro To Rust-Edu* — Massey
 
-* [07:30 AM PT](https://www.inyourowntime.zone/2022-08-20_07.30_America.Los_Angeles): First talk, questions, discussion
+  * 7:10 - 7:30: Group Introductions
 
-* [08:30 AM PT](https://www.inyourowntime.zone/2022-08-20_08.30_America.Los_Angeles): Next talk
+* **Session 1 - Experiences with Teaching Rust (7:30 - 9:00)**
 
-* …
+  * 7:30 - 7:50: *Imagining Introductory Rust* — Bohrer
 
-* [13:30 (1:30 PM) PT](https://www.inyourowntime.zone/2022-08-20_13.30_America.Los_Angeles) or earlier: Workshop ends
+  * 7:50 - 8:10: *Experience Report: Two Semesters of Teaching
+    Rust, Five Programming Assignments for Rust* — Fluet
+
+  * 8:10 - 8:30: *Paradigm Problems: A Case Study on
+    `rebalance`* — Crichton
+
+  * 8:30 - 9:00: Small + large group discussion
+
+* **Break (9:00 - 9:15)**
+
+* **Session 2 - Tools for Teaching Rust (9:15 - 10:45)**
+
+  * 9:15 - 9:35: *Experiences of Teaching Rust and Code Recommendation
+    To Assist Rust Beginners* — Xu
+
+  * 9:35 - 9:55: *The Book & Rustlings Adaptation By
+    JetBrains*  — Bragilevsky
+
+  * 9:55 - 10:15: *RustViz: Interactively Visualizing
+    Ownership and Borrowing*  — Omar
+
+  * 10:15 - 10:45: Group Discussion
+
+* **Long Break (10:45 - 11:30)**
+
+* **Session 3 - Rust and OS (11:30 - 12:30)**
+
+  * 11:30 - 11:50: *The Pluggable Interrupt OS: Writing a
+    Kernel in Rust* — Ferrer
+
+  * 11:50 - 12:10: *An Online Debugging Tool for Rust-based
+    Operating Systems*  — Chen, Yu, Li, Wu
+
+  * 12:10 - 12:30: Group Discussion
+
+* **Open-Ended Discussion (12:30 - 1:00)**
 
 ### Participating
 
