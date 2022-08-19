@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Redirecting...{% endblock title %}
+
+{% block head %}
+<meta http-equiv="Refresh" content="1; url='{{ page.extra.link }}'" />
+{% endblock head %}
+
+{% block content %}
+Redirecting you to <a href="{{ page.extra.link }}">{{ page.extra.link }}</a>...
+{% endblock content %}
