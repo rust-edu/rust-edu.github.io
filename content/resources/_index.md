@@ -64,7 +64,7 @@ title = "By topic"
 
     [[extra.categories.subcategories.resources]]
     title = "Embedded Rust on Espressif"
-    url = "https://espressif-trainings.ferrous-systems.com/"
+    url = "https://esp-rs.github.io/std-training"
     description = "Training Material for learning to use Embedded Rust with the Espressif ESP32-C3."
 
   [[extra.categories.subcategories]]
