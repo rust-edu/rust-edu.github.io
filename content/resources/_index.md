@@ -34,6 +34,14 @@ title = "Examples"
   description = "Collection of Rust code snippets which exemplify various Rust programming concepts."
 
 [[extra.categories]]
+title = "Training Courses"
+
+  [[extra.categories.resources]]
+  title = "Comprehensive Rust 🦀: Fundamentals"
+  url = "https://google.github.io/comprehensive-rust/"
+  description = "A 3-day course on Rust, covering everything from basic syntax to more advanced topics such as generics, error handling, and unsafe Rust."
+
+[[extra.categories]]
 title = "By topic"
 
   [[extra.categories.subcategories]]
@@ -44,6 +52,11 @@ title = "By topic"
     url = "https://rust-lang.github.io/async-book/"
     description = "Comprehensive, up-to-date guide to using Rust's async language features and libraries."
 
+    [[extra.categories.subcategories.resources]]
+    title = "Comprehensive Rust 🦀: Concurrency"
+    url = "https://google.github.io/comprehensive-rust/concurrency.html"
+    description = "A full-day course covering thread-based and async/await-based concurrency."
+
   [[extra.categories.subcategories]]
   title = "Embedded"
 
@@ -51,6 +64,11 @@ title = "By topic"
     title = "The Embedded Rust Book"
     url = "https://docs.rust-embedded.org/book/"
     description = "Introductory book about using the Rust Programming Language on Bare Metal embedded systems, such as Microcontrollers."
+
+    [[extra.categories.subcategories.resources]]
+    title = "Comprehensive Rust 🦀: Bare Metal"
+    url = "https://google.github.io/comprehensive-rust/bare-metal.html"
+    description = "A full-day course on using Rust for embedded development in a `no_std` environment. Covers both microcontrollers and application processors."
 
     [[extra.categories.subcategories.resources]]
     title = "Awesome Embedded Rust"
