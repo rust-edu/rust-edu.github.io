@@ -21,7 +21,7 @@ minify_html = false
 navbar = [
   { name = "Home", url = "/" },
   { name = "News", url = "/news" },
-  { name = "Workshop", url = "/workshop" },
+  { name = "Zulip", url = "https://zulip.rust-edu.org" },
   { name = "Resources", url = "/resources" },
 ]
 
