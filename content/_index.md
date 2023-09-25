@@ -29,6 +29,7 @@ To spread Rust use and development through academic curricula and communities th
 ## How can I help?
 
 We welcome any educators, sponsors, and potential collaborators who share our vision for the future of Rust education to get in touch with us at <a href="mailto:contact@rust-edu.org">contact@rust-edu.org</a>.
+We also have a [Zulip instance](https://zulip.rust-edu.org), where you can chat with the Rust Edu team and community.
 
 ## Code of Conduct
 
