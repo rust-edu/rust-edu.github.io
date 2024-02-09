@@ -34,12 +34,30 @@ title = "Examples"
   description = "Collection of Rust code snippets which exemplify various Rust programming concepts."
 
 [[extra.categories]]
-title = "Training Courses"
+title = "Teaching and Training"
 
   [[extra.categories.resources]]
-  title = "Comprehensive Rust 🦀: Fundamentals"
+  title = "Comprehensive Rust 🦀"
   url = "https://google.github.io/comprehensive-rust/"
-  description = "A 3-day course on Rust, covering everything from basic syntax to more advanced topics such as generics, error handling, and unsafe Rust."
+  description = "A 3-day course on Rust, covering everything from basic syntax to more advanced topics such as generics, error handling, and unsafe Rust. Also includes 'deep-dive' content on Chromium, Bare-metal and Concurrency."
+
+  [[extra.categories.resources]]
+  title = "Rust 101 (Tweede Golf)"
+  url = "https://github.com/tweedegolf/101-rs/"
+  description = "Modular course materials for teaching Rust.  Organized as four tracks: Rust Language Introduction, Rust for the Web, Rust for Systems Programming, Scientific Rust."
+
+  [[extra.categories.resources]]
+  title = "Rust 101 (Ralf Jung)"
+  url = "https://github.com/RalfJung/rust-101"
+  description = "This course covers core Rust in detail, including advanced concepts."
+
+[[extra.categories]]
+title = "Collected learning materials"
+
+  [[extra.categories.resources]]
+  title = "rust-learning"
+  url = "https://github.com/ctjhoa/rust-learning"
+  description = "This is a curated collection of Rust blog posts, videos, etc focused on learning Rust."
 
 [[extra.categories]]
 title = "By topic"
