@@ -51,6 +51,11 @@ title = "Teaching and Training"
   url = "https://github.com/RalfJung/rust-101"
   description = "This course covers core Rust in detail, including advanced concepts."
 
+  [[extra.categories.resources]]
+  title = "Embedded Rust 101 (Wyliodrin & Politehnica Bucharest)"
+  url = "https://embedded-rust-101.wyliodrin.com"
+  description = "The embedded systems course delivered in Rust using the Raspberry Pi Pico 2 at the Politehnica University of Bucharest."
+
 [[extra.categories]]
 title = "Collected learning materials"
 
