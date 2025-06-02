@@ -16,7 +16,7 @@ Over the past few months, **Rust Africa** has been on an ambitious journey: taki
 Campuses are the breeding ground for tomorrow’s software engineers, innovators, and open-source contributors. The Rust Africa Campus Tour was born from the belief that exposure to modern, powerful, and safe programming languages like Rust can unlock new levels of creativity and capability among African students
 
 ## What Happens on the Tour?
-Each stop on the tour includes a carefully curated mix of interactive workshops, technical talks, live coding sessions, and community building activities. Students are introduced to. Students are introduced to:
+Each stop on the tour includes a carefully curated mix of interactive workshops, technical talks, live coding sessions, and community building activities. Students are introduced to:
 - The fundamentals of the **Rust** programming language  
 - How Rust compares with other languages like **C++**  
 - Real-world applications of Rust (web, embedded systems, blockchain, etc.)  
@@ -37,7 +37,7 @@ Rust Africa, through its close collaboration with Rust Nigeria, has played a piv
 
 ![University of Benin – Edo State, Nigeria](/images/RAACampusTour3.png)
 
-Our partnership with the department of Computer Engineering at the University of Benin has enabled us birth a strong Rust developer community within the school.
+Our partnership with the department of Computer Engineering at the University of Benin has enabled us to birth a strong Rust developer community within the school.
 
 Since our initial engagement in 2024, Rust Africa has worked hand in hand with Rust Nigeria to introduce students to Rust through study groups, and department-backed workshops.
 
@@ -67,7 +67,7 @@ PROMOTIC, an educational institution focused on producing industry-ready develop
 ## Powered by Community and Collaboration
 
 The **Rust Africa Campus Tour** wouldn’t be possible without the consistent support of individuals and community partners who believe in our mission.
-This initiative has been largely driven by the efforts of our project leads: **Mordecai Etukudo** and **Enow Scott**, Their commitment has helped turn vision into action — coordinating logistics, connecting with local groups, and ensuring each tour stop delivers real value.
+This initiative has been largely driven by the efforts of our project leads: **Mordecai Etukudo** and **Enow Scott**. Their commitment has helped turn vision into action — coordinating logistics, connecting with local groups, and ensuring each tour stop delivers real value.
 
 Equally vital are the passionate local developer communities who work behind the scenes to organize events, mentor learners, and keep the momentum going. Each stop on this journey reflects community synergy. From educators and student clubs to open-source contributors and grassroots organizers. Rust Africa provides the spark, but it’s the collective effort that keeps the flame burning. We’re excited about what lies ahead, and we're ready to do even more.
 
@@ -75,24 +75,29 @@ Equally vital are the passionate local developer communities who work behind the
 
 This is just the beginning.
 
-In the future tours, **Rust Africa** plans to expand the tour to tech hubs in:
+In future tours, **Rust Africa** plans to expand the tour to tech hubs in:
 - **Kenya**
 - **Ghana**
 - **Rwanda**
 - **South Africa**
 
-The goal is clear: to ensure that Rust has a home in every country and tech ecosystem across Africa.But to do more, we need more.To deepen our impact, we must go beyond tours. We need:
+The goal is clear: to ensure that Rust has a home in every country and a tech ecosystem across Africa. But to do more, we need more. To deepen our impact, we must go beyond tours. We need:
 - Sustained mentorship  
 - Access to hardware for embedded development  
 - Funding for student-led Rust clubs  
 - Internship pipelines  
 - Institutional partnerships to formally adopt Rust into academic curricula  
 
-There is immense untapped talent on this continent.With the right support, we can equip thousands of students with the tools they need to build safe, performant, and globally relevant software all while growing Africa’s influence in open-source.
+There is immense untapped talent on this continent. With the right support, we can equip thousands of students with the tools they need to build safe, performant, and globally relevant software all while growing Africa’s influence in open-source.
 
 ## Get Involved
 
-By introducing Rust to students and developers across the continent, we’re laying the foundation for a future where **African Rustaceans** are: Building the tools of tomorrow Contributing to open-source Leading communities of their own. The **Rust Africa Campus Tour** is a bold step toward a future where African developers are not just consumers of technology, but key contributors to global innovation — and Rust is a big part of that journey.
+By introducing Rust to students and developers across the continent, we’re laying the foundation for a future where **African Rustaceans** are:
+- Building the tools of tomorrow
+- Contributing to open-source
+- Leading communities of their own.
+
+The **Rust Africa Campus Tour** is a bold step towards a future where African developers are not just consumers of technology, but key contributors to global innovation — and Rust is a big part of that journey.
 
 We’re actively looking for:
 - Academic institutions ready to host Rust events  
