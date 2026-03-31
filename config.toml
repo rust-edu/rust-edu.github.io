@@ -11,7 +11,9 @@ compile_sass = true
  highlight_code = true
 
 # Whether to build a search index to be used later on by a JavaScript library
+[search]
 build_search_index = true
+
 
 title = "Rust Edu"
 description = ""
