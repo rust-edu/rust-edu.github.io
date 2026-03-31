@@ -29,14 +29,13 @@ In addition, we are forming a **Rust-Edu Organizing Committee** a group of commi
 
 If this sounds like something you do like to be part of, we invite you to complete the form linked below.
 
-Fill it out, and we’ll be in touch soon.
-
-👉 [Apply here](https://forms.gle/2TXRRBhTLm6HCJVq8)  
+Fill it out, and we’ll be in touch soon.👉 [Apply here](https://forms.gle/2TXRRBhTLm6HCJVq8)  
 
 ## Looking Ahead
 
 We’re optimistic about what lies ahead.
 
 With the right people, shared vision, and consistent effort, we believe Rust-Edu can play a meaningful role in shaping how Rust is taught and adopted in universities around the world.
+
 
 Hopefully, to building something impactful together join our [**zulip channel**](https://rust-edu.zulip.cs.pdx.edu/#narrow/channel/576-Rust-Edu-CFP/topic/channel.20events/with/87780) to stay in touch.
