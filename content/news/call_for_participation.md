@@ -9,7 +9,7 @@ author = "Mordecai Etukudo and Bart Massey"
 
 # A New Chapter for Rust-Edu
 
-We are making a fresh start on [**Rust-Edu**]((https://rust-edu.org)).
+We are making a fresh start on **Rust-Edu** <https://rust-edu.org>.
 
 Founded several years ago, Rust-Edu was created with a clear mission: to promote Rust education globally, with a strong focus on bringing Rust into academia. Thanks to an early and generous contribution from FutureWei, the initiative was able to take its first steps toward that vision.
 
@@ -25,7 +25,7 @@ This next phase of Rust-Edu is not something we want to build alone: we want to 
 
 We’re looking for individuals who are passionate about Rust education, particularly in academic environments, and who are excited to contribute their time, ideas, and experience. Whether you're an educator, developer, student, or community builder, there’s a place for you here.
 
-Please join us on our [**Rust-Edu Zulip chat**](https://rust-edu.zulip.cs.pdx.edu). Visit the [**CFP chat channel**](https://rust-edu.zulip.cs.pdx.edu/#narrow/channel/576-Rust-Edu-CFP/topic/channel.20events/with/87780) where we'll figure this out together.
+Please join us on our [**Rust-Edu Zulip chat**](https://rust-edu.zulip.cs.pdx.edu). Visit the [**CFP chat channel**](https://rust-edu.zulip.cs.pdx.edu/#narrow/channel/576-Rust-Edu-CFP/) where we'll figure this out together.
 
 In addition, we are forming a **Rust-Edu Organizing Committee** a group of committed contributors who will help guide and lead our upcoming initiatives. This will involve regular collaboration, planning, and execution of programs that push Rust education forward. If this sounds like something you want to be a part of, please do fill out our application form.
 
