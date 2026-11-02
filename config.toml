@@ -1,45 +1,28 @@
-# The URL the site will be built for
-base_url = "https://rust-edu.github.io"
+# The URL the site is served at
+base_url = "https://rust-edu.org"
+title = "Rust Edu"
+description = "Rust education in academia (and beyond)"
 
+# The stylesheet is plain CSS: static/style.css
+compile_sass = false
 
-# Whether to automatically compile all Sass files in the sass directory
-compile_sass = true
-
-# Whether to do syntax highlighting
-# Theme can be customised by setting the `highlight_theme` variable to a theme supported by Zola
 [markdown]
-render_emoji = true
+# Curl straight quotes and apostrophes
 smart_punctuation = true
-
-# [markdown.highlighting]
-
-
-
-# Whether to build a search index to be used later on by a JavaScript library
-[search]
-build_search_index = true
 
 [link_checker]
 internal_level = "error"
 external_level = "warn"
 
-
-title = "Rust Edu"
-description = ""
-
-minify_html = false
-
 [extra]
-
 navbar = [
   { name = "Home", url = "/" },
-  { name = "News", url = "/news" },
+  { name = "News", url = "/news/" },
   { name = "Zulip", url = "/zulip/" },
-  { name = "Resources", url = "/resources" },
+  { name = "Resources", url = "/resources/" },
 ]
 
 external = [
   { name = "Rust Language Website", url = "https://rust-lang.org" },
   { name = "Official Rust Book", url = "https://doc.rust-lang.org/book/" }
 ]
-

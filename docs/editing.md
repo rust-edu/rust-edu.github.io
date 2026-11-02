@@ -85,7 +85,6 @@ An automatic check builds the site for every pull request; a maintainer reviews 
 With [Zola 0.22.1](https://github.com/getzola/zola/releases/tag/v0.22.1) installed (see the [README](../README.md)):
 
 ```bash
-git submodule update --init --recursive
 zola serve
 ```
 

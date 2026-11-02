@@ -8,8 +8,10 @@ Rust Edu is an organization dedicated to supporting Rust education in the academ
 ## 🚀 Setting Up on Local Machine
 To contribute or run this website locally, follow the steps below.
 
+To change only the content, see [docs/editing.md](docs/editing.md): every page is a Markdown file under `content/`.
+
 ### ✅ Requirements
-- Zola **0.22.1** installed (newer releases, such as the one Homebrew installs, fail with `Unknown tag`)
+- Zola **0.22.1** installed, the version CI builds and deploys with
 
 ## 📦 Installation Steps
 ### 1. Clone the Repository
@@ -25,11 +27,6 @@ or, with [Rust](https://www.rust-lang.org/tools/install) installed, build it wit
 cargo install --locked --git https://github.com/getzola/zola --tag v0.22.1 zola
 ```
 
-### 3. Initialize Submodules
-To load the external CSS themes (Bulma & Bulmaswatch):
-```bash
-git submodule update --init --recursive
-```
 ## 💻 Run Locally
 Start a local development server:
 ```bash
@@ -39,23 +36,11 @@ Your site will be live at: http://127.0.0.1:1111
 
 Zola will auto-reload when changes are made.
 
-## 🐛 Common Issues
-### ❌ `Can't find stylesheet to import` error?
-Ensure submodules are initialized:
-```bash
-git submodule update --init --recursive
-```
-### ❌ `Variable config.extra.navbar not found`?
-Ensure your `config.toml` includes a `[extra]` section:
-```toml
-[extra]
-navbar = [
-  { name = "Home", url = "/" },
-  { name = "News", url = "/news" },,
-  { name = "Resources", url = "/resources" }
-]
+## 🎨 Layout and Style
+- `templates/`: the HTML layout of each kind of page (Zola's Tera templates)
+- `static/style.css`: the whole stylesheet, plain CSS with its colors in one token block at the top
+- `config.toml`: the site title and description, and the menu and footer links
 
-```
 ## 📬 Get Involved
 Interested in contributing or learning more?
 * 🌐 Visit: [https://rust-edu.org/](https://rust-edu.org/)

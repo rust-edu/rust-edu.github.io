@@ -1,20 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}News{% endblock title %}
+{% block title %}{{ section.title }}{% endblock title %}
 
 {% block content %}
-<h1 class="title">News</h1>
-
-{% for post in section.pages %}
-<div class="card block">
-    <div class="card-content is-flex">
-        <a class="title my-0" href="{{ post.permalink }}">
-            {{ post.title }}
-        </a>
-        <p class="subtitle ml-auto my-auto">
-            {{ post.date }}
-        </p>
-    </div>
-</div>
-{% endfor %}
+<h1>{{ section.title }}</h1>
+<ul class="news-list">
+    {% for post in section.pages %}
+    <li>
+        <a href="{{ post.path }}">{{ post.title }}</a>
+        <time datetime="{{ post.date }}">{{ post.date | date(format="%b %e, %Y") }}</time>
+    </li>
+    {% endfor %}
+</ul>
 {% endblock content %}

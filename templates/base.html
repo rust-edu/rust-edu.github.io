@@ -4,79 +4,58 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <link href="{{ get_url(path='style.css') }}" rel="stylesheet" />
+    <meta name="description" content="{{ config.description }}">
+    <link rel="stylesheet" href="/style.css">
 
     {% block head %}{% endblock head %}
 
-    <title>{% block title %}{% endblock title %} - Rust Edu</title>
+    <title>{% block title %}{% endblock title %} - {{ config.title }}</title>
 </head>
 
 <body>
-    <nav class="navbar" role="navigation" aria-label="main navigation">
-        <div class="navbar-brand">
-            <a class="navbar-item" href="{{ config.base_url }}">
-                <img class="navbar-logo" src="{{ get_url(path='rust-edu-banner.svg')}}" alt="Rust Edu Logo" />
-                <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false">
-                    <span aria-hidden="true"></span>
-                    <span aria-hidden="true"></span>
-                    <span aria-hidden="true"></span>
-                </a>
-            </a>
-        </div>
-        <div class="navbar-menu" id="navMenu">
-            <div class="navbar-end has-text-centered">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+        <a class="site-logo" href="/">
+            <img src="/rust-edu-banner.svg" alt="Rust Edu home" width="150" height="36">
+        </a>
+        <nav class="site-nav" aria-label="Main">
+            <ul>
                 {% for item in config.extra.navbar %}
-                <a class="navbar-item has-text-weight-semibold" href="{{ item.url | replace(from='$BASE_URL', to=config.base_url) }}">
-                    {{ item.name }}
-                </a>
+                <li><a href="{{ item.url }}">{{ item.name }}</a></li>
                 {% endfor %}
-            </div>
-        </div>
-    </nav>
+            </ul>
+        </nav>
+    </header>
 
-    <div class="main-content columns is-fluid">
-        <div class="column">
-            <section class="section">
-                <div class="container">
-                    {% block content %}{% endblock content %}
-                </div>
-            </section>
-        </div>
-    </div>
+    <main id="main">
+        {% block content %}{% endblock content %}
+    </main>
 
-    <footer class="footer mt-auto pt-6 pb-5 gray">
-        <div class="columns is-centered mb-5">
-            <div class="column is-narrow mx-6">
-                <h4 class="title is-5 mb-2">Navigation</h4>
-
+    <footer class="site-footer">
+        <div class="site-footer-links">
+            <nav aria-labelledby="footer-navigation">
+                <h2 id="footer-navigation">Navigation</h2>
                 <ul>
                     {% for item in config.extra.navbar %}
-                    <li><a href="{{ item.url | replace(from='$BASE_URL', to=config.base_url) }}">{{ item.name }}</a></li>
+                    <li><a href="{{ item.url }}">{{ item.name }}</a></li>
                     {% endfor %}
                 </ul>
-            </div>
-            <div class="column is-narrow mx-6">
-                <h4 class="title is-5 mb-2">Useful links</h4>
+            </nav>
+            <nav aria-labelledby="footer-useful-links">
+                <h2 id="footer-useful-links">Useful links</h2>
                 <ul>
                     {% for item in config.extra.external %}
-                    <li><a href="{{ item.url | replace(from='$BASE_URL', to=config.base_url) }}" target="_blank">{{ item.name }}</a></li>
+                    <li><a href="{{ item.url }}">{{ item.name }}</a></li>
                     {% endfor %}
                 </ul>
-            </div>
+            </nav>
         </div>
 
-        <div class="footer-notice content">
-            <p class="is-size-6">
-                The content of this website is licensed <a href="https://creativecommons.org/share-your-work/public-domain/cc0/" target="_blank">CC0</a>.
-            </p>
-            <p class="is-size-6">
-                View the source on <a href="https://github.com/rust-edu/rust-edu.github.io" target="_blank">GitHub</a>.
-            </p>
-        </div>
+        <p>The content of this website is licensed
+            <a href="https://creativecommons.org/share-your-work/public-domain/cc0/">CC0</a>.</p>
+        <p>View the source on <a href="https://github.com/rust-edu/rust-edu.github.io">GitHub</a>.</p>
     </footer>
-
-    <script src="{{ get_url(path='js/site.js') }}"></script>
 </body>
 
 </html>

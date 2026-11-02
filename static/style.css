@@ -1,0 +1,389 @@
+/*
+ * Rust Edu site styles: plain CSS, no framework and no build step.
+ *
+ * Colors appear only in the two token blocks below. Every text color meets
+ * WCAG 2.1 AA (4.5:1) on the backgrounds it is used on, in both themes, and
+ * focus outlines meet 3:1. Links inside text are underlined, because link
+ * and body colors differ by less than 3:1.
+ */
+
+:root {
+    color-scheme: light dark;
+
+    --brand-gray: #2a3439;
+    --brand-yellow: #ffc832;
+    --brand-red: #a72145;
+    --brand-green: #0b7261;
+
+    --color-bg: #ffffff;
+    --color-surface: #f3f5f6;
+    --color-text: var(--brand-gray);
+    --color-text-muted: #58636a;
+    --color-link: var(--brand-green);
+    --color-link-hover: #07594b;
+    --color-border: #d3d9dc;
+    --color-focus: var(--brand-red);
+    --color-code: var(--brand-red);
+    --color-footer-bg: var(--brand-gray);
+    --color-footer-text: #ffffff;
+    --color-footer-muted: #c5cdd1;
+    --color-footer-link: var(--brand-yellow);
+
+    --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji";
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --text-sm: 0.875rem;
+    --text-base: 1.0625rem;
+    --text-lg: 1.25rem;
+    --text-xl: 1.5rem;
+    --text-2xl: 2rem;
+    --text-3xl: 2.75rem;
+    --leading-tight: 1.25;
+    --leading-normal: 1.6;
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+    --space-7: 3rem;
+    --space-8: 4rem;
+
+    --radius: 4px;
+    --container-max: 46rem;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-bg: #161c1f;
+        --color-surface: #20292d;
+        --color-text: #e4e9eb;
+        --color-text-muted: #a7b2b8;
+        --color-link: #4fc9ad;
+        --color-link-hover: #86dcc8;
+        --color-border: #3a474d;
+        --color-focus: var(--brand-yellow);
+        --color-code: #ff9eb3;
+        --color-footer-bg: #0e1214;
+        --color-footer-text: #e4e9eb;
+        --color-footer-muted: #a7b2b8;
+    }
+
+    /* The logo's lettering is black; invert it and turn the hues back. */
+    .site-logo img {
+        filter: invert(1) hue-rotate(180deg);
+    }
+}
+
+/* Base */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+}
+
+a {
+    color: var(--color-link);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.15em;
+}
+
+a:hover {
+    color: var(--color-link-hover);
+    text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Skip link: off screen until it receives keyboard focus */
+
+.skip-link {
+    position: absolute;
+    top: var(--space-2);
+    left: var(--space-2);
+    z-index: 1;
+    padding: var(--space-2) var(--space-4);
+    border: 2px solid var(--color-focus);
+    border-radius: var(--radius);
+    background: var(--color-bg);
+    transform: translateY(-200%);
+}
+
+.skip-link:focus {
+    transform: none;
+}
+
+/* Header */
+
+.site-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3) var(--space-5);
+    padding: var(--space-3) var(--space-5);
+}
+
+.site-logo {
+    display: block;
+    line-height: 0;
+}
+
+.site-logo img {
+    width: auto;
+    height: 2.25rem;
+}
+
+.site-nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.site-nav a {
+    color: var(--color-text);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.site-nav a:hover {
+    color: var(--color-link);
+    text-decoration: underline;
+}
+
+/* Main content: classless styles for the HTML that Markdown produces */
+
+main {
+    flex: 1;
+    width: 100%;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: var(--space-7) var(--space-5) var(--space-8);
+}
+
+main h1,
+main h2,
+main h3 {
+    margin: var(--space-6) 0 var(--space-3);
+    font-weight: 700;
+    line-height: var(--leading-tight);
+}
+
+main h1 {
+    margin-top: 0;
+    font-size: var(--text-2xl);
+}
+
+main h2 {
+    font-size: var(--text-xl);
+}
+
+main h3 {
+    font-size: var(--text-lg);
+}
+
+main p,
+main ul,
+main ol,
+main blockquote,
+main pre {
+    margin: 0 0 var(--space-4);
+}
+
+main ul,
+main ol {
+    padding-left: var(--space-5);
+}
+
+main li + li {
+    margin-top: var(--space-1);
+}
+
+main li > ul,
+main li > ol {
+    margin: var(--space-1) 0 0;
+}
+
+main li > p {
+    margin-bottom: var(--space-2);
+}
+
+main blockquote {
+    padding: var(--space-1) var(--space-4);
+    border-left: 4px solid var(--color-border);
+    color: var(--color-text-muted);
+}
+
+main blockquote p:last-child {
+    margin-bottom: 0;
+}
+
+main code {
+    padding: 0.1em 0.3em;
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    color: var(--color-code);
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+}
+
+main pre {
+    overflow-x: auto;
+    padding: var(--space-4);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+}
+
+main pre code {
+    padding: 0;
+    background: none;
+    color: inherit;
+    font-size: var(--text-sm);
+}
+
+main img {
+    display: block;
+    margin: var(--space-4) auto;
+    border-radius: var(--radius);
+}
+
+main hr {
+    margin: var(--space-6) 0;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+}
+
+/* Home page title */
+
+.site-hero {
+    margin-bottom: var(--space-7);
+    text-align: center;
+}
+
+.site-hero h1 {
+    margin-bottom: var(--space-2);
+    font-size: var(--text-3xl);
+}
+
+.site-hero p {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-lg);
+}
+
+/* News */
+
+.byline {
+    margin-top: calc(-1 * var(--space-2));
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+main .news-list {
+    padding: 0;
+    list-style: none;
+}
+
+.news-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-1) var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+}
+
+main .news-list li + li {
+    margin-top: var(--space-4);
+}
+
+.news-list a {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    line-height: var(--leading-tight);
+    text-decoration: none;
+}
+
+.news-list a:hover {
+    text-decoration: underline;
+}
+
+.news-list time {
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+/* Footer */
+
+.site-footer {
+    --color-focus: var(--color-footer-link);
+
+    padding: var(--space-7) var(--space-5) var(--space-6);
+    background: var(--color-footer-bg);
+    color: var(--color-footer-text);
+}
+
+.site-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-5) var(--space-8);
+    margin-bottom: var(--space-6);
+}
+
+.site-footer h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-lg);
+}
+
+.site-footer ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.site-footer a,
+.site-footer a:hover {
+    color: var(--color-footer-link);
+}
+
+.site-footer p {
+    margin: 0;
+    color: var(--color-footer-muted);
+    font-size: var(--text-sm);
+    text-align: center;
+}

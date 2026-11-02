@@ -3,11 +3,9 @@
 {% block title %}Home{% endblock title %}
 
 {% block content %}
-<div class="has-text-centered pb-6">
-    <h1 class="title is-1">{{ section.title }}</h1>
-    <p class="subtitle is-4">Rust education in academia (and beyond)</p>
+<div class="site-hero">
+    <h1>{{ section.title }}</h1>
+    <p>{{ config.description }}</p>
 </div>
-<div class="content">
-    {{ section.content | safe }}
-</div>
+{{ section.content | safe }}
 {% endblock content %}

@@ -17,8 +17,6 @@ jobs:
     steps:
       - name: Checkout main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          submodules: true
       - name: Build only
         uses: shalzz/zola-deploy-action@74526e63f38f84b82476349bbcd886b82040ff98 # v0.22.1
         env:
@@ -34,8 +32,6 @@ jobs:
     steps:
       - name: Checkout main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          submodules: true
       - name: Build and deploy
         uses: shalzz/zola-deploy-action@74526e63f38f84b82476349bbcd886b82040ff98 # v0.22.1
         env:
