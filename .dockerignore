@@ -1,0 +1,7 @@
+# An allowlist: the build sees only what the Dockerfile copies, never .git, target/ or public/.
+*
+!Cargo.toml
+!Cargo.lock
+!clippy.toml
+!rust-toolchain.toml
+!crates
