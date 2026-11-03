@@ -44,14 +44,15 @@ Zola will auto-reload when changes are made.
 ## 🦀 The New Generator (in progress)
 [Plan 0002](docs/Plan-0002—Own-Markdown-Site-Generator.md) replaces Zola, step by step, with a small generator in
 `crates/` that uses only the Rust standard library; Zola builds and deploys the site until the switch. CI checks the
-generator inside a pinned Docker image, and the same check runs locally with:
+generator, and the YAML header of every page in `content/`, inside a pinned Docker image; the same check runs locally
+with:
 ```bash
 docker build --target check .
 ```
 With [Rust](https://www.rust-lang.org/tools/install) installed, `rust-toolchain.toml` selects Rust 1.99.1:
 ```bash
 cargo test
-cargo run -p edu-site -- help
+cargo run -p edu-site -- check
 ```
 
 ## 📬 Get Involved

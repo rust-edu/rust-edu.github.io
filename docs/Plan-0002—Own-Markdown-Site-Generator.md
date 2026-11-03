@@ -1,6 +1,6 @@
 # Plan 0002 — Own Markdown Site Generator
 
-**Date:** 2026-10-28 · **Status:** steps 0–3 done · **Supersedes:** Spec 0001 and Plan 0001 (archived at tag
+**Date:** 2026-10-28 · **Status:** steps 0–4 done · **Supersedes:** Spec 0001 and Plan 0001 (archived at tag
 [`archive/initial-project-plan`](https://github.com/kenesparta/rust-edu.github.io/tree/archive/initial-project-plan/docs)
 on the fork kenesparta/rust-edu.github.io) · **Research:**
 [0001 inventory](../research/0001-current-site-inventory.md) ·
@@ -95,13 +95,14 @@ research 0002 §1) with two std-only exceptions: hand-written error enums instea
 random-input test instead of a property-testing crate. Part B is about 4,850 lines including tests in about twelve PRs;
 research 0002 §9 sizes a broader subset at ~4,650.
 
-4. `feat/edu-workspace` (~1,250, three PRs: workspace, Docker and CI, done in fork PR #6; YAML maps, scalars and errors;
-   YAML lists, page headers and `edu check`) — a workspace with zero dependencies, `rust-toolchain.toml` (1.99.1) and
-   workspace lints, where each crate of `crates/{yaml,markdown,template,site}` arrives with its first code (`edu-site`
-   and the `edu` binary first, `edu-yaml` in the second PR, the other two in steps 5 and 6); a `Dockerfile` whose base
-   image is pinned by digest; `ci.yml` runs fmt, clippy, the tests and an offline build inside Docker; the YAML subset;
-   a first `edu check` that parses every header in `content/`. *Done when:* CI is green, `Cargo.lock` lists only our own
-   crates, and a CI check fails when the Dockerfile's `FROM` tag and `rust-toolchain.toml` name different Rust versions.
+4. *Done (fork PRs #6, #7 and #8).* `feat/edu-workspace` (~1,250, three PRs: workspace, Docker and CI; YAML maps,
+   scalars and errors; YAML lists, page headers and `edu check`) — a workspace with zero dependencies,
+   `rust-toolchain.toml` (1.99.1) and workspace lints, where each crate of `crates/{yaml,markdown,template,site}`
+   arrives with its first code (`edu-site` and the `edu` binary first, `edu-yaml` in the second PR, the other two in
+   steps 5 and 6); a `Dockerfile` whose base image is pinned by digest; `ci.yml` runs fmt, clippy, the tests and an
+   offline build inside Docker; the YAML subset; a first `edu check` that parses every header in `content/`.
+   *Done when:* CI is green, `Cargo.lock` lists only our own crates, and a CI check fails when the Dockerfile's `FROM`
+   tag and `rust-toolchain.toml` name different Rust versions.
 5. `feat/edu-markdown` (~1,250, three PRs: blocks; inlines; emphasis and errors) — the Markdown the content uses
    (research 0001 §1) plus fenced code and numbered lists, with heading ids as Zola makes them for headings whose
    letters are ASCII (all 21 today); anything else is an error. *Done when:* one golden test per content file passes,
