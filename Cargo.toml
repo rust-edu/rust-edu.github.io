@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/site",
+    "crates/yaml",
 ]
 
 [workspace.package]

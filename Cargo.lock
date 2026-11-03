@@ -5,3 +5,7 @@ version = 4
 [[package]]
 name = "edu-site"
 version = "0.1.0"
+
+[[package]]
+name = "edu-yaml"
+version = "0.1.0"
