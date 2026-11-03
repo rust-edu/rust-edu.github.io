@@ -92,8 +92,8 @@ Each PR merges into the fork's `main` after review; the upstream PR comes after 
 
 Code follows our Rust rules (no `unwrap`, `expect` or `panic!` on input paths, no `mod.rs`, the workspace lints of
 research 0002 §1) with two std-only exceptions: hand-written error enums instead of `thiserror`/`anyhow`, and a seeded
-random-input test instead of a property-testing crate. Part B is about 4,850 lines including tests in about twelve PRs;
-research 0002 §9 sizes a broader subset at ~4,650.
+random-input test instead of a property-testing crate. Part B is about 5,400 lines including tests in about thirteen
+PRs; research 0002 §9 sizes a broader subset at ~4,650.
 
 4. *Done (fork PRs #6, #7 and #8).* `feat/edu-workspace` (~1,250, three PRs: workspace, Docker and CI; YAML maps,
    scalars and errors; YAML lists, page headers and `edu check`) — a workspace with zero dependencies,
@@ -103,11 +103,11 @@ research 0002 §9 sizes a broader subset at ~4,650.
    offline build inside Docker; the YAML subset; a first `edu check` that parses every header in `content/`.
    *Done when:* CI is green, `Cargo.lock` lists only our own crates, and a CI check fails when the Dockerfile's `FROM`
    tag and `rust-toolchain.toml` name different Rust versions.
-5. `feat/edu-markdown` (~1,250, three PRs: blocks; inlines; emphasis and errors) — the Markdown the content uses
-   (research 0001 §1) plus fenced code and numbered lists, with heading ids as Zola makes them for headings whose
-   letters are ASCII (all 21 today); anything else is an error. *Done when:* one golden test per content file passes,
-   its HTML diffed against Zola 0.22.1's output with each difference explained in the PR; rejected syntax has error
-   tests; the seeded random-input test finds no panic.
+5. `feat/edu-markdown` (~1,800, four PRs: paragraphs and headings; fenced code, quotes and lists; inlines; emphasis
+   and errors) — the Markdown the content uses (research 0001 §1) plus fenced code and numbered lists, with heading
+   ids as Zola makes them for headings whose letters and digits are ASCII (all 30 today); anything else is an error.
+   *Done when:* one golden test per content file passes, its HTML diffed against Zola 0.22.1's output with each
+   difference explained in the PR; rejected syntax has error tests; the seeded random-input test finds no panic.
 6. `feat/edu-template` (~750, two PRs: engine, then the ported layouts) — `{{ x }}` (escaped), `{{ x | safe }}`,
    `if`/`else`, `for` and one layout; the step-3 templates ported to `layouts/` (Zola keeps `templates/`), menu and
    footer links in `site.yaml`. *Done when:* every page renders and template errors name the file and line.
