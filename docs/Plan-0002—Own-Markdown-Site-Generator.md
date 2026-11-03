@@ -28,6 +28,7 @@ on the fork kenesparta/rust-edu.github.io) · **Research:**
 | JavaScript | None; the menu wraps on small screens (decision 3) |
 | Names | Binary `edu`; crates `edu-yaml`, `edu-markdown`, `edu-template` and `edu-site` in `crates/{yaml,markdown,template,site}`; templates in `layouts/` (decision 5, 2026-11-01) |
 | Code license | CC0 1.0 like the rest of the repository, `license = "CC0-1.0"` (decision 6, 2026-11-01) |
+| Smart quotes | None: quotes and apostrophes render as typed, in Zola too (decision 4, 2026-11-03) |
 
 ## Editing with only Markdown
 
@@ -137,7 +138,8 @@ PRs; research 0002 §9 sizes a broader subset at ~4,650.
 2. *Decided 2026-10-28: brand green.* Link color: **brand green `#0b7261`** (today's `$green`; 5.84:1 on white), or
    darker blue `#276f94` (5.54:1).
 3. *Decided 2026-10-28: none.* JavaScript: **none** (the menu wraps on small screens), or a small disclosure menu.
-4. Smart quotes: **dropped** (about 12 lines render as typed once resources are Markdown), or implemented (~60 lines).
+4. *Decided 2026-11-03: dropped.* Smart quotes: **dropped** (about 12 lines render as typed once resources are
+   Markdown), or implemented (~60 lines).
 5. *Decided 2026-11-01: as proposed.* Names: **binary `edu`; crates `edu-yaml`, `edu-markdown`, `edu-template`,
    `edu-site`; templates in `layouts/`**.
 6. *Decided 2026-11-01: CC0.* Code license: **CC0 like the rest of the repo**, or MIT/Apache-2.0 for `crates/`.

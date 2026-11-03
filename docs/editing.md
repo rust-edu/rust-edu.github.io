@@ -54,6 +54,8 @@ Use plain Markdown, never HTML:
 - lists with `-` or `*` (one marker per list), nested one level by indenting two spaces;
 - links `[text](url)` and images `![description of the image](/images/file.png)`.
 
+Quotes and apostrophes show as typed: `"` and `'` stay straight, and `“`, `”` and `’` are curly.
+
 ## Links
 
 - **Another page or file on this site:** a root-relative URL ending in `/` for pages: `/news/campus-tour/`,
