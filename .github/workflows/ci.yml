@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generator:
+    # The checks run inside the pinned Docker image, so the runner only has to provide Docker.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Cargo.lock lists only crates of this repository
+        run: |
+          test -f Cargo.lock
+          if grep -n '^source = ' Cargo.lock; then
+            echo "::error file=Cargo.lock::Cargo.lock lists a crate from a registry or git; the generator uses the Rust standard library only"
+            exit 1
+          fi
+      - name: The Dockerfile and rust-toolchain.toml name the same Rust
+        run: |
+          image=$(sed -n 's/^FROM rust:\([0-9.]*\)-.*/\1/p' Dockerfile)
+          channel=$(sed -n 's/^channel = "\([0-9.]*\)"$/\1/p' rust-toolchain.toml)
+          echo "Dockerfile: rust:${image}; rust-toolchain.toml: ${channel}"
+          if [ -z "$image" ] || [ "$image" != "$channel" ]; then
+            echo "::error file=Dockerfile::the FROM tag names Rust ${image:-?} and rust-toolchain.toml names ${channel:-?}; bump both together"
+            exit 1
+          fi
+      - name: Format, lint, test and build in Docker
+        run: docker build --progress=plain --target check .

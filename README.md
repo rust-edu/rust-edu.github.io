@@ -41,6 +41,19 @@ Zola will auto-reload when changes are made.
 - `static/style.css`: the whole stylesheet, plain CSS with its colors in one token block at the top
 - `config.toml`: the site title and description, and the menu and footer links
 
+## 🦀 The New Generator (in progress)
+[Plan 0002](docs/Plan-0002—Own-Markdown-Site-Generator.md) replaces Zola, step by step, with a small generator in
+`crates/` that uses only the Rust standard library; Zola builds and deploys the site until the switch. CI checks the
+generator inside a pinned Docker image, and the same check runs locally with:
+```bash
+docker build --target check .
+```
+With [Rust](https://www.rust-lang.org/tools/install) installed, `rust-toolchain.toml` selects Rust 1.99.1:
+```bash
+cargo test
+cargo run -p edu-site -- help
+```
+
 ## 📬 Get Involved
 Interested in contributing or learning more?
 * 🌐 Visit: [https://rust-edu.org/](https://rust-edu.org/)

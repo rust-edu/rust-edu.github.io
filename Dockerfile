@@ -1,0 +1,17 @@
+# The generator's toolchain, the same on laptops and in CI. Check the generator with:
+#   docker build --target check .
+# The tag names the Rust version of rust-toolchain.toml (CI fails when they differ); the digest
+# pins the image, since tags are re-pushed.
+FROM rust:1.99.1-slim-trixie@sha256:b8e062b1c3a80183df83d9ba187cadd2b5ab84bc78d453dbfeb2fccd5f982247 AS toolchain
+# The image installs Rust's minimal profile, which lacks these two.
+RUN rustup component add clippy rustfmt
+WORKDIR /src
+
+# Format, lint, test and build with no network: the generator uses the standard library only.
+FROM toolchain AS check
+COPY Cargo.toml Cargo.lock clippy.toml rust-toolchain.toml ./
+COPY crates/ crates/
+RUN --network=none cargo fmt --all --check
+RUN --network=none cargo clippy --workspace --all-targets --locked --offline -- -D warnings
+RUN --network=none cargo test --workspace --locked --offline
+RUN --network=none cargo build --workspace --release --locked --offline

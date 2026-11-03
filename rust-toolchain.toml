@@ -1,0 +1,5 @@
+# The Dockerfile's FROM tag names the same Rust version; CI fails when they differ.
+[toolchain]
+channel = "1.99.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
