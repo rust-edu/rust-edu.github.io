@@ -78,7 +78,8 @@ Use plain Markdown, never HTML:
 2. Edit, and check the *Preview* tab (GitHub shows the header as a table).
 3. Choose *Commit changes… → Propose changes → Create pull request*.
 
-An automatic check builds the site for every pull request; a maintainer reviews and merges it.
+An automatic check builds the site for every pull request and names the file, line and column of any mistake in a
+page's header; a maintainer reviews and merges it.
 
 ## Previewing locally (optional)
 
