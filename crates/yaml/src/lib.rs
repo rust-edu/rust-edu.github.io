@@ -1,11 +1,11 @@
 //! A strict subset of YAML 1.2 for the headers of Markdown pages and for site settings.
 //!
-//! Only block style: `key: value` lines, and maps indented under `key:`. A scalar is plain,
-//! `'single'` or `"double"` quoted, and always a string: its consumer decides whether
-//! `2027-03-01` is a date and `true` a boolean, so `no` never turns into `false`. The rest of YAML
-//! (tabs, anchors, aliases, tags, flow collections, block scalars, values over several lines) is
-//! an error with a line and column, so a YAML 1.2 parser reads whatever this crate accepts as the
-//! same maps and text.
+//! Only block style: `key: value` maps, a map or a list indented under `key:`, `- item` lists, and
+//! lists of maps, whose keys line up after the `- `. A scalar is plain, `'single'` or `"double"`
+//! quoted, and always a string: its consumer decides whether `2027-03-01` is a date and `true` a
+//! boolean, so `no` never turns into `false`. The rest of YAML (tabs, anchors, aliases, tags,
+//! flow collections, block scalars, values over several lines) is an error with a line and column,
+//! so a YAML 1.2 parser reads whatever this crate accepts as the same maps, lists and text.
 
 use std::fmt;
 
@@ -27,6 +27,7 @@ pub struct Node {
 pub enum Value {
     /// A scalar's text, without its quotes and with its escapes resolved.
     Str(String),
+    List(Vec<Node>),
     /// Entries in the order of the text; no two have the same key.
     Map(Vec<Entry>),
 }
@@ -48,11 +49,14 @@ pub struct Error {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ErrorKind {
+    MissingHeader,
+    UnclosedHeader,
     ControlCharacter(char),
     /// A line indented deeper than its block but not under a `key:`, such as a value's second line.
     BadIndent,
     ExpectedKey,
-    /// A `key:` with no value after it and no lines indented under it.
+    ExpectedListItem,
+    /// A `- ` or `key:` with no value after it, and for a key, no lines indented under it.
     MissingValue,
     DuplicateKey {
         key: String,
@@ -64,15 +68,53 @@ pub enum ErrorKind {
     /// A plain value with `: ` in it or `:` at its end, which YAML reads as a key.
     ColonInValue,
     /// YAML outside the subset, by the character that starts it: `&` anchors, `*` aliases, `!`
-    /// tags, `[` and `{` flow collections, `|` and `>` block scalars, `?` complex keys, `-` lists,
-    /// or a character YAML reserves (`%`, `@`, `` ` ``, `,`, `:`, `]`, `}`).
+    /// tags, `[` and `{` flow collections, `|` and `>` block scalars, `?` complex keys, `-` a list
+    /// on the line of its key, or a character YAML reserves (`%`, `@`, `` ` ``, `,`, `:`, `]`, `}`).
     Indicator(char),
 }
 
+/// Where a page starts, and where its header errors point when no line is to blame.
+const TOP: Pos = Pos { line: 1, col: 1 };
+
 /// Parses a text whose top level is a map, such as a settings file.
 pub fn parse(text: &str) -> Result<Vec<Entry>, Error> {
+    parse_lines(text.lines().zip(1..))
+}
+
+/// Splits a Markdown page into its header and the text after it. The header is the map between
+/// a first line `---` and the next line `---`; its positions count lines from the top of the page.
+pub fn parse_front_matter(text: &str) -> Result<(Vec<Entry>, &str), Error> {
+    let (first, mut rest) = split_line(text);
+    if first != "---" {
+        let kind = ErrorKind::MissingHeader;
+        return Err(Error { pos: TOP, kind });
+    }
+    let mut header = Vec::new();
+    while !rest.is_empty() {
+        let (line, after) = split_line(rest);
+        if line == "---" {
+            return Ok((parse_lines(header)?, after));
+        }
+        // Line 1 is the opening `---`.
+        header.push((line, header.len() + 2));
+        rest = after;
+    }
+    let kind = ErrorKind::UnclosedHeader;
+    Err(Error { pos: TOP, kind })
+}
+
+/// The first line of `text` without its `\n` or `\r\n`, and the text after that line.
+fn split_line(text: &str) -> (&str, &str) {
+    let (line, rest) = text.split_once('\n').unwrap_or((text, ""));
+    (line.strip_suffix('\r').unwrap_or(line), rest)
+}
+
+/// Parses lines, each with its line number, as a top-level map.
+fn parse_lines<'a>(
+    numbered: impl IntoIterator<Item = (&'a str, usize)>,
+) -> Result<Vec<Entry>, Error> {
     let mut lines = Vec::new();
-    for (raw, number) in text.lines().zip(1..) {
+    for (raw, number) in numbered {
         if let Some((index, c)) = raw.chars().enumerate().find(|(_, c)| c.is_control()) {
             let (line, col, kind) = (number, index + 1, ErrorKind::ControlCharacter(c));
             let pos = Pos { line, col };
@@ -97,13 +139,14 @@ struct Line<'a> {
     number: usize,
     /// The whole line without trailing spaces; columns count from its start.
     text: &'a str,
-    /// The end of `text` left to parse, after the indentation.
+    /// The end of `text` left to parse: after the indentation, or after the `- ` of a list item
+    /// that holds a map.
     content: &'a str,
 }
 
 impl Line<'_> {
-    /// The column, counted from 0, where `content` starts. Only spaces come before it, so bytes
-    /// count as columns.
+    /// The column, counted from 0, where `content` starts. Only spaces and `-` come before it, so
+    /// bytes count as columns.
     fn indent(&self) -> usize {
         self.text.len() - self.content.len()
     }
@@ -172,15 +215,45 @@ impl<'a> Parser<'a> {
         Ok(entries)
     }
 
-    /// The map on the lines indented under the `key:` at `pos`, column `indent`.
+    /// The map or list on the lines indented under the `key:` at `pos`, column `indent`.
     fn block(&mut self, indent: usize, pos: Pos) -> Result<Node, Error> {
         let Some(first) = self.peek().filter(|line| line.indent() > indent) else {
             let kind = ErrorKind::MissingValue;
             return Err(Error { pos, kind });
         };
-        let value = Value::Map(self.map(first.indent())?);
+        let value = if list_item(first.content).is_some() {
+            Value::List(self.list(first.indent())?)
+        } else {
+            Value::Map(self.map(first.indent())?)
+        };
         let pos = first.pos(first.content);
         Ok(Node { pos, value })
+    }
+
+    fn list(&mut self, indent: usize) -> Result<Vec<Node>, Error> {
+        let mut items = Vec::new();
+        while let Some(line) = self.peek_at(indent)? {
+            let Some(item) = list_item(line.content) else {
+                return Err(line.error(line.content, ErrorKind::ExpectedListItem));
+            };
+            if item.is_empty() || item.starts_with('#') {
+                return Err(line.error(line.content, ErrorKind::MissingValue));
+            }
+            let node = if split_key(item).is_some() {
+                // A map: its first key follows the `- `, and its other keys line up under the first.
+                if let Some(current) = self.lines.get_mut(self.next) {
+                    current.content = item;
+                }
+                let pos = line.pos(item);
+                let value = Value::Map(self.map(pos.col - 1)?);
+                Node { pos, value }
+            } else {
+                self.next += 1;
+                scalar(&line, item)?
+            };
+            items.push(node);
+        }
+        Ok(items)
     }
 }
 
@@ -190,6 +263,12 @@ fn split_key(content: &str) -> Option<(&str, &str)> {
     let is_key_char = |c: char| c.is_ascii_alphanumeric() || c == '-' || c == '_';
     let is_key = !key.is_empty() && key.chars().all(is_key_char);
     (is_key && (rest.is_empty() || rest.starts_with(' '))).then_some((key, rest))
+}
+
+/// The value after the `- ` of a list item, or `None` if `content` is not a list item.
+fn list_item(content: &str) -> Option<&str> {
+    let rest = content.strip_prefix('-')?;
+    (rest.is_empty() || rest.starts_with(' ')).then_some(rest.trim_start_matches(' '))
 }
 
 /// The character that starts `text` if YAML gives it a meaning outside the subset.
@@ -285,10 +364,13 @@ impl fmt::Display for ErrorKind {
             Self::DuplicateKey { key, first_line } => {
                 return write!(f, "duplicate key `{key}`, first on line {first_line}");
             }
+            Self::MissingHeader => "expected a line `---` that opens the header",
+            Self::UnclosedHeader => "the header has no closing line `---`",
             Self::ControlCharacter('\t') => "tab character; indent with spaces",
             Self::ControlCharacter(_) => "control character",
             Self::BadIndent => "unexpected indentation; a value fits on one line",
             Self::ExpectedKey => "expected `key: value`, a key of letters, digits, `-` or `_`",
+            Self::ExpectedListItem => "expected a list item: `- ` and a value",
             Self::MissingValue => "missing value; put it on this line, or indented below",
             Self::UnclosedQuote => "the quote is not closed on this line",
             Self::InvalidEscape => "unknown escape; use `\\\"`, `\\\\`, `\\n` or `\\t`",
@@ -298,7 +380,7 @@ impl fmt::Display for ErrorKind {
             Self::Indicator('[' | '{') => "`[` and `{` are not supported; write one item per line",
             Self::Indicator('|' | '>') => "block scalars are not supported; use one line",
             Self::Indicator('?') => "complex keys are not supported",
-            Self::Indicator('-') => "lists are not supported",
+            Self::Indicator('-') => "a list starts on the line below its key",
             Self::Indicator(_) => "a value cannot start with this character unless quoted",
         };
         f.write_str(message)

@@ -1,12 +1,14 @@
 //! The subset through its public API: what each text parses to, and where each error points.
 
 use edu_yaml::ErrorKind::{
-    BadIndent, ColonInValue, ControlCharacter, DuplicateKey, ExpectedKey, Indicator, InvalidEscape,
-    MissingValue, TextAfterQuote, UnclosedQuote,
+    BadIndent, ColonInValue, ControlCharacter, DuplicateKey, ExpectedKey, ExpectedListItem,
+    Indicator, InvalidEscape, MissingHeader, MissingValue, TextAfterQuote, UnclosedHeader,
+    UnclosedQuote,
 };
-use edu_yaml::{Entry, ErrorKind, Node, Pos, Value, parse};
+use edu_yaml::{Entry, ErrorKind, Node, Pos, Value, parse, parse_front_matter};
 
-/// The parsed text in short form, as in `{key: "text", map: {key: "text"}}`, or the error.
+/// The parsed text in short form, as in `{key: "text", list: ["item"], map: {key: "text"}}`, or
+/// the error.
 fn shape(text: &str) -> String {
     match parse(text) {
         Ok(entries) => map_shape(&entries),
@@ -25,6 +27,10 @@ fn map_shape(entries: &[Entry]) -> String {
 fn node_shape(node: &Node) -> String {
     match &node.value {
         Value::Str(text) => format!("{text:?}"),
+        Value::List(items) => {
+            let items: Vec<_> = items.iter().map(node_shape).collect();
+            format!("[{}]", items.join(", "))
+        }
         Value::Map(entries) => map_shape(entries),
     }
 }
@@ -37,9 +43,11 @@ fn error(text: &str) -> Option<(usize, usize, ErrorKind)> {
 }
 
 #[test]
-fn a_header_is_a_map_of_strings() {
-    let text = "title: Rust Week 2027\ndate: 2027-03-01\nauthor: Zoë Ng\n";
-    let expected = r#"{title: "Rust Week 2027", date: "2027-03-01", author: "Zoë Ng"}"#;
+fn a_page_header_is_a_map_of_strings_and_lists() {
+    let text =
+        "title: Rust Week 2027\ndate: 2027-03-01\nauthors:\n  - Jane Doe\n  - Zoë Ng # a comment\n";
+    let expected =
+        r#"{title: "Rust Week 2027", date: "2027-03-01", authors: ["Jane Doe", "Zoë Ng"]}"#;
     assert_eq!(shape(text), expected);
 }
 
@@ -47,6 +55,13 @@ fn a_header_is_a_map_of_strings() {
 fn maps_nest_under_keys() {
     let text = "footer:\n    license:\n      name: CC0\n    year: 2026\nnext: x\n";
     let expected = r#"{footer: {license: {name: "CC0"}, year: "2026"}, next: "x"}"#;
+    assert_eq!(shape(text), expected);
+}
+
+#[test]
+fn a_list_item_can_be_a_map_whose_keys_line_up_after_the_dash() {
+    let text = "menu:\n  - name: News\n    url: /news/\n  -   name: Zulip\n      url: /zulip/\n";
+    let expected = r#"{menu: [{name: "News", url: "/news/"}, {name: "Zulip", url: "/zulip/"}]}"#;
     assert_eq!(shape(text), expected);
 }
 
@@ -88,9 +103,15 @@ footer: # a comment instead of a value
 
 #[test]
 fn keys_and_values_know_where_they_start() {
-    let entries = parse("a: x\nmap:\n  k: 'v'\n").unwrap();
+    let entries = parse("a: x\nmap:\n  k: 'v'\nlist:\n  - y\n  - k: v\n").unwrap();
     let Value::Map(map) = &entries[1].value.value else {
         panic!("not a map: {entries:?}");
+    };
+    let Value::List(items) = &entries[2].value.value else {
+        panic!("not a list: {entries:?}");
+    };
+    let Value::Map(item) = &items[1].value else {
+        panic!("not a map: {items:?}");
     };
     let at = |pos: Pos| (pos.line, pos.col);
     assert_eq!(at(entries[0].pos), (1, 1));
@@ -99,12 +120,49 @@ fn keys_and_values_know_where_they_start() {
     assert_eq!(at(entries[1].value.pos), (3, 3));
     assert_eq!(at(map[0].pos), (3, 3));
     assert_eq!(at(map[0].value.pos), (3, 6));
+    assert_eq!(at(entries[2].value.pos), (5, 3));
+    assert_eq!(at(items[0].pos), (5, 5));
+    assert_eq!(at(items[1].pos), (6, 5));
+    assert_eq!(at(item[0].pos), (6, 5));
+    assert_eq!(at(item[0].value.pos), (6, 8));
 }
 
 #[test]
 fn columns_count_characters_not_bytes() {
     // `ë` takes two bytes in UTF-8.
     assert_eq!(error("a: \"Zoë\" x\n"), Some((1, 10, TextAfterQuote)));
+}
+
+#[test]
+fn a_page_header_lies_between_two_dashed_lines() {
+    let (header, body) = parse_front_matter("---\ntitle: A\n---\nText\n---\nmore\n").unwrap();
+    assert_eq!(map_shape(&header), r#"{title: "A"}"#);
+    assert_eq!(body, "Text\n---\nmore\n");
+    let (header, body) = parse_front_matter("---\r\ntitle: A\r\n---").unwrap();
+    assert_eq!((map_shape(&header).as_str(), body), (r#"{title: "A"}"#, ""));
+}
+
+#[test]
+fn header_errors_count_lines_from_the_top_of_the_page() {
+    let error = parse_front_matter("---\ntitle: A\ndraft: no: yes\n---\n").unwrap_err();
+    assert_eq!(
+        (error.pos.line, error.pos.col, error.kind),
+        (3, 8, ColonInValue)
+    );
+    let pages = [
+        ("title: A\n", MissingHeader),
+        ("", MissingHeader),
+        (" ---\ntitle: A\n---\n", MissingHeader),
+        ("---\ntitle: A\n", UnclosedHeader),
+    ];
+    for (page, kind) in pages {
+        let error = parse_front_matter(page).unwrap_err();
+        assert_eq!(
+            (error.pos.line, error.pos.col, error.kind),
+            (1, 1, kind),
+            "{page:?}"
+        );
+    }
 }
 
 #[test]
@@ -119,6 +177,7 @@ fn a_line_deeper_than_its_block_must_follow_a_key() {
     // YAML would join these lines to the value above.
     assert_eq!(error("title: A long\n  title\n"), Some((2, 3, BadIndent)));
     assert_eq!(error("a:\n  b: x\n    y\n"), Some((3, 5, BadIndent)));
+    assert_eq!(error("a:\n  - x\n    y\n"), Some((3, 5, BadIndent)));
     // These line up with no block.
     assert_eq!(error("a:\n    b: x\n  c: y\n"), Some((3, 3, BadIndent)));
     assert_eq!(error("  a: x\n"), Some((1, 3, BadIndent)));
@@ -139,6 +198,14 @@ fn a_map_line_is_a_key_a_colon_and_a_space() {
     let key = "a".to_owned();
     let duplicate = DuplicateKey { key, first_line: 1 };
     assert_eq!(error("a: 1\nb: 2\na: 3\n"), Some((3, 1, duplicate)));
+}
+
+#[test]
+fn a_list_line_is_a_dash_a_space_and_a_value() {
+    assert_eq!(error("a:\n  - x\n  y\n"), Some((3, 3, ExpectedListItem)));
+    assert_eq!(error("a:\n  - x\n  -y\n"), Some((3, 3, ExpectedListItem)));
+    assert_eq!(error("a:\n  -\n"), Some((2, 3, MissingValue)));
+    assert_eq!(error("a:\n  - # nothing\n"), Some((2, 3, MissingValue)));
 }
 
 #[test]
@@ -164,6 +231,7 @@ fn a_plain_value_with_a_colon_and_a_space_needs_quotes() {
     assert_eq!(error(campus_tour), Some((1, 8, ColonInValue)));
     assert_eq!(error("title: Note:\n"), Some((1, 8, ColonInValue)));
     assert_eq!(error("a:\n  b: c: d\n"), Some((2, 6, ColonInValue)));
+    assert_eq!(error("a:\n  - b: c: d\n"), Some((2, 8, ColonInValue)));
 }
 
 #[test]
@@ -179,9 +247,10 @@ fn yaml_outside_the_subset_is_named_by_its_first_character() {
         ("? a\n", 1, 1, '?'),
         ("a: - b\n", 1, 4, '-'),
         ("- a\n", 1, 1, '-'),
-        ("authors:\n  - Jane\n", 2, 3, '-'),
+        ("a:\n  - - b\n", 2, 5, '-'),
         ("a: @b\n", 1, 4, '@'),
         ("a:\n  b: [c]\n", 2, 6, '['),
+        ("a:\n  - [b]\n", 2, 5, '['),
     ];
     for (text, line, col, c) in cases {
         assert_eq!(error(text), Some((line, col, Indicator(c))), "{text:?}");
@@ -192,13 +261,17 @@ fn yaml_outside_the_subset_is_named_by_its_first_character() {
 const SAMPLE: &str = "\
 title: 'It''s: \"quoted\"' # a comment
 date: 2027-03-01
-author: \"Zoë \\\"ZN\\\" Ng\"
+authors:
+  - Zoë Ng
+  - \"Jane \\\"JD\\\" Doe\"
 
 # The menu
 menu:
-  news:
-    name: News
+  - name: News
     url: /news/#top
+  -   name: Zulip
+      links:
+        - a
 footer:
     license:
       name: CC0
@@ -229,6 +302,8 @@ fn a_damaged_text_gives_an_error_or_a_value_never_a_panic() {
                 _ => _ = text.remove(at),
             }
         }
-        let _ = parse(&text.into_iter().collect::<String>());
+        let text: String = text.into_iter().collect();
+        let _ = parse(&text);
+        let _ = parse_front_matter(&format!("---\n{text}---\n"));
     }
 }
