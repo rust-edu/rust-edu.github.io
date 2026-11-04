@@ -6,10 +6,6 @@ description = "Rust education in academia (and beyond)"
 # The stylesheet is plain CSS: static/style.css
 compile_sass = false
 
-[markdown]
-# Curl straight quotes and apostrophes
-smart_punctuation = true
-
 [link_checker]
 internal_level = "error"
 external_level = "warn"
