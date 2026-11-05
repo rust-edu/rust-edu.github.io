@@ -1,6 +1,6 @@
-//! The inline syntax of paragraphs and headings, rendered as Zola renders it: code spans, links,
-//! images, autolinks, backslash escapes, the character references `&amp;`, `&lt;`, `&gt;` and
-//! `&quot;`, and hard line breaks. `*` and `_` are text.
+//! The inline syntax of paragraphs and headings, rendered as Zola renders it: code spans,
+//! emphasis, links, images, autolinks, backslash escapes, the character references `&amp;`,
+//! `&lt;`, `&gt;` and `&quot;`, and hard line breaks.
 
 use crate::{ErrorKind, escape, escape_attribute};
 
@@ -10,6 +10,10 @@ pub(crate) enum Inline<'a> {
     Text(&'a str),
     /// The text of a code span, with its line breaks made spaces.
     Code(String),
+    /// `*text*` or `_text_`, or with `strong` `**text**` or `__text__`.
+    Emphasis { strong: bool, text: Vec<Inline<'a>> },
+    /// A run of `*` or `_` that may start or end emphasis, until [`emphasis`] pairs it.
+    Delimiter(Delimiter),
     /// A link: where it points, and its text.
     Link { url: String, text: Vec<Inline<'a>> },
     /// An image: where it is, and its description.
@@ -18,6 +22,24 @@ pub(crate) enum Inline<'a> {
     LineBreak,
     /// A line break kept in the HTML, after two spaces or more, or a `\`.
     HardBreak,
+}
+
+/// A run of one or two `*` or `_` that may open or close emphasis.
+#[derive(Clone, Copy)]
+pub(crate) struct Delimiter {
+    /// Where it is in the text.
+    at: usize,
+    mark: char,
+    len: usize,
+    open: bool,
+    close: bool,
+}
+
+impl Delimiter {
+    /// The run as written, for a delimiter left unpaired.
+    fn run(self) -> String {
+        self.mark.to_string().repeat(self.len)
+    }
 }
 
 /// A `[`, or a `![`, that a later `]` may close.
@@ -42,18 +64,21 @@ struct Inlines<'a> {
     start: usize,
     nodes: Vec<Inline<'a>>,
     brackets: Vec<Bracket>,
+    /// Where text outside links and images has a URL that GitHub links, so far.
+    bare: Vec<usize>,
 }
 
 /// Parses `text`: the lines of a paragraph joined by `\n`, without the spaces that end it, or the
 /// text of a heading. An error has the byte of `text` where it starts.
 pub(crate) fn parse(text: &str) -> Result<Vec<Inline<'_>>, (usize, ErrorKind)> {
-    let (next, start, nodes, brackets) = (0, 0, Vec::new(), Vec::new());
+    let (next, start, nodes, brackets, bare) = (0, 0, Vec::new(), Vec::new(), Vec::new());
     let mut inlines = Inlines {
         text,
         next,
         start,
         nodes,
         brackets,
+        bare,
     };
     while let Some(&byte) = text.as_bytes().get(inlines.next) {
         match byte {
@@ -61,6 +86,11 @@ pub(crate) fn parse(text: &str) -> Result<Vec<Inline<'_>>, (usize, ErrorKind)> {
             b'`' => inlines.code(),
             b'<' => inlines.angle()?,
             b'&' => inlines.reference()?,
+            b'*' | b'_' => inlines.delimiter()?,
+            b'~' => inlines.tilde()?,
+            b'[' if inlines.rest().starts_with("[^") => {
+                return Err((inlines.next, ErrorKind::Footnote));
+            }
             b'[' => inlines.open(false),
             b'!' if inlines.rest().starts_with("![") => inlines.open(true),
             b']' => inlines.close()?,
@@ -69,6 +99,10 @@ pub(crate) fn parse(text: &str) -> Result<Vec<Inline<'_>>, (usize, ErrorKind)> {
         }
     }
     inlines.flush();
+    if let Some(&at) = inlines.bare.first() {
+        return Err((at, ErrorKind::BareUrl));
+    }
+    emphasis(&mut inlines.nodes)?;
     Ok(inlines.nodes)
 }
 
@@ -78,10 +112,18 @@ impl<'a> Inlines<'a> {
         self.text.get(self.next..).unwrap_or_default()
     }
 
+    /// The character before the next byte.
+    fn before(&self) -> Option<char> {
+        self.text.get(..self.next)?.chars().next_back()
+    }
+
     /// Ends the text before the next byte as a node.
     fn flush(&mut self) {
         let text = self.text.get(self.start..self.next).unwrap_or_default();
         if !text.is_empty() {
+            if let Some(index) = bare_url(text) {
+                self.bare.push(self.start + index);
+            }
             self.nodes.push(Inline::Text(text));
         }
         self.start = self.next;
@@ -169,6 +211,49 @@ impl<'a> Inlines<'a> {
         Ok(())
     }
 
+    /// A run of `*` or `_`: a delimiter if it may open or close emphasis, else text.
+    fn delimiter(&mut self) -> Result<(), (usize, ErrorKind)> {
+        let (at, rest) = (self.next, self.rest());
+        let mark = if rest.starts_with('*') { '*' } else { '_' };
+        let len = rest.len() - rest.trim_start_matches(mark).len();
+        let before = self.before();
+        let after = rest.get(len..).and_then(|t| t.chars().next());
+        let Some((open, close)) = can_open_close(mark, before, after) else {
+            let mut neighbors = [before, after].into_iter().flatten();
+            let c = neighbors.find(|&c| class(Some(c)).is_none());
+            return Err((at, ErrorKind::EmphasisNextTo(c.unwrap_or(mark))));
+        };
+        if !open && !close {
+            self.next += len;
+        } else if len > 2 {
+            return Err((at, ErrorKind::EmphasisRun));
+        } else {
+            let delimiter = Delimiter {
+                at,
+                mark,
+                len,
+                open,
+                close,
+            };
+            self.push(Inline::Delimiter(delimiter), len);
+        }
+        Ok(())
+    }
+
+    /// A run of `~`, which may start or end strikethrough on GitHub and in Zola: text only with
+    /// space on both sides, where `*` could neither open nor close emphasis.
+    fn tilde(&mut self) -> Result<(), (usize, ErrorKind)> {
+        let rest = self.rest();
+        let len = rest.len() - rest.trim_start_matches('~').len();
+        let after = rest.get(len..).and_then(|t| t.chars().next());
+        let is_space = |c: Option<char>| c.is_none_or(char::is_whitespace);
+        if !is_space(self.before()) || !is_space(after) {
+            return Err((self.next, ErrorKind::Strikethrough));
+        }
+        self.next += len;
+        Ok(())
+    }
+
     /// A `[`, or with `image` a `![`, kept as text unless a `]` closes it.
     fn open(&mut self, image: bool) {
         let (at, len) = (self.next, if image { 2 } else { 1 });
@@ -209,6 +294,8 @@ impl<'a> Inlines<'a> {
         let destination = after.get(1..).and_then(destination).ok_or(error)?;
         let url = decode(destination).map_err(|index| (open + 1 + index, ErrorKind::Entity))?;
         self.flush();
+        // GitHub does not link a URL in a link's text or an image's description.
+        self.bare.retain(|&at| at < bracket.at);
         let text = self.nodes.split_off(bracket.node + 1);
         self.nodes.truncate(bracket.node);
         self.deactivate(bracket.image);
@@ -248,6 +335,124 @@ impl<'a> Inlines<'a> {
 /// How many backticks start `text`.
 fn backticks(text: &str) -> usize {
     text.len() - text.trim_start_matches('`').len()
+}
+
+/// How CommonMark's rules for emphasis count a character next to a run of `*` or `_`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Class {
+    Space,
+    Punctuation,
+    Other,
+}
+
+/// The class of `c`, the start or end of the text counting as space; `None` for a character
+/// outside ASCII that is not a letter, digit or space, which Unicode's tables may count as
+/// punctuation or not.
+fn class(c: Option<char>) -> Option<Class> {
+    match c {
+        None => Some(Class::Space),
+        Some(c) if c.is_whitespace() => Some(Class::Space),
+        Some(c) if c.is_ascii_punctuation() => Some(Class::Punctuation),
+        Some(c) if c.is_ascii() || c.is_alphanumeric() => Some(Class::Other),
+        Some(_) => None,
+    }
+}
+
+/// Whether a run of `mark` between `before` and `after` may open and may close emphasis, by
+/// rules 1 to 8 of CommonMark; `None` if that depends on a character [`class`] cannot tell.
+fn can_open_close(mark: char, before: Option<char>, after: Option<char>) -> Option<(bool, bool)> {
+    let rules = |before: Class, after: Class| {
+        let left = after != Class::Space && (after != Class::Punctuation || before != Class::Other);
+        let right =
+            before != Class::Space && (before != Class::Punctuation || after != Class::Other);
+        if mark == '*' {
+            (left, right)
+        } else {
+            // `_` opens or closes inside a word only next to punctuation.
+            let open = left && (!right || before == Class::Punctuation);
+            (open, right && (!left || after == Class::Punctuation))
+        }
+    };
+    // A character that cannot be classed is tried as punctuation and as a letter.
+    let tries = |c| class(c).map_or([Class::Punctuation, Class::Other], |class| [class; 2]);
+    let results = tries(before).map(|before| tries(after).map(|after| rules(before, after)));
+    let results = results.as_flattened();
+    let first = *results.first()?;
+    results
+        .iter()
+        .all(|&result| result == first)
+        .then_some(first)
+}
+
+/// Pairs the delimiters of `inlines`, and of the links and images in them, into emphasis: each
+/// closer with the nearest opener of the same mark, which must be as long and have no unpaired
+/// opener after it. Any other delimiter is an error.
+fn emphasis(inlines: &mut Vec<Inline<'_>>) -> Result<(), (usize, ErrorKind)> {
+    for inline in inlines.iter_mut() {
+        if let Inline::Link { text, .. } | Inline::Image { text, .. } = inline {
+            emphasis(text)?;
+        }
+    }
+    let mut openers: Vec<(usize, Delimiter)> = Vec::new();
+    let mut index = 0;
+    while let Some(inline) = inlines.get(index) {
+        let &Inline::Delimiter(delimiter) = inline else {
+            index += 1;
+            continue;
+        };
+        let same_mark = |&(_, opener): &(usize, Delimiter)| opener.mark == delimiter.mark;
+        let found = openers.iter().rposition(same_mark);
+        match found.zip(found.and_then(|found| openers.get(found))) {
+            Some((found, &(start, opener))) if delimiter.close => {
+                if let Some((_, between)) = openers.get(found + 1) {
+                    return Err((between.at, ErrorKind::UnmatchedEmphasis));
+                }
+                if opener.len != delimiter.len {
+                    return Err((delimiter.at, ErrorKind::UnmatchedEmphasis));
+                }
+                openers.truncate(found);
+                let text: Vec<_> = inlines.drain(start + 1..index).collect();
+                inlines.remove(start + 1);
+                let strong = delimiter.len == 2;
+                if let Some(inline) = inlines.get_mut(start) {
+                    *inline = Inline::Emphasis { strong, text };
+                }
+                index = start + 1;
+            }
+            _ if delimiter.open => {
+                openers.push((index, delimiter));
+                index += 1;
+            }
+            _ => return Err((delimiter.at, ErrorKind::UnmatchedEmphasis)),
+        }
+    }
+    match openers.first() {
+        Some((_, opener)) => Err((opener.at, ErrorKind::UnmatchedEmphasis)),
+        None => Ok(()),
+    }
+}
+
+/// Where `text` has a URL or an email address that GitHub links and CommonMark leaves as text:
+/// `https://`, `http://` or `www.` not after a letter or digit, or `name@domain.tld`.
+fn bare_url(text: &str) -> Option<usize> {
+    let after_word = |index: usize| {
+        let before = text.get(..index).and_then(|t| t.chars().next_back());
+        before.is_some_and(char::is_alphanumeric)
+    };
+    let urls = ["https://", "http://", "www."].into_iter();
+    let url = urls.flat_map(|prefix| text.match_indices(prefix).map(|(index, _)| index));
+    let url = url.filter(|&index| !after_word(index)).min();
+    let email = text.match_indices('@').find_map(|(at, _)| {
+        let is_user = |c: char| c.is_ascii_alphanumeric() || ".+-_".contains(c);
+        let user = text.get(..at)?.rsplit(|c| !is_user(c)).next()?;
+        let domain = text
+            .get(at + 1..)?
+            .split(|c| !is_user(c) || c == '+')
+            .next()?;
+        let dotted = domain.trim_end_matches('.').contains('.');
+        (!user.is_empty() && dotted).then(|| at - user.len())
+    });
+    url.into_iter().chain(email).min()
 }
 
 /// Whether `target`, between `<` and `>`, is a URL: a scheme of 2 to 32 letters, digits, `+`, `.`
@@ -350,6 +555,13 @@ pub(crate) fn write(html: &mut String, inlines: &[Inline<'_>]) {
                 escape(html, code);
                 html.push_str("</code>");
             }
+            Inline::Emphasis { strong, text } => {
+                let tag = if *strong { "strong" } else { "em" };
+                html.push_str(&format!("<{tag}>"));
+                write(html, text);
+                html.push_str(&format!("</{tag}>"));
+            }
+            Inline::Delimiter(delimiter) => html.push_str(&delimiter.run()),
             Inline::Link { url, text } => {
                 // Zola marks links to `http` and `https` URLs, its own site's too, as external.
                 if url.starts_with("http:") || url.starts_with("https:") {
@@ -383,7 +595,10 @@ pub(crate) fn plain(inlines: &[Inline<'_>]) -> String {
         match inline {
             Inline::Text(text) => plain.push_str(text),
             Inline::Code(code) => plain.push_str(code),
-            Inline::Link { text, .. } => plain.push_str(&self::plain(text)),
+            Inline::Emphasis { text, .. } | Inline::Link { text, .. } => {
+                plain.push_str(&self::plain(text));
+            }
+            Inline::Delimiter(delimiter) => plain.push_str(&delimiter.run()),
             Inline::Image { .. } | Inline::LineBreak | Inline::HardBreak => {}
         }
     }

@@ -2,7 +2,8 @@
 //! points.
 
 use edu_markdown::ErrorKind::{
-    Entity, LinkDestination, NestedLink, NoHeadingId, NonAsciiInHeading, RawHtml, ReferenceLink,
+    BareUrl, EmphasisNextTo, EmphasisRun, Entity, Footnote, LinkDestination, NestedLink,
+    NoHeadingId, NonAsciiInHeading, RawHtml, ReferenceLink, Strikethrough, UnmatchedEmphasis,
 };
 use edu_markdown::{ErrorKind, to_html};
 
@@ -210,17 +211,111 @@ fn reference_links_and_their_definitions_are_errors() {
     assert_eq!(html("![y]: c\n\na [x]: b\n"), expected);
 }
 
+#[test]
+fn emphasis_pairs_marks_of_the_same_kind_and_length() {
+    let text = "*a* _b_ **c** __d__ *a **b** c* **a *b* c** _a __b__ c_\n";
+    let expected = concat!(
+        "<p><em>a</em> <em>b</em> <strong>c</strong> <strong>d</strong> ",
+        "<em>a <strong>b</strong> c</em> <strong>a <em>b</em> c</strong> ",
+        "<em>a <strong>b</strong> c</em></p>\n",
+    );
+    assert_eq!(html(text), expected);
+    // `*` works inside a word and `_` does not; with spaces around them, both are text.
+    let text = "2*3*4 a**b**c snake_case a__b__c x * y x _ y a*é*b\n";
+    let expected = concat!(
+        "<p>2<em>3</em>4 a<strong>b</strong>c snake_case a__b__c x * y x _ y ",
+        "a<em>é</em>b</p>\n",
+    );
+    assert_eq!(html(text), expected);
+}
+
+#[test]
+fn emphasis_holds_and_wraps_links_code_and_lines() {
+    let text = "*[Registration](/r) Paper:* [**PROMOTIC | Group**](/p) *`code`* **Email:**\n";
+    let expected = concat!(
+        "<p><em><a href=\"/r\">Registration</a> Paper:</em> ",
+        "<a href=\"/p\"><strong>PROMOTIC | Group</strong></a> <em><code>code</code></em> ",
+        "<strong>Email:</strong></p>\n",
+    );
+    assert_eq!(html(text), expected);
+    let expected = "<p><em>A Case Study on\n<code>rebalance</code></em> — Crichton</p>\n";
+    assert_eq!(
+        html("*A Case Study on\n`rebalance`* — Crichton\n"),
+        expected
+    );
+    let text = "_“Adopting Rust.”_ *“quoted”* \\*a\\* \\_b\\_ *a\\*b*\n";
+    let expected = "<p><em>“Adopting Rust.”</em> <em>“quoted”</em> *a* _b_ <em>a*b</em></p>\n";
+    assert_eq!(html(text), expected);
+    let expected = concat!(
+        "<h2 id=\"head-bold\"><em>Head</em> <strong>bold</strong></h2>\n",
+        "<p><img src=\"/i.png\" alt=\"a b\" /> <a href=\"/x\"><em>a</em></a> ",
+        "<em><a href=\"/x\">a</a></em></p>\n",
+    );
+    assert_eq!(
+        html("## *Head* **bold**\n![*a* **b**](/i.png) [*a*](/x) *[a](/x)*\n"),
+        expected
+    );
+}
+
+#[test]
+fn emphasis_that_commonmark_resolves_by_subtler_rules_is_an_error() {
+    let cases = [
+        ("***a***\n", 1, 1, EmphasisRun),
+        ("**a *b***\n", 1, 7, EmphasisRun),
+        ("a ___b___\n", 1, 3, EmphasisRun),
+        ("*a\n", 1, 1, UnmatchedEmphasis),
+        ("a*\n", 1, 2, UnmatchedEmphasis),
+        ("*a**\n", 1, 3, UnmatchedEmphasis),
+        ("**a*\n", 1, 4, UnmatchedEmphasis),
+        ("*a _b* c_\n", 1, 4, UnmatchedEmphasis),
+        ("*[a*](/x)\n", 1, 4, UnmatchedEmphasis),
+        ("*a.*b\n", 1, 1, UnmatchedEmphasis),
+        // CommonMark counts `“` as punctuation, from tables std does not have.
+        ("a*“b”*c\n", 1, 2, EmphasisNextTo('“')),
+        ("x_“y”_z\n", 1, 2, EmphasisNextTo('“')),
+    ];
+    for (text, line, col, kind) in cases {
+        assert_eq!(error(text), Some((line, col, kind)), "{text:?}");
+    }
+}
+
+#[test]
+fn strikethrough_footnotes_and_bare_urls_are_errors() {
+    let cases = [
+        ("~~a~~\n", 1, 1, Strikethrough),
+        ("a~b\n", 1, 2, Strikethrough),
+        ("~10 minutes\n", 1, 1, Strikethrough),
+        ("[^1]\n", 1, 1, Footnote),
+        ("a [^note]\n", 1, 3, Footnote),
+        ("see https://x.org\n", 1, 5, BareUrl),
+        ("http://x.org\n", 1, 1, BareUrl),
+        ("www.x.org\n", 1, 1, BareUrl),
+        ("mail a@b.org now\n", 1, 6, BareUrl),
+        ("*https://x.org*\n", 1, 2, BareUrl),
+    ];
+    for (text, line, col, kind) in cases {
+        assert_eq!(error(text), Some((line, col, kind)), "{text:?}");
+    }
+    // GitHub does not link these either.
+    let text = "a ~ b, [https://x.org](https://x.org) `www.x.org` a@b a@b. @x.org xhttps://y ~\n";
+    let expected = concat!(
+        "<p>a ~ b, <a rel=\"external\" href=\"https://x.org\">https://x.org</a> ",
+        "<code>www.x.org</code> a@b a@b. @x.org xhttps://y ~</p>\n",
+    );
+    assert_eq!(html(text), expected);
+}
+
 /// Every inline of the subset, for the random test to damage. The spaces of a hard line break are
 /// written before `\n`, as editors may remove spaces at the end of a line.
 const SAMPLE: &str = "\
 ## The `edu` [crate](/crates/) &amp; <https://rust-edu.org>
 
-Text with `code` and ``more `code` ``, a [link](https://example.org/a_(b)?c=1&d=2), an
+Text with `code` and ``more `code` ``, a [**link**](https://example.org/a_(b)?c=1&d=2), an
 ![image](/i.png), <https://example.org> or <a@b.c>, \\*escapes\\*, a line break  \n\
-and another\\
-end, as 1 < 2 & 3 > 2.
+and _another_\\
+end, as 1 < 2 & 3 > 2 ~ 4.
 
-- [![badge](/b.png)](/x) `item`  \n  next
+- [![badge](/b.png)](/x) *`item`*  \n  **next**
 ";
 
 #[test]
@@ -228,7 +323,8 @@ fn a_damaged_text_gives_html_or_an_error_never_a_panic() {
     to_html(SAMPLE).unwrap();
     let sample: Vec<char> = SAMPLE.chars().collect();
     let damage = [
-        '[', ']', '(', ')', '!', '<', '>', '`', '\\', '&', ';', ':', '@', '/', ' ', '\n', 'é',
+        '*', '_', '~', '^', '[', ']', '(', ')', '!', '<', '>', '`', '\\', '&', ';', ':', '@', '/',
+        ' ', '\n', 'é', '“',
     ];
     // xorshift64 with a fixed seed: every run tries the same 5,000 texts, each with two random
     // characters replaced, inserted or removed.
