@@ -45,9 +45,66 @@ Zola will auto-reload when changes are made.
 
 ## 🦀 The New Generator (in progress)
 [Plan 0002](docs/Plan-0002—Own-Markdown-Site-Generator.md) replaces Zola, step by step, with a small generator in
-`crates/` that uses only the Rust standard library; Zola builds and deploys the site until the switch. CI checks the
-generator, and the YAML header and Markdown text of every page in `content/`, inside a pinned Docker image; the same
-check runs locally with:
+`crates/` that uses only the Rust standard library; Zola builds and deploys the site until the switch.
+
+### How it works
+```mermaid
+flowchart LR
+    subgraph Inputs["Site Sources"]
+        MD["content/**/*.md"]
+        SY["site.yaml"]
+        LY["layouts/*.html"]
+    end
+
+    subgraph Crates["Rust Workspace (std only)"]
+        YAML["edu-yaml\nparse_front_matter & parse"]
+        MARK["edu-markdown\nto_html (2-pass)"]
+        TMPL["edu-template\nTemplate::parse & render"]
+        SITE["edu-site (edu CLI)\ncheck, build, serve"]
+    end
+
+    MD -->|"YAML header"| YAML
+    MD -->|"Markdown body"| MARK
+    SY --> YAML
+    LY --> TMPL
+    YAML --> SITE
+    MARK --> SITE
+    TMPL --> SITE
+    SITE --> OUT["Verified Content & HTML"]
+```
+
+- **Standard library only:** `Cargo.lock` lists only the four crates of this workspace (`edition = "2024"`,
+  `rust-version = "1.99.1"`, `unsafe_code = "forbid"`). CI rejects any external crate in `Cargo.lock` and builds and
+  tests with `--network=none --locked --offline` inside a digest-pinned Docker image.
+- **Strict subsets, no panics:** Each parser accepts the subset of YAML 1.2, CommonMark or the template language that
+  the site uses, and rejects anything outside it with `file:line:col` and a hint. Input paths never call `unwrap`,
+  `expect` or `panic!`, and a seeded random-input test in each parser crate checks 5,000 damaged inputs per run.
+- **Four crates under `crates/`:**
+  - `crates/yaml` (`edu-yaml`) — block-style YAML maps, lists, lists of maps and `---` page headers; every scalar stays
+    a string so `no` never becomes `false`.
+  - `crates/markdown` (`edu-markdown`) — a two-pass CommonMark subset (paragraphs, `#` headings with Zola's ASCII ids,
+    fenced code, `>` quotes, nested lists, code spans, links, images, autolinks, emphasis and escapes), tested byte for
+    byte against Zola 0.22.1's HTML on every page of the site.
+  - `crates/template` (`edu-template`) — layout templates rendered with a `Value` tree (`Str`, `Bool`, `List` and
+    ordered `Map`): `{{ path }}` writes text with `&`, `<`, `>`, `"` and `'` escaped, `{{ path | safe }}` writes raw
+    HTML such as `page.content`, `{# … #}` is a comment, and `if`/`else`/`for` handle branches and lists, with one
+    outer `layouts/layout.html` wrapping each page layout (`home.html`, `page.html`, `section.html`, `news.html`) at
+    `{{ content | safe }}` instead of `extends` and `block`.
+  - `crates/site` (`edu-site`, binary `edu`) — the command-line tool. `edu check` checks `site.yaml`, the layouts in
+    `layouts/`, and the YAML header and Markdown text of every page in `content/`; `edu build` and `edu serve` follow
+    in step 7.
+
+```mermaid
+flowchart LR
+    CTX["Context (Value::Map)\nsite.* + page.*"] --> INNER["Page Layout\nhome / page / section / news.html"]
+    BODY["Rendered Markdown\npage.content"] --> INNER
+    INNER -->|"content (HTML)"| OUTER["Outer Layout\nlayouts/layout.html\n{{ content | safe }}"]
+    CTX --> OUTER
+    OUTER --> PAGE["Final Page HTML"]
+```
+
+### Check locally
+CI runs the generator checks and `edu check` inside the pinned Docker image; the same check runs locally with:
 ```bash
 docker build --target check .
 ```
