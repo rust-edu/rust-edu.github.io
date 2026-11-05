@@ -9,14 +9,14 @@ use std::fmt;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
-pub use check::ContentError;
+pub use check::{ContentError, PageError};
 
 /// What `edu help` prints, and what follows a usage error.
 pub const USAGE: &str = "\
 Usage: edu <command>
 
 Commands:
-  check    Check the header of every page in content/
+  check    Check the header and the text of every page in content/
   help     Print this help
   version  Print the version
 ";
@@ -41,7 +41,7 @@ pub enum UsageError {
 pub enum Error {
     /// A file or directory of the site cannot be read, or a page is not UTF-8.
     Read { path: PathBuf, source: io::Error },
-    /// Pages whose header is not in the YAML subset, in path order.
+    /// Pages whose header or text is not in the subsets, in path order.
     Content(Vec<ContentError>),
     /// The output cannot be written.
     Write(io::Error),
@@ -77,8 +77,8 @@ fn lossy(arg: &OsStr) -> String {
 pub fn run(command: &Command, root: &Path, out: &mut impl Write) -> Result<(), Error> {
     let written = match command {
         Command::Check => {
-            let pages = check::headers(root)?;
-            writeln!(out, "checked the headers of {}", count(pages, "page"))
+            let pages = check::pages(root)?;
+            writeln!(out, "checked {}", count(pages, "page"))
         }
         Command::Help => out.write_all(USAGE.as_bytes()),
         Command::Version => writeln!(out, "edu {}", env!("CARGO_PKG_VERSION")),
@@ -190,7 +190,7 @@ mod tests {
 
     #[test]
     fn check_writes_how_many_pages_it_checked() {
-        assert_eq!(output(&Command::Check), "checked the headers of 2 pages\n");
+        assert_eq!(output(&Command::Check), "checked 2 pages\n");
     }
 
     #[test]

@@ -1,5 +1,5 @@
-# The generator's toolchain, the same on laptops and in CI. Check the generator and the header of
-# every page with:
+# The generator's toolchain, the same on laptops and in CI. Check the generator and the header and
+# text of every page with:
 #   docker build --target check .
 # The tag names the Rust version of rust-toolchain.toml (CI fails when they differ); the digest
 # pins the image, since tags are re-pushed.
