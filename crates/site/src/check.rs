@@ -1,6 +1,6 @@
-//! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset and
-//! its text is in the Markdown subset, `site.yaml` is in the YAML subset, and every layout of
-//! `layouts/` is in the template language.
+//! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset whose
+//! values the site can use, its text is in the Markdown subset and its layout is in `layouts/`;
+//! `site.yaml` is in the YAML subset, and every layout is in the template language.
 
 use std::ffi::OsStr;
 use std::fmt;
@@ -8,6 +8,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::Error;
+use crate::page::Page;
 use crate::render::{self, Layouts};
 
 /// A file of the site with an error: a page, `site.yaml` or a layout.
@@ -23,9 +24,30 @@ pub struct ContentError {
 pub enum PageError {
     /// An error in the YAML of a page's header or of `site.yaml`.
     Header(edu_yaml::Error),
+    /// A value of a page's header that the site cannot use, and where it is.
+    Value(edu_yaml::Pos, ValueError),
     Text(edu_markdown::Error),
     /// An error in a layout's text.
     Layout(edu_template::Error),
+}
+
+/// Why the site cannot use a value of a page's header.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ValueError {
+    /// A page without a `title` that does not redirect.
+    NoTitle,
+    /// A list or a map where the header needs a text.
+    NotText,
+    /// A `date` that is not a day of the calendar written as `2027-03-01`.
+    BadDate,
+    /// `authors` that is not a list of names.
+    NotNames,
+    /// A `sort_by` other than `date`.
+    BadSortBy,
+    /// A page without a `date` in a section with `sort_by: date`.
+    NoDate,
+    /// A `template`, or the layout a page needs without one, that is not a file of `layouts/`.
+    NoLayout(String),
 }
 
 /// How many pages and layouts `edu check` checked.
@@ -36,38 +58,37 @@ pub(crate) struct Checked {
 }
 
 /// Checks the header and the text of every Markdown page under `content/` in `root`, the settings
-/// of `site.yaml`, and the text of every layout of `layouts/`.
+/// of `site.yaml` and the text of every layout of `layouts/`, and then the layout and the values of
+/// each page that has no error and does not redirect.
 pub(crate) fn pages(root: &Path) -> Result<Checked, Error> {
     let mut paths = Vec::new();
     markdown_files(root, Path::new("content"), &mut paths)?;
-    let mut errors = Vec::new();
+    let (mut pages, mut errors) = (Vec::new(), Vec::new());
     for path in &paths {
-        if let Some(error) = page_error(&read(root, path)?) {
-            let path = path.clone();
-            errors.push(ContentError { path, error });
+        match Page::read(path, &read(root, path)?) {
+            Ok(page) => pages.push(page),
+            Err(error) => {
+                let path = path.clone();
+                errors.push(ContentError { path, error });
+            }
         }
     }
     render::site(root, &mut errors)?;
-    let layouts = Layouts::read(root, &mut errors)?;
+    // A layout with an error would be missing for every page that needs it.
+    let Some(layouts) = Layouts::read(root, &mut errors)? else {
+        return Err(Error::Content(errors));
+    };
+    for page in pages.iter().filter(|page| page.redirect_to.is_none()) {
+        if let Err(error) = render::prepare(page, &pages, &layouts) {
+            errors.push(error);
+        }
+    }
     if errors.is_empty() {
         let (pages, layouts) = (paths.len(), layouts.len());
         Ok(Checked { pages, layouts })
     } else {
         Err(Error::Content(errors))
     }
-}
-
-/// The first error in `text`, a page: in its header, or else in the text after it.
-fn page_error(text: &str) -> Option<PageError> {
-    let body = match edu_yaml::parse_front_matter(text) {
-        Ok((_, body)) => body,
-        Err(error) => return Some(PageError::Header(error)),
-    };
-    let mut error = edu_markdown::to_html(body).err()?;
-    // The text starts on the line after the header's closing `---`.
-    let header = text.get(..text.len() - body.len()).unwrap_or_default();
-    error.pos.line += header.matches('\n').count();
-    Some(PageError::Text(error))
 }
 
 /// The text of the file at `path`, relative to `root`.
@@ -108,8 +129,23 @@ impl fmt::Display for ContentError {
         let path = self.path.display();
         match &self.error {
             PageError::Header(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
+            PageError::Value(pos, kind) => write!(f, "{path}:{pos}: error: {kind}"),
             PageError::Text(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
             PageError::Layout(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
+        }
+    }
+}
+
+impl fmt::Display for ValueError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NoTitle => f.write_str("a page needs a `title`"),
+            Self::NotText => f.write_str("this value must be text"),
+            Self::BadDate => f.write_str("a date is a day written as `2027-03-01`"),
+            Self::NotNames => f.write_str("`authors` is a list of names, one `- name` per line"),
+            Self::BadSortBy => f.write_str("the only `sort_by` is `date`"),
+            Self::NoDate => f.write_str("a page in a section with `sort_by: date` needs a `date`"),
+            Self::NoLayout(name) => write!(f, "`layouts/{name}` does not exist"),
         }
     }
 }
@@ -127,9 +163,10 @@ mod tests {
 
     #[test]
     fn every_markdown_file_under_content_is_a_page_and_every_html_file_a_layout() {
-        // `valid` holds two pages and `news/notes.txt`, and three layouts and `notes.txt`.
+        // `valid` holds three pages, one of them a redirect, and `news/notes.txt`, and three
+        // layouts and `notes.txt`.
         let checked = pages(&site("valid")).unwrap();
-        assert_eq!((checked.pages, checked.layouts), (2, 3));
+        assert_eq!((checked.pages, checked.layouts), (3, 3));
     }
 
     #[test]
@@ -145,6 +182,26 @@ mod tests {
              in backticks",
             "site.yaml:1:8: error: a value with `: ` in it or `:` at its end needs quotes",
             "layouts/layout.html:1:11: error: unknown filter `upper`; the only filter is `safe`",
+        ];
+        assert_eq!(errors, expected);
+    }
+
+    #[test]
+    fn each_value_or_layout_that_a_page_cannot_render_with_is_an_error() {
+        let Err(Error::Content(errors)) = pages(&site("unrenderable")) else {
+            panic!("expected content errors");
+        };
+        let errors: Vec<String> = errors.iter().map(ToString::to_string).collect();
+        let expected = [
+            "content/author-map.md:4:3: error: `authors` is a list of names, one `- name` per line",
+            "content/bad-date.md:3:7: error: a date is a day written as `2027-03-01`",
+            "content/list-title.md:3:3: error: this value must be text",
+            "content/no-title.md:1:1: error: a page needs a `title`",
+            "content/one-author.md:3:10: error: `authors` is a list of names, one `- name` per line",
+            "content/sections/_index.md:3:10: error: the only `sort_by` is `date`",
+            "content/a.md:3:11: error: `layouts/missing.html` does not exist",
+            "content/news/undated.md:1:1: error: a page in a section with `sort_by: date` needs a \
+             `date`",
         ];
         assert_eq!(errors, expected);
     }

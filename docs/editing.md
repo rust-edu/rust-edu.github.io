@@ -34,12 +34,12 @@ The text of the page starts here.
 
 | Key | Used in | Meaning |
 |---|---|---|
-| `title` | every file | The page title, shown as its only top-level heading. Quote it when it contains `: `, as in `title: "Campus Tour: Rust Africa"`. |
-| `date` | news posts | `YYYY-MM-DD`; the news list is sorted by it, newest first. |
+| `title` | every file but a redirect | The page title, shown as its only top-level heading. Quote it when it contains `: `, as in `title: "Campus Tour: Rust Africa"`. |
+| `date` | news posts | `YYYY-MM-DD`, a day of the calendar; the news list is sorted by it, newest first, so every news post needs one. |
 | `authors` | news posts | One name per line; shown in the byline as "A and B on Mar 1, 2027". |
 | `draft` | pages | `draft: true` keeps the page off the live site; pull request builds still include it. |
-| `template` | `content/news/_index.md` | The layout of the news list. |
-| `sort_by` | `content/news/_index.md` | `date`. |
+| `template` | `content/news/_index.md` | The layout of the news list, a file of `layouts/`. |
+| `sort_by` | `content/news/_index.md` | `date`, the only value. |
 | `redirect_to` | `content/zulip/_index.md` | The address that `/zulip/` forwards to. |
 
 No other keys are used, because the site's planned generator

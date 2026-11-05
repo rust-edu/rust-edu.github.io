@@ -3,6 +3,7 @@
 //! (stdout); `main` reports errors on stderr.
 
 mod check;
+mod page;
 mod render;
 
 use std::ffi::{OsStr, OsString};
@@ -10,7 +11,7 @@ use std::fmt;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
-pub use check::{ContentError, PageError};
+pub use check::{ContentError, PageError, ValueError};
 
 /// What `edu help` prints, and what follows a usage error.
 pub const USAGE: &str = "\
@@ -42,7 +43,8 @@ pub enum UsageError {
 pub enum Error {
     /// A file or directory of the site cannot be read, or a page is not UTF-8.
     Read { path: PathBuf, source: io::Error },
-    /// Files of the site with errors: pages in path order, then `site.yaml` and the layouts.
+    /// Files of the site with errors: pages in path order, then `site.yaml` and the layouts, and
+    /// then the pages that cannot render, in path order.
     Content(Vec<ContentError>),
     /// The output cannot be written.
     Write(io::Error),
@@ -195,7 +197,7 @@ mod tests {
 
     #[test]
     fn check_writes_how_many_pages_it_checked() {
-        assert_eq!(output(&Command::Check), "checked 2 pages with 3 layouts\n");
+        assert_eq!(output(&Command::Check), "checked 3 pages with 3 layouts\n");
     }
 
     #[test]
