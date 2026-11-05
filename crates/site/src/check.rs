@@ -36,8 +36,14 @@ pub enum PageError {
 pub enum ValueError {
     /// A page without a `title` that does not redirect.
     NoTitle,
+    /// A key that the header of a page of its own does not have.
+    NotPageKey(String),
+    /// A key that the header of an `_index.md` does not have.
+    NotSectionKey(String),
     /// A list or a map where the header needs a text.
     NotText,
+    /// A `draft` other than `true` and `false`.
+    BadDraft,
     /// A `date` that is not a day of the calendar written as `2027-03-01`.
     BadDate,
     /// `authors` that is not a list of names.
@@ -140,7 +146,17 @@ impl fmt::Display for ValueError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NoTitle => f.write_str("a page needs a `title`"),
+            Self::NotPageKey(key) => write!(
+                f,
+                "a page's header has `title`, `date`, `authors`, `template` and `draft`, not `{key}`"
+            ),
+            Self::NotSectionKey(key) => write!(
+                f,
+                "the header of an `_index.md` has `title`, `sort_by`, `template`, `redirect_to` \
+                 and `draft`, not `{key}`"
+            ),
             Self::NotText => f.write_str("this value must be text"),
+            Self::BadDraft => f.write_str("`draft` is `true` or `false`"),
             Self::BadDate => f.write_str("a date is a day written as `2027-03-01`"),
             Self::NotNames => f.write_str("`authors` is a list of names, one `- name` per line"),
             Self::BadSortBy => f.write_str("the only `sort_by` is `date`"),
@@ -195,10 +211,21 @@ mod tests {
         let expected = [
             "content/author-map.md:4:3: error: `authors` is a list of names, one `- name` per line",
             "content/bad-date.md:3:7: error: a date is a day written as `2027-03-01`",
+            "content/bad-draft.md:3:8: error: `draft` is `true` or `false`",
             "content/list-title.md:3:3: error: this value must be text",
             "content/no-title.md:1:1: error: a page needs a `title`",
             "content/one-author.md:3:10: error: `authors` is a list of names, one `- name` per line",
+            "content/page-key.md:3:1: error: a page's header has `title`, `date`, `authors`, \
+             `template` and `draft`, not `sort_by`",
+            "content/page-redirect.md:3:1: error: a page's header has `title`, `date`, `authors`, \
+             `template` and `draft`, not `redirect_to`",
             "content/sections/_index.md:3:10: error: the only `sort_by` is `date`",
+            "content/sections/authors/_index.md:3:1: error: the header of an `_index.md` has \
+             `title`, `sort_by`, `template`, `redirect_to` and `draft`, not `authors`",
+            "content/sections/date/_index.md:3:1: error: the header of an `_index.md` has `title`, \
+             `sort_by`, `template`, `redirect_to` and `draft`, not `date`",
+            "content/typo.md:2:1: error: a page's header has `title`, `date`, `authors`, \
+             `template` and `draft`, not `titel`",
             "content/a.md:3:11: error: `layouts/missing.html` does not exist",
             "content/news/undated.md:1:1: error: a page in a section with `sort_by: date` needs a \
              `date`",
