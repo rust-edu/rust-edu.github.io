@@ -51,10 +51,21 @@ Use plain Markdown, never HTML:
 
 - headings `##` and `###` (the title is already the page's `#` heading);
 - paragraphs, `**bold**`, `*italic*`, `` `code` ``, and `> quotes`;
-- lists with `-` or `*` (one marker per list), nested one level by indenting two spaces;
-- links `[text](url)` and images `![description of the image](/images/file.png)`.
+- lists with `-` or `*`, or numbered `1.`, one marker per list; an item's further lines and nested lists are
+  indented to the item's text;
+- links `[text](url)`, images `![description of the image](/images/file.png)`, and a bare address as
+  `<https://example.org>`;
+- code on lines of its own, between two lines of three backticks (```` ``` ````);
+- a line break inside a paragraph: two spaces or a `\` at the end of the line.
 
-Quotes and apostrophes show as typed: `"` and `'` stay straight, and `“`, `”` and `’` are curly.
+Quotes and apostrophes show as typed: `"` and `'` stay straight, and `“`, `”` and `’` are curly. Type other
+characters as they are too, such as `é` or `—`. To show a character that Markdown reads as syntax, put a `\` before
+it: `\*`, `\_`, `\[`, `\<`, `\~`; `&amp;`, `&lt;`, `&gt;` and `&quot;` work as well.
+
+The automatic check (see below) stops at what GitHub's preview and the site would show differently, with its line,
+column and a hint: HTML, tables, footnotes, task lists, `~~strikethrough~~`, `***` (write bold italic as
+`**_text_**`) and other `*` or `_` that do not pair up, `{#id}` after a heading, horizontal rules, headings
+underlined with `===`, indented code, and web or email addresses not written as `<…>` or as a link.
 
 ## Links
 
@@ -81,7 +92,7 @@ Quotes and apostrophes show as typed: `"` and `'` stay straight, and `“`, `”
 3. Choose *Commit changes… → Propose changes → Create pull request*.
 
 An automatic check builds the site for every pull request and names the file, line and column of any mistake in a
-page's header; a maintainer reviews and merges it.
+page's header or text; a maintainer reviews and merges it.
 
 ## Previewing locally (optional)
 
