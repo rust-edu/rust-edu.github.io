@@ -137,24 +137,36 @@ impl Page {
         Ok(page)
     }
 
-    /// Takes the value of `entry`, if the layouts or the order of a section's pages need it.
+    /// Takes the value of `entry`: `title`, `template` and `draft` in every page, `date` and
+    /// `authors` in a page of its own, and `sort_by` and `redirect_to` in an `_index.md`.
     fn set(&mut self, entry: &Entry) -> Result<(), (Pos, ValueError)> {
         let pos = entry.value.pos;
-        match entry.key.as_str() {
-            "title" => self.title = Some(text(entry)?.to_owned()),
-            "template" => self.template = Some((text(entry)?.to_owned(), pos)),
-            "date" => {
+        match (entry.key.as_str(), self.kind) {
+            ("title", _) => self.title = Some(text(entry)?.to_owned()),
+            ("template", _) => self.template = Some((text(entry)?.to_owned(), pos)),
+            // `edu check` checks a draft like every page; leaving drafts out is for `edu build`.
+            ("draft", _) => match text(entry)? {
+                "true" | "false" => {}
+                _ => return Err((pos, ValueError::BadDraft)),
+            },
+            ("date", Kind::Page) => {
                 let date = Date::parse(text(entry)?).ok_or((pos, ValueError::BadDate))?;
                 self.date = Some(date);
             }
-            "authors" => self.authors = names(entry).ok_or((pos, ValueError::NotNames))?,
-            "sort_by" => match text(entry)? {
+            ("authors", Kind::Page) => {
+                self.authors = names(entry).ok_or((pos, ValueError::NotNames))?;
+            }
+            ("sort_by", Kind::Home | Kind::Section) => match text(entry)? {
                 "date" => self.order = Order::Date,
                 _ => return Err((pos, ValueError::BadSortBy)),
             },
-            "redirect_to" => self.redirect_to = Some(text(entry)?.to_owned()),
-            // Other keys, such as `draft`, are not checked yet.
-            _ => {}
+            ("redirect_to", Kind::Home | Kind::Section) => {
+                self.redirect_to = Some(text(entry)?.to_owned());
+            }
+            (key, Kind::Page) => return Err((entry.pos, ValueError::NotPageKey(key.to_owned()))),
+            (key, Kind::Home | Kind::Section) => {
+                return Err((entry.pos, ValueError::NotSectionKey(key.to_owned())));
+            }
         }
         Ok(())
     }
@@ -230,7 +242,7 @@ mod tests {
     #[test]
     fn a_header_holds_the_values_of_its_kind_of_page() {
         let header = "title: A\ndate: 2022-07-11\nauthors:\n  - B\n  - C\ntemplate: list.html\n";
-        let a = page("news/a.md", header);
+        let a = page("news/a.md", &format!("{header}draft: true\n"));
         assert_eq!(a.title.as_deref(), Some("A"));
         let date = a.date.unwrap();
         assert_eq!(
@@ -241,11 +253,17 @@ mod tests {
         let template = a.template.unwrap();
         let at = Pos { line: 7, col: 11 };
         assert_eq!((template.0.as_str(), template.1), ("list.html", at));
-        let news = page("news/_index.md", "title: News\nsort_by: date\n");
+        let section = "title: News\nsort_by: date\ndraft: false\n";
+        let news = page("news/_index.md", section);
         assert_eq!((news.order, news.redirect_to), (Order::Date, None));
         let chat = page("chat/_index.md", "redirect_to: https://example.org/\n");
         assert_eq!(chat.redirect_to.as_deref(), Some("https://example.org/"));
         assert_eq!((chat.order, chat.title), (Order::Url, None));
+        let home = page("_index.md", "sort_by: date\nredirect_to: /news/\n");
+        assert_eq!(
+            (home.order, home.redirect_to.as_deref()),
+            (Order::Date, Some("/news/"))
+        );
     }
 
     #[test]

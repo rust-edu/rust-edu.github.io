@@ -42,8 +42,9 @@ The text of the page starts here.
 | `sort_by` | `content/news/_index.md` | `date`, the only value. |
 | `redirect_to` | `content/zulip/_index.md` | The address that `/zulip/` forwards to. |
 
-No other keys are used, because the site's planned generator
-([Plan 0002](Plan-0002—Own-Markdown-Site-Generator.md)) will read only these.
+`title`, `template` and `draft` go in any file, `date` and `authors` only in pages, and `sort_by` and `redirect_to`
+only in `_index.md` files. The automatic check (see below) stops at any other key, because the site's planned
+generator ([Plan 0002](Plan-0002—Own-Markdown-Site-Generator.md)) reads only these.
 
 ## Markdown
 
