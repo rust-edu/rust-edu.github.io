@@ -101,6 +101,7 @@ pub(crate) struct Page {
     pub(crate) template: Option<(String, Pos)>,
     pub(crate) order: Order,
     pub(crate) redirect_to: Option<String>,
+    pub(crate) draft: bool,
     pub(crate) html: String,
 }
 
@@ -120,6 +121,7 @@ impl Page {
             template: None,
             order: Order::Url,
             redirect_to: None,
+            draft: false,
             html: String::new(),
         };
         for entry in &header {
@@ -145,11 +147,16 @@ impl Page {
         match (entry.key.as_str(), self.kind) {
             ("title", _) => self.title = Some(text(entry)?.to_owned()),
             ("template", _) => self.template = Some((text(entry)?.to_owned(), pos)),
-            // `edu check` checks a draft like every page; leaving drafts out is for `edu build`.
-            ("draft", _) => match text(entry)? {
-                "true" | "false" => {}
-                _ => return Err((pos, ValueError::BadDraft)),
-            },
+            ("draft", _) => {
+                self.draft = match text(entry)? {
+                    "true" => true,
+                    "false" => false,
+                    _ => return Err((pos, ValueError::BadDraft)),
+                };
+                if self.draft && self.kind == Kind::Home {
+                    return Err((pos, ValueError::DraftHome));
+                }
+            }
             ("date", Kind::Page) => {
                 let date = Date::parse(text(entry)?).ok_or((pos, ValueError::BadDate))?;
                 self.date = Some(date);
@@ -278,7 +285,7 @@ mod tests {
     fn a_header_holds_the_values_of_its_kind_of_page() {
         let header = "title: A\ndate: 2022-07-11\nauthors:\n  - B\n  - C\ntemplate: list.html\n";
         let a = page("news/a.md", &format!("{header}draft: true\n"));
-        assert_eq!(a.title.as_deref(), Some("A"));
+        assert_eq!((a.title.as_deref(), a.draft), (Some("A"), true));
         let date = a.date.unwrap();
         assert_eq!(
             (date.text.as_str(), date.shown.as_str()),
@@ -290,11 +297,17 @@ mod tests {
         assert_eq!((template.0.as_str(), template.1), ("list.html", at));
         let section = "title: News\nsort_by: date\ndraft: false\n";
         let news = page("news/_index.md", section);
-        assert_eq!((news.order, news.redirect_to), (Order::Date, None));
+        assert_eq!(
+            (news.order, news.redirect_to, news.draft),
+            (Order::Date, None, false)
+        );
         let chat = page("chat/_index.md", "redirect_to: https://example.org/\n");
         assert_eq!(chat.redirect_to.as_deref(), Some("https://example.org/"));
         assert_eq!((chat.order, chat.title), (Order::Url, None));
-        let home = page("_index.md", "sort_by: date\nredirect_to: http://a.org/\n");
+        let home = page(
+            "_index.md",
+            "sort_by: date\nredirect_to: http://a.org/\ndraft: false\n",
+        );
         assert_eq!(
             (home.order, home.redirect_to.as_deref()),
             (Order::Date, Some("http://a.org/"))

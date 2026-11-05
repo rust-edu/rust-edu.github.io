@@ -82,16 +82,23 @@ fn build_writes_the_site_into_public_and_says_how_much() {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("valid");
     let _ = fs::remove_dir_all(&dir);
     copy(&sites.join("valid"), &dir).unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_edu"))
-        .arg("build")
-        .current_dir(&dir)
-        .output()
-        .unwrap();
+    let build = |args: &[&str]| {
+        let output = Command::new(env!("CARGO_BIN_EXE_edu"))
+            .arg("build")
+            .args(args)
+            .current_dir(&dir)
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{output:?}");
+        String::from_utf8(output.stdout).unwrap()
+    };
 
-    assert!(output.status.success(), "{output:?}");
-    let stdout = String::from_utf8(output.stdout).unwrap();
-    assert_eq!(stdout, "wrote 4 pages and 7 files to public/\n");
+    assert_eq!(build(&[]), "wrote 4 pages and 7 files to public/\n");
     assert!(dir.join("public/news/post/index.html").is_file());
+    let preview = build(&["--drafts", "--base-url", "https://example.github.io/edu"]);
+    assert_eq!(preview, "wrote 7 pages and 8 files to public/\n");
+    let robots = fs::read_to_string(dir.join("public/robots.txt")).unwrap();
+    assert!(robots.ends_with(" https://example.github.io/edu/sitemap.xml\n"));
 }
 
 #[test]

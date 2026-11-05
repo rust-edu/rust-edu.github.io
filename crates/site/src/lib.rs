@@ -12,6 +12,7 @@ use std::fmt;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
+pub use build::{BaseUrl, Drafts, Options};
 pub use check::{ContentError, PageError, ValueError};
 
 /// The folder that `edu build` writes, in the root of the site.
@@ -22,15 +23,19 @@ pub const USAGE: &str = "\
 Usage: edu <command>
 
 Commands:
-  build    Check the site, then write it into public/
+  build    Check the site, then write it into public/, without drafts
   check    Check every page in content/, and render it with layouts/ and site.yaml
   help     Print this help
   version  Print the version
+
+Options of build:
+  --drafts          Write the drafts too, as for a preview
+  --base-url <url>  Build for this address instead of the base_url of site.yaml
 ";
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Command {
-    Build,
+    Build(Options),
     Check,
     Help,
     Version,
@@ -42,6 +47,10 @@ pub enum UsageError {
     MissingCommand,
     UnknownCommand(String),
     UnexpectedArgument(String),
+    /// `--base-url` as the last argument.
+    MissingBaseUrl,
+    /// The value of `--base-url`, which is not an address.
+    BadBaseUrl(String),
 }
 
 /// Why a command failed; `main` exits with status 1.
@@ -77,7 +86,7 @@ impl Command {
             return Err(UsageError::MissingCommand);
         };
         let command = match name.to_str() {
-            Some("build") => Self::Build,
+            Some("build") => return build_options(args).map(Self::Build),
             Some("check") => Self::Check,
             Some("help" | "--help" | "-h") => Self::Help,
             Some("version" | "--version" | "-V") => Self::Version,
@@ -90,6 +99,22 @@ impl Command {
     }
 }
 
+/// The options of `edu build` in `args`, each at most once.
+fn build_options(mut args: impl Iterator<Item = OsString>) -> Result<Options, UsageError> {
+    let (mut drafts, mut base_url) = (Drafts::Exclude, None);
+    while let Some(arg) = args.next() {
+        match arg.to_str() {
+            Some("--drafts") if drafts == Drafts::Exclude => drafts = Drafts::Include,
+            Some("--base-url") if base_url.is_none() => {
+                let url = lossy(&args.next().ok_or(UsageError::MissingBaseUrl)?);
+                base_url = Some(BaseUrl::parse(&url).ok_or(UsageError::BadBaseUrl(url))?);
+            }
+            _ => return Err(UsageError::UnexpectedArgument(lossy(&arg))),
+        }
+    }
+    Ok(Options { drafts, base_url })
+}
+
 /// The argument as text, with invalid Unicode replaced by U+FFFD.
 fn lossy(arg: &OsStr) -> String {
     arg.to_string_lossy().into_owned()
@@ -98,13 +123,17 @@ fn lossy(arg: &OsStr) -> String {
 /// Runs one command on the site in `root`, writing its output to `out`.
 pub fn run(command: &Command, root: &Path, out: &mut impl Write) -> Result<(), Error> {
     let written = match command {
-        Command::Build => {
-            let built = build::site(root, Path::new(OUT))?;
+        Command::Build(options) => {
+            let built = build::site(root, Path::new(OUT), options)?;
             let (pages, files) = (count(built.pages, "page"), count(built.files, "file"));
             writeln!(out, "wrote {pages} and {files} to {OUT}/")
         }
         Command::Check => {
-            let checked = check::pages(root)?;
+            let options = Options {
+                drafts: Drafts::Include,
+                base_url: None,
+            };
+            let checked = check::pages(root, &options)?;
             let (pages, layouts) = (
                 count(checked.pages, "page"),
                 count(checked.layouts, "layout"),
@@ -129,6 +158,11 @@ impl fmt::Display for UsageError {
             Self::MissingCommand => f.write_str("no command given"),
             Self::UnknownCommand(name) => write!(f, "unknown command `{name}`"),
             Self::UnexpectedArgument(arg) => write!(f, "unexpected argument `{arg}`"),
+            Self::MissingBaseUrl => f.write_str("`--base-url` needs an address after it"),
+            Self::BadBaseUrl(url) => write!(
+                f,
+                "`{url}` is not an address such as `https://example.github.io/rust-edu`"
+            ),
         }
     }
 }
@@ -197,7 +231,11 @@ mod tests {
 
     #[test]
     fn check_help_and_version_are_commands() {
-        assert_eq!(parse(&["build"]), Ok(Command::Build));
+        let live = Options {
+            drafts: Drafts::Exclude,
+            base_url: None,
+        };
+        assert_eq!(parse(&["build"]), Ok(Command::Build(live)));
         assert_eq!(parse(&["check"]), Ok(Command::Check));
         for arg in ["help", "--help", "-h"] {
             assert_eq!(parse(&[arg]), Ok(Command::Help), "{arg}");
@@ -205,6 +243,46 @@ mod tests {
         for arg in ["version", "--version", "-V"] {
             assert_eq!(parse(&[arg]), Ok(Command::Version), "{arg}");
         }
+    }
+
+    #[test]
+    fn build_takes_drafts_and_a_base_url_once_each() {
+        let base_url = BaseUrl::parse("https://a.org/b");
+        let preview = Options {
+            drafts: Drafts::Include,
+            base_url,
+        };
+        let args = ["build", "--base-url", "https://a.org/b/", "--drafts"];
+        assert_eq!(parse(&args), Ok(Command::Build(preview)));
+        let unexpected = |arg: &str| Err(UsageError::UnexpectedArgument(arg.to_owned()));
+        let cases = [
+            (
+                &["build", "--drafts", "--drafts"][..],
+                unexpected("--drafts"),
+            ),
+            (
+                &["build", "--base-url", "http://a", "--base-url"],
+                unexpected("--base-url"),
+            ),
+            (&["build", "--draft"], unexpected("--draft")),
+            (&["build", "--base-url"], Err(UsageError::MissingBaseUrl)),
+            (
+                &["build", "--base-url", "a.org"],
+                Err(UsageError::BadBaseUrl("a.org".into())),
+            ),
+        ];
+        for (args, expected) in cases {
+            assert_eq!(parse(args), expected, "{args:?}");
+        }
+        let messages = [
+            UsageError::MissingBaseUrl.to_string(),
+            UsageError::BadBaseUrl("a".into()).to_string(),
+        ];
+        let expected = [
+            "`--base-url` needs an address after it",
+            "`a` is not an address such as `https://example.github.io/rust-edu`",
+        ];
+        assert_eq!(messages, expected);
     }
 
     #[test]
@@ -247,7 +325,15 @@ mod tests {
 
     #[test]
     fn check_writes_how_many_pages_it_checked() {
-        assert_eq!(output(&Command::Check), "checked 4 pages with 3 layouts\n");
+        assert_eq!(output(&Command::Check), "checked 7 pages with 3 layouts\n");
+    }
+
+    #[test]
+    fn check_renders_the_drafts_too() {
+        // One of the errors of `unrenderable` is in a draft.
+        let site = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/sites/unrenderable");
+        let error = run(&Command::Check, &site, &mut Vec::new()).unwrap_err();
+        assert_eq!(error.to_string(), "19 errors in the site");
     }
 
     #[test]
