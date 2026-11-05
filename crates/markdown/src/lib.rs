@@ -3,12 +3,14 @@
 //! The blocks are paragraphs; `#` headings, each with an id made from its text; code between
 //! ```` ``` ```` or `~~~` fences; `>` quotes; and lists of `-`, `*` or `+` items or of numbered
 //! items such as `1.`, nested by the column where an item's text starts. In paragraphs and
-//! headings are code spans, `[text](url)` links, `![description](url)` images, `<url>` and
-//! `<email>` autolinks, backslash escapes, the references `&amp;`, `&lt;`, `&gt;` and `&quot;`,
-//! and line breaks after two spaces or a `\`; `*` and `_` are text. Tabs, indented code,
-//! underlined headings, horizontal rules, HTML, other character references, reference links, and
-//! lines that CommonMark reads in a way that is easy to miss, such as a line that continues a list
-//! item without its indentation, are errors with a line and column; [`ErrorKind`] lists them.
+//! headings are code spans, `*` or `_` emphasis and `**` or `__` bold, `[text](url)` links,
+//! `![description](url)` images, `<url>` and `<email>` autolinks, backslash escapes, the
+//! references `&amp;`, `&lt;`, `&gt;` and `&quot;`, and line breaks after two spaces or a `\`.
+//! Tabs, indented code, underlined headings, horizontal rules, HTML, other character references,
+//! reference links, emphasis that CommonMark resolves by its subtler rules, the syntax Zola or
+//! GitHub add to CommonMark, and lines that CommonMark reads in a way that is easy to miss, such
+//! as a line that continues a list item without its indentation, are errors with a line and
+//! column; [`ErrorKind`] lists them.
 
 mod inline;
 
@@ -67,6 +69,26 @@ pub enum ErrorKind {
     /// A reference link, `[text][label]`, or a paragraph or heading that starts with `[label]:`,
     /// which CommonMark may read as the definition of one.
     ReferenceLink,
+    /// Three `*` or `_` or more in a row that may start or end emphasis.
+    EmphasisRun,
+    /// A `*`, `**`, `_` or `__` that may start or end emphasis without a match of the same length
+    /// in the same link text or paragraph, or with another one unmatched in between.
+    UnmatchedEmphasis,
+    /// A `*` or `_` next to a character outside ASCII whose class in Unicode's tables decides
+    /// whether it starts or ends emphasis.
+    EmphasisNextTo(char),
+    /// A `~` next to text, which may start or end strikethrough on GitHub and in Zola.
+    Strikethrough,
+    /// A footnote, `[^label]`, which GitHub and Zola render.
+    Footnote,
+    /// A row of `-` and `|` under a paragraph line, which makes a table on GitHub and in Zola.
+    Table,
+    /// A list item that starts with `[ ]` or `[x]`, a checkbox on GitHub and in Zola.
+    TaskListItem,
+    /// A `{…}` at the end of a heading, which Zola reads as its id or classes.
+    HeadingAttributes,
+    /// A URL or email address outside `<>` and links, which GitHub links and CommonMark does not.
+    BareUrl,
 }
 
 /// Renders `text`, the Markdown of a page after its header, to HTML. An error's line counts from
@@ -283,6 +305,22 @@ fn is_underline(line: &Line<'_>) -> bool {
     line.indent() <= 3 && (marks.chars().all(|c| c == '=') || marks.chars().all(|c| c == '-'))
 }
 
+/// Whether `line`, under a paragraph line, is a row of `-`, `|` and `:` that makes the lines
+/// above and below it a table on GitHub and in Zola.
+fn is_table_row(line: &Line<'_>) -> bool {
+    let row = line.content();
+    row.contains('|') && row.contains('-') && row.chars().all(|c| "-|: ".contains(c))
+}
+
+/// Whether the text of a list item starts with a checkbox: `[ ]`, `[x]` or `[X]`, then a space or
+/// nothing.
+fn is_task(text: &str) -> bool {
+    let rest = ["[ ]", "[x]", "[X]"]
+        .iter()
+        .find_map(|mark| text.strip_prefix(mark));
+    rest.is_some_and(|rest| rest.is_empty() || rest.starts_with(' '))
+}
+
 /// Whether `line` ends the paragraph above it: any block but an empty list item or one numbered
 /// from other than 1.
 fn interrupts(line: &Line<'_>) -> bool {
@@ -351,6 +389,9 @@ impl<'a> Parser<'a> {
             if is_underline(&line) {
                 return Err(line.error(ErrorKind::UnderlinedHeading));
             }
+            if is_table_row(&line) {
+                return Err(line.error(ErrorKind::Table));
+            }
             if interrupts(&line) {
                 break;
             }
@@ -404,7 +445,11 @@ impl<'a> Parser<'a> {
             if item.empty {
                 return Err(line.error(ErrorKind::EmptyListItem));
             }
-            let mut lines = vec![line.inside(item.width)];
+            let text = line.inside(item.width);
+            if is_task(text.content()) {
+                return Err(text.error(ErrorKind::TaskListItem));
+            }
+            let mut lines = vec![text];
             self.next += 1;
             let in_item = |line: &Line<'_>| line.is_blank() || line.indent() >= item.width;
             while let Some(line) = self.peek().filter(in_item) {
@@ -522,6 +567,10 @@ impl Html {
         let error = |at: usize, kind| line.error_at(text.get(at..).unwrap_or_default(), kind);
         let shown = without_closing_marks(text);
         let inlines = inline::parse(shown).map_err(|(at, kind)| error(at, kind))?;
+        // Zola reads `{…}` at the end of a heading as its attributes, even without `#` or `.`.
+        if let Some(brace) = shown.strip_suffix('}').and_then(|text| text.rfind('{')) {
+            return Err(error(brace, ErrorKind::HeadingAttributes));
+        }
         // Zola makes the id from the heading's text without markup and images.
         let words = inline::plain(&inlines);
         if let Some(c) = words.chars().find(|c| c.is_alphanumeric() && !c.is_ascii()) {
@@ -674,6 +723,31 @@ impl fmt::Display for ErrorKind {
             Self::NestedLink => "a link cannot hold another link, nor an image another image",
             Self::ReferenceLink => {
                 "reference links are not supported; write `[text](url)`, or `\\[` for a `[`"
+            }
+            Self::EmphasisRun => {
+                "use at most two `*` or `_` in a row; write bold italic as `**_text_**`"
+            }
+            Self::UnmatchedEmphasis => {
+                "emphasis is `*text*` or `_text_`, and bold `**text**` or `__text__`; this mark \
+                 has no match of its kind, or crosses another; write `\\*` or `\\_` to show it"
+            }
+            Self::EmphasisNextTo(c) => {
+                return write!(
+                    f,
+                    "whether `*` or `_` next to `{c}` starts or ends emphasis depends on Unicode's \
+                     tables; put a space between them, or write `\\*` or `\\_`"
+                );
+            }
+            Self::Strikethrough => "`~` may start strikethrough on GitHub and in Zola; write `\\~`",
+            Self::Footnote => "footnotes are not supported; write `\\[^` for the text itself",
+            Self::Table => "tables are not supported; use a list instead",
+            Self::TaskListItem => "task lists are not supported; write the item without `[ ]`",
+            Self::HeadingAttributes => {
+                "Zola reads `{…}` at the end of a heading as its id or classes; leave it out"
+            }
+            Self::BareUrl => {
+                "GitHub links a bare URL or email address and the site would not; write it as \
+                 `<https://…>`, or as `[text](https://…)`"
             }
         };
         f.write_str(message)

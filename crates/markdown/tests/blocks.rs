@@ -1,8 +1,8 @@
 //! The blocks of the subset through the public API: the HTML of each, and where each error points.
 
 use edu_markdown::ErrorKind::{
-    ControlCharacter, EmptyListItem, IndentedCode, LazyLine, NoHeadingId, NonAsciiInHeading, Rule,
-    TooDeep, UnclosedFence, UnderlinedHeading,
+    ControlCharacter, EmptyListItem, HeadingAttributes, IndentedCode, LazyLine, NoHeadingId,
+    NonAsciiInHeading, Rule, Table, TaskListItem, TooDeep, UnclosedFence, UnderlinedHeading,
 };
 use edu_markdown::{ErrorKind, to_html};
 
@@ -86,6 +86,29 @@ fn underlined_headings_and_rules_are_errors() {
     for (text, line, col, kind) in cases {
         assert_eq!(error(text), Some((line, col, kind)), "{text:?}");
     }
+}
+
+#[test]
+fn tables_task_lists_and_heading_attributes_are_errors() {
+    let cases = [
+        ("a | b\n--|--\n", 2, 1, Table),
+        ("text\n| a | b |\n|---|---|\n", 3, 1, Table),
+        ("- a\n  |-|\n", 2, 3, Table),
+        ("| a |\n| - |\n", 2, 1, Table),
+        ("- [ ] a\n", 1, 3, TaskListItem),
+        ("1. [x] b\n", 1, 4, TaskListItem),
+        ("- [X]\n", 1, 3, TaskListItem),
+        ("## Head {#custom}\n", 1, 9, HeadingAttributes),
+        ("## Head{.x}\n", 1, 8, HeadingAttributes),
+        ("## a {b} ##\n", 1, 6, HeadingAttributes),
+    ];
+    for (text, line, col, kind) in cases {
+        assert_eq!(error(text), Some((line, col, kind)), "{text:?}");
+    }
+    // Without a `|`, a checkbox's space or a `{`, they are text in Zola too.
+    let expected =
+        "<p>a\n:-:</p>\n<ul>\n<li>[x]a</li>\n<li>[y] b</li>\n</ul>\n<h2 id=\"a\">a }</h2>\n";
+    assert_eq!(html("a\n:-:\n\n- [x]a\n- [y] b\n\n## a }\n"), expected);
 }
 
 #[test]
