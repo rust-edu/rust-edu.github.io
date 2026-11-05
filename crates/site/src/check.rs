@@ -36,9 +36,11 @@ pub enum PageError {
     },
 }
 
-/// Why the site cannot use a value of a page's header.
+/// Why the site cannot use a page: a value of its header, its path, or a layout it needs.
 #[derive(Debug, PartialEq, Eq)]
 pub enum ValueError {
+    /// A file or folder name in the page's path that Zola would change to make the URL.
+    BadName(String),
     /// A page without a `title` that does not redirect.
     NoTitle,
     /// A key that the header of a page of its own does not have.
@@ -61,11 +63,22 @@ pub enum ValueError {
     NoLayout(String),
 }
 
-/// How many pages and layouts `edu check` checked.
+/// What `edu check` checked: how many pages and layouts, each page it rendered, and the files of
+/// `content/` that are not pages.
 #[derive(Debug)]
 pub(crate) struct Checked {
     pub(crate) pages: usize,
     pub(crate) layouts: usize,
+    pub(crate) rendered: Vec<Rendered>,
+    pub(crate) files: Vec<PathBuf>,
+}
+
+/// A page that does not redirect: its path, its URL and its HTML.
+#[derive(Debug)]
+pub(crate) struct Rendered {
+    pub(crate) path: PathBuf,
+    pub(crate) url: String,
+    pub(crate) html: String,
 }
 
 /// Checks the header and the text of every Markdown page under `content/` in `root`, the settings
@@ -73,7 +86,9 @@ pub(crate) struct Checked {
 /// that has no error and does not redirect.
 pub(crate) fn pages(root: &Path) -> Result<Checked, Error> {
     let mut paths = Vec::new();
-    markdown_files(root, Path::new("content"), &mut paths)?;
+    walk(root, Path::new("content"), &mut paths)?;
+    let is_page = |path: &PathBuf| path.extension() == Some(OsStr::new("md"));
+    let (paths, files): (Vec<_>, Vec<_>) = paths.into_iter().partition(is_page);
     let (mut pages, mut errors) = (Vec::new(), Vec::new());
     for path in &paths {
         match Page::read(path, &read(root, path)?) {
@@ -90,14 +105,24 @@ pub(crate) fn pages(root: &Path) -> Result<Checked, Error> {
     let (Some(site), Some(layouts)) = (site, layouts) else {
         return Err(Error::Content(errors));
     };
+    let mut rendered = Vec::new();
     for page in pages.iter().filter(|page| page.redirect_to.is_none()) {
-        if let Err(error) = render::render(page, &pages, &site, &layouts) {
-            errors.push(error);
+        match render::render(page, &pages, &site, &layouts) {
+            Ok(html) => {
+                let (path, url) = (page.path.clone(), page.url.clone());
+                rendered.push(Rendered { path, url, html });
+            }
+            Err(error) => errors.push(error),
         }
     }
     if errors.is_empty() {
         let (pages, layouts) = (paths.len(), layouts.len());
-        Ok(Checked { pages, layouts })
+        Ok(Checked {
+            pages,
+            layouts,
+            rendered,
+            files,
+        })
     } else {
         Err(Error::Content(errors))
     }
@@ -112,8 +137,8 @@ pub(crate) fn read(root: &Path, path: &Path) -> Result<String, Error> {
     fs::read_to_string(root.join(path)).map_err(read_error)
 }
 
-/// Adds the Markdown files under `dir`, a directory relative to `root`, to `files` in path order.
-fn markdown_files(root: &Path, dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), Error> {
+/// Adds the files under `dir`, a directory relative to `root`, to `files` in path order.
+pub(crate) fn walk(root: &Path, dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), Error> {
     let read_error = |source| Error::Read {
         path: dir.to_owned(),
         source,
@@ -128,8 +153,8 @@ fn markdown_files(root: &Path, dir: &Path, files: &mut Vec<PathBuf>) -> Result<(
     for (name, is_dir) in entries {
         let path = dir.join(name);
         if is_dir {
-            markdown_files(root, &path, files)?;
-        } else if path.extension() == Some(OsStr::new("md")) {
+            walk(root, &path, files)?;
+        } else {
             files.push(path);
         }
     }
@@ -159,6 +184,11 @@ impl fmt::Display for ContentError {
 impl fmt::Display for ValueError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::BadName(name) => write!(
+                f,
+                "`{name}` cannot be part of a URL; name files and folders with lowercase letters and \
+                 digits joined by `-`, such as `rust-week-2027`"
+            ),
             Self::NoTitle => f.write_str("a page needs a `title`"),
             Self::NotPageKey(key) => write!(
                 f,
@@ -193,8 +223,8 @@ mod tests {
 
     #[test]
     fn every_markdown_file_under_content_is_a_page_and_every_html_file_a_layout() {
-        // `valid` holds three pages, one of them a redirect, and `news/notes.txt`, and three
-        // layouts and `notes.txt`.
+        // `valid` holds three pages, one of them a redirect, and two other files in `news/`, and
+        // three layouts and `notes.txt`.
         let checked = pages(&site("valid")).unwrap();
         assert_eq!((checked.pages, checked.layouts), (3, 3));
     }
@@ -238,6 +268,8 @@ mod tests {
              `title`, `sort_by`, `template`, `redirect_to` and `draft`, not `authors`",
             "content/sections/date/_index.md:3:1: error: the header of an `_index.md` has `title`, \
              `sort_by`, `template`, `redirect_to` and `draft`, not `date`",
+            "content/snake_case.md:1:1: error: `snake_case` cannot be part of a URL; name files and \
+             folders with lowercase letters and digits joined by `-`, such as `rust-week-2027`",
             "content/typo.md:2:1: error: a page's header has `title`, `date`, `authors`, \
              `template` and `draft`, not `titel`",
             "content/a.md:3:11: error: `layouts/missing.html` does not exist",

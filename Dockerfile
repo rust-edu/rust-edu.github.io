@@ -1,5 +1,5 @@
-# The generator's toolchain, the same on laptops and in CI. Check the generator and the header and
-# text of every page with:
+# The generator's toolchain, the same on laptops and in CI. Check the generator and every page,
+# and build the site twice to see that both builds are the same, with:
 #   docker build --target check .
 # The tag names the Rust version of rust-toolchain.toml (CI fails when they differ); the digest
 # pins the image, since tags are re-pushed.
@@ -16,9 +16,12 @@ RUN --network=none cargo fmt --all --check
 RUN --network=none cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 RUN --network=none cargo test --workspace --locked --offline
 RUN --network=none cargo build --workspace --release --locked --offline
-# The settings, the layouts and then the pages come last, so that editing one reuses every layer
-# above.
+# The settings, the layouts, the static files and then the pages come last, so that editing one
+# reuses every layer above.
 COPY site.yaml ./
 COPY layouts/ layouts/
+COPY static/ static/
 COPY content/ content/
 RUN --network=none target/release/edu check
+RUN --network=none target/release/edu build && mv public /tmp/first \
+    && target/release/edu build && diff -r /tmp/first public

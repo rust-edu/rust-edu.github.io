@@ -108,11 +108,12 @@ impl Page {
     /// Reads `text`, the page at `path`. The error is the first one: in the header, or else in
     /// the text, at a line counted from the top of the page.
     pub(crate) fn read(path: &Path, text: &str) -> Result<Self, PageError> {
+        let url = url(path).map_err(|name| PageError::Value(TOP, ValueError::BadName(name)))?;
         let (header, body) = edu_yaml::parse_front_matter(text).map_err(PageError::Header)?;
         let mut page = Self {
             path: path.to_owned(),
             kind: Kind::of(path),
-            url: url(path),
+            url,
             title: None,
             date: None,
             authors: Vec::new(),
@@ -179,17 +180,32 @@ impl Page {
 }
 
 /// `/` for `content/_index.md`, `/news/` for `content/news/_index.md`, and `/news/a/` for
-/// `content/news/a.md`.
-fn url(path: &Path) -> String {
+/// `content/news/a.md`; or the first name in the path that Zola would change to make the URL.
+fn url(path: &Path) -> Result<String, String> {
     let path = path.strip_prefix("content").unwrap_or(path);
     let mut url = String::from("/");
     for name in path.with_extension("").iter() {
-        if name != "_index" {
-            url.push_str(&name.to_string_lossy());
-            url.push('/');
+        let name = name.to_string_lossy();
+        if name == "_index" {
+            continue;
         }
+        if !is_slug(&name) {
+            return Err(name.into_owned());
+        }
+        url.push_str(&name);
+        url.push('/');
     }
-    url
+    Ok(url)
+}
+
+/// Whether Zola keeps `name` as it is in a URL: lowercase ASCII letters and digits, with single
+/// `-` between them.
+fn is_slug(name: &str) -> bool {
+    let is_part = |part: &str| {
+        let is_letter = |b: u8| b.is_ascii_lowercase() || b.is_ascii_digit();
+        !part.is_empty() && part.bytes().all(is_letter)
+    };
+    name.split('-').all(is_part)
 }
 
 /// The text of `entry`'s value, or an error at the value.
@@ -237,6 +253,21 @@ mod tests {
             let page = page(path, "title: T\n");
             assert_eq!((page.kind, page.url.as_str()), (kind, url), "{path}");
         }
+    }
+
+    #[test]
+    fn a_url_is_the_names_of_the_path_as_zola_keeps_them() {
+        for name in ["a", "rust-week-2027", "2027", "cfp-2022"] {
+            assert!(is_slug(name), "{name}");
+        }
+        for name in [
+            "", "A", "Rust", "a_b", "a--b", "-a", "a-", "a b", "é", "a.b",
+        ] {
+            assert!(!is_slug(name), "{name}");
+        }
+        let path = |path: &str| url(&Path::new("content").join(path));
+        assert_eq!(path("news/Rust Week.md"), Err("Rust Week".to_owned()));
+        assert_eq!(path("Old_News/a.md"), Err("Old_News".to_owned()));
     }
 
     #[test]

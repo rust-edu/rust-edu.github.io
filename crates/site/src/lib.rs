@@ -2,6 +2,7 @@
 //! `main` passes (the current directory) and writes its output to the writer that `main` passes
 //! (stdout); `main` reports errors on stderr.
 
+mod build;
 mod check;
 mod page;
 mod render;
@@ -13,11 +14,15 @@ use std::path::{Path, PathBuf};
 
 pub use check::{ContentError, PageError, ValueError};
 
+/// The folder that `edu build` writes, in the root of the site.
+const OUT: &str = "public";
+
 /// What `edu help` prints, and what follows a usage error.
 pub const USAGE: &str = "\
 Usage: edu <command>
 
 Commands:
+  build    Check the site, then write it into public/
   check    Check every page in content/, and render it with layouts/ and site.yaml
   help     Print this help
   version  Print the version
@@ -25,6 +30,7 @@ Commands:
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Command {
+    Build,
     Check,
     Help,
     Version,
@@ -48,6 +54,16 @@ pub enum Error {
     Content(Vec<ContentError>),
     /// The output cannot be written.
     Write(io::Error),
+    /// A file or folder of the built site, relative to the root, cannot be written or deleted.
+    Output { path: PathBuf, source: io::Error },
+    /// A folder in the way of the built site that no earlier build made.
+    Foreign(PathBuf),
+    /// Two files of the site that would both be the file `path` of the built site.
+    Clash {
+        path: PathBuf,
+        first: PathBuf,
+        second: PathBuf,
+    },
 }
 
 impl Command {
@@ -59,6 +75,7 @@ impl Command {
             return Err(UsageError::MissingCommand);
         };
         let command = match name.to_str() {
+            Some("build") => Self::Build,
             Some("check") => Self::Check,
             Some("help" | "--help" | "-h") => Self::Help,
             Some("version" | "--version" | "-V") => Self::Version,
@@ -79,6 +96,11 @@ fn lossy(arg: &OsStr) -> String {
 /// Runs one command on the site in `root`, writing its output to `out`.
 pub fn run(command: &Command, root: &Path, out: &mut impl Write) -> Result<(), Error> {
     let written = match command {
+        Command::Build => {
+            let built = build::site(root, Path::new(OUT))?;
+            let (pages, files) = (count(built.pages, "page"), count(built.files, "file"));
+            writeln!(out, "wrote {pages} and {files} to {OUT}/")
+        }
         Command::Check => {
             let checked = check::pages(root)?;
             let (pages, layouts) = (
@@ -117,6 +139,20 @@ impl fmt::Display for Error {
             Self::Read { path, .. } => write!(f, "cannot read {}", path.display()),
             Self::Content(errors) => write!(f, "{} in the site", count(errors.len(), "error")),
             Self::Write(_) => f.write_str("cannot write the output"),
+            Self::Output { path, .. } => write!(f, "cannot write {}", path.display()),
+            Self::Foreign(path) => write!(
+                f,
+                "{} is in the way: no earlier `edu build` made it, so move it away",
+                path.display()
+            ),
+            Self::Clash {
+                path,
+                first,
+                second,
+            } => {
+                let (path, first, second) = (path.display(), first.display(), second.display());
+                write!(f, "{first} and {second} would both be /{path}")
+            }
         }
     }
 }
@@ -124,8 +160,10 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::Read { source, .. } | Self::Write(source) => Some(source),
-            Self::Content(_) => None,
+            Self::Read { source, .. } | Self::Write(source) | Self::Output { source, .. } => {
+                Some(source)
+            }
+            Self::Content(_) | Self::Foreign(_) | Self::Clash { .. } => None,
         }
     }
 }
@@ -148,6 +186,7 @@ mod tests {
 
     #[test]
     fn check_help_and_version_are_commands() {
+        assert_eq!(parse(&["build"]), Ok(Command::Build));
         assert_eq!(parse(&["check"]), Ok(Command::Check));
         for arg in ["help", "--help", "-h"] {
             assert_eq!(parse(&[arg]), Ok(Command::Help), "{arg}");
