@@ -1,4 +1,5 @@
-//! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset.
+//! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset, and
+//! the text after it is in the Markdown subset.
 
 use std::ffi::OsStr;
 use std::fmt;
@@ -7,17 +8,24 @@ use std::path::{Path, PathBuf};
 
 use crate::Error;
 
-/// A page whose header is not in the YAML subset.
+/// A page whose header or text is not in the subsets.
 #[derive(Debug)]
 pub struct ContentError {
     /// The page, relative to the site root.
     pub path: PathBuf,
-    pub error: edu_yaml::Error,
+    pub error: PageError,
 }
 
-/// Parses the header of every Markdown page under `content/` in `root`, and returns how many
-/// pages there are.
-pub(crate) fn headers(root: &Path) -> Result<usize, Error> {
+/// What is wrong with a page; positions count lines from the top of the page.
+#[derive(Debug)]
+pub enum PageError {
+    Header(edu_yaml::Error),
+    Text(edu_markdown::Error),
+}
+
+/// Checks the header and the text of every Markdown page under `content/` in `root`, and returns
+/// how many pages there are.
+pub(crate) fn pages(root: &Path) -> Result<usize, Error> {
     let mut pages = Vec::new();
     markdown_files(root, Path::new("content"), &mut pages)?;
     let mut errors = Vec::new();
@@ -27,7 +35,7 @@ pub(crate) fn headers(root: &Path) -> Result<usize, Error> {
             source,
         };
         let text = fs::read_to_string(root.join(path)).map_err(read_error)?;
-        if let Err(error) = edu_yaml::parse_front_matter(&text) {
+        if let Some(error) = page_error(&text) {
             let path = path.clone();
             errors.push(ContentError { path, error });
         }
@@ -37,6 +45,19 @@ pub(crate) fn headers(root: &Path) -> Result<usize, Error> {
     } else {
         Err(Error::Content(errors))
     }
+}
+
+/// The first error in `text`, a page: in its header, or else in the text after it.
+fn page_error(text: &str) -> Option<PageError> {
+    let body = match edu_yaml::parse_front_matter(text) {
+        Ok((_, body)) => body,
+        Err(error) => return Some(PageError::Header(error)),
+    };
+    let mut error = edu_markdown::to_html(body).err()?;
+    // The text starts on the line after the header's closing `---`.
+    let header = text.get(..text.len() - body.len()).unwrap_or_default();
+    error.pos.line += header.matches('\n').count();
+    Some(PageError::Text(error))
 }
 
 /// Adds the Markdown files under `dir`, a directory relative to `root`, to `files` in path order.
@@ -65,8 +86,11 @@ fn markdown_files(root: &Path, dir: &Path, files: &mut Vec<PathBuf>) -> Result<(
 
 impl fmt::Display for ContentError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let Self { path, error } = self;
-        write!(f, "{}:{}: error: {}", path.display(), error.pos, error.kind)
+        let path = self.path.display();
+        match &self.error {
+            PageError::Header(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
+            PageError::Text(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
+        }
     }
 }
 
@@ -84,25 +108,27 @@ mod tests {
     #[test]
     fn every_markdown_file_under_content_is_a_page() {
         // `valid` holds two pages and `news/notes.txt`.
-        assert_eq!(headers(&site("valid")).unwrap(), 2);
+        assert_eq!(pages(&site("valid")).unwrap(), 2);
     }
 
     #[test]
-    fn each_bad_header_is_an_error_with_its_page_line_and_column_in_path_order() {
-        let Err(Error::Content(errors)) = headers(&site("broken")) else {
+    fn each_bad_header_or_text_is_an_error_with_its_page_line_and_column_in_path_order() {
+        let Err(Error::Content(errors)) = pages(&site("broken")) else {
             panic!("expected content errors");
         };
         let errors: Vec<String> = errors.iter().map(ToString::to_string).collect();
         let expected = [
             "content/a/no-header.md:1:1: error: expected a line `---` that opens the header",
             "content/b.md:2:8: error: a value with `: ` in it or `:` at its end needs quotes",
+            "content/d.md:5:11: error: HTML is not supported; write `\\<` for a `<`, or put code \
+             in backticks",
         ];
         assert_eq!(errors, expected);
     }
 
     #[test]
     fn a_site_without_content_is_a_read_error() {
-        let result = headers(&site("missing"));
+        let result = pages(&site("missing"));
         let is_content = |path: &PathBuf| path == Path::new("content");
         assert!(
             matches!(&result, Err(Error::Read { path, .. }) if is_content(path)),

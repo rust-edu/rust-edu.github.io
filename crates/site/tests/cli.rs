@@ -43,7 +43,7 @@ fn a_usage_error_goes_to_stderr_with_the_usage_and_exits_with_2() {
 }
 
 #[test]
-fn check_lists_each_bad_header_on_stderr_and_exits_with_1() {
+fn check_lists_each_bad_header_or_text_on_stderr_and_exits_with_1() {
     let output = edu_check("broken").unwrap();
 
     assert_eq!(output.status.code(), Some(1));
@@ -51,7 +51,9 @@ fn check_lists_each_bad_header_on_stderr_and_exits_with_1() {
     let expected = concat!(
         "content/a/no-header.md:1:1: error: expected a line `---` that opens the header\n",
         "content/b.md:2:8: error: a value with `: ` in it or `:` at its end needs quotes\n",
-        "edu: 2 errors in content/\n",
+        "content/d.md:5:11: error: HTML is not supported; write `\\<` for a `<`, or put code in \
+         backticks\n",
+        "edu: 3 errors in content/\n",
     );
     assert_eq!(String::from_utf8(output.stderr).unwrap(), expected);
 }

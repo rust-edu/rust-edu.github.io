@@ -37,5 +37,5 @@ jobs:
             echo "::error file=Dockerfile::the FROM tag names Rust ${image:-?} and rust-toolchain.toml names ${channel:-?}; bump both together"
             exit 1
           fi
-      - name: Format, lint, test and build in Docker, then check the page headers
+      - name: Format, lint, test and build in Docker, then check the pages
         run: docker build --progress=plain --target check .
