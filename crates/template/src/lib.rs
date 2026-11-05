@@ -84,12 +84,12 @@ impl Template {
     pub fn parse(text: &str) -> Result<Self, Error> {
         let mut nodes = Vec::new();
         let mut at = 0;
-        while let Some(open) = next_tag(text, at) {
+        while let Some((open, kind)) = next_tag(text, at) {
             push_text(&mut nodes, text.get(at..open).unwrap_or_default());
-            let close = match text.as_bytes().get(open + 1) {
-                Some(b'{') => "}}",
-                Some(b'%') => "%}",
-                _ => "#}",
+            let close = match kind {
+                Open::Print => "}}",
+                Open::Tag => "%}",
+                Open::Comment => "#}",
             };
             let start = open + 2;
             let Some(len) = text.get(start..).and_then(|rest| rest.find(close)) else {
@@ -98,10 +98,10 @@ impl Template {
             let inner = text.get(start..start + len).unwrap_or_default();
             // A tag's position is that of its first word.
             let first = pos(text, start + inner.len() - inner.trim_start().len());
-            match close {
-                "}}" => nodes.push(print(inner.trim(), first)?),
-                "%}" => return Err(Error::new(first, ErrorKind::BadTag(inner.trim().into()))),
-                _ => {}
+            match kind {
+                Open::Print => nodes.push(print(inner.trim(), first)?),
+                Open::Tag => return Err(Error::new(first, ErrorKind::BadTag(inner.trim().into()))),
+                Open::Comment => {}
             }
             at = start + len + close.len();
         }
@@ -127,13 +127,25 @@ impl Template {
     }
 }
 
-/// Where the next `{{`, `{%` or `{#` at or after byte `at` of `text` starts.
-fn next_tag(text: &str, at: usize) -> Option<usize> {
-    let mut braces = text
-        .get(at..)?
-        .match_indices('{')
-        .map(|(index, _)| at + index);
-    braces.find(|&index| matches!(text.as_bytes().get(index + 1), Some(b'{' | b'%' | b'#')))
+/// What `{{`, `{%` or `{#` opens.
+enum Open {
+    Print,
+    Tag,
+    Comment,
+}
+
+/// Where the next `{{`, `{%` or `{#` at or after byte `at` of `text` starts, and what it opens.
+fn next_tag(text: &str, at: usize) -> Option<(usize, Open)> {
+    text.get(at..)?.match_indices('{').find_map(|(index, _)| {
+        let open = at + index;
+        let kind = match text.as_bytes().get(open + 1)? {
+            b'{' => Open::Print,
+            b'%' => Open::Tag,
+            b'#' => Open::Comment,
+            _ => return None,
+        };
+        Some((open, kind))
+    })
 }
 
 /// The line and column of byte `at` of `text`.
