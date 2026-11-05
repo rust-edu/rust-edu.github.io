@@ -1,0 +1,164 @@
+//! The inlines of the subset through the public API: the HTML of each, and where each error
+//! points.
+
+use edu_markdown::ErrorKind::{Entity, NoHeadingId, NonAsciiInHeading, RawHtml};
+use edu_markdown::{ErrorKind, to_html};
+
+/// The HTML of `text`, or its error.
+fn html(text: &str) -> String {
+    to_html(text).unwrap_or_else(|error| format!("error {error}"))
+}
+
+/// The line, column and kind of the error in `text`, or `None` if it renders.
+fn error(text: &str) -> Option<(usize, usize, ErrorKind)> {
+    to_html(text)
+        .err()
+        .map(|error| (error.pos.line, error.pos.col, error.kind))
+}
+
+#[test]
+fn a_code_span_ends_at_as_many_backticks_and_keeps_its_text() {
+    let text = "a `code` b `` x`y `` c ` d ` e `  ` f `&amp; <b>`\n";
+    let expected = concat!(
+        "<p>a <code>code</code> b <code>x`y</code> c <code>d</code> e <code>  </code> f ",
+        "<code>&amp;amp; &lt;b&gt;</code></p>\n",
+    );
+    assert_eq!(html(text), expected);
+    // Line breaks become spaces; a run of backticks without its match is text.
+    let expected = "<p><code>a b</code> <code>x   y</code> <code>a``b</code> ``z`</p>\n";
+    assert_eq!(html("`a\nb` `x  \ny` `a``b` ``z`\n"), expected);
+}
+
+#[test]
+fn an_autolink_is_a_url_or_an_email_address_between_angle_brackets() {
+    let text = concat!(
+        "<https://rust-edu.org> <https://a.org/é?x=1&y> <irc://foo> <a.b@c-d.e> ",
+        "a < b <1a:b> <@b>\n",
+    );
+    let expected = concat!(
+        "<p><a rel=\"external\" href=\"https://rust-edu.org\">https://rust-edu.org</a> ",
+        "<a rel=\"external\" href=\"https://a.org/%C3%A9?x=1&amp;y\">",
+        "https://a.org/é?x=1&amp;y</a> ",
+        "<a href=\"irc://foo\">irc://foo</a> <a href=\"mailto:a.b@c-d.e\">a.b@c-d.e</a> ",
+        "a &lt; b &lt;1a:b&gt; &lt;@b&gt;</p>\n",
+    );
+    assert_eq!(html(text), expected);
+    // Zola makes this URL relative to the page too, as it does relative links; CommonMark keeps it.
+    let expected = "<p><a href=\"svn+ssh://x.org\">svn+ssh://x.org</a></p>\n";
+    assert_eq!(html("<svn+ssh://x.org>\n"), expected);
+}
+
+#[test]
+fn a_url_is_escaped_and_marked_external_as_in_zola() {
+    let text = "<https://x.org/\"'{|}^[]`\\(é)> <HTTP://x.org> <httpx://z>\n";
+    let expected = concat!(
+        "<p><a rel=\"external\" href=\"https://x.org/%22&#x27;%7B%7C%7D^%5B%5D%60%5C(%C3%A9)\">",
+        "https://x.org/\"'{|}^[]`\\(é)</a> <a href=\"HTTP://x.org\">HTTP://x.org</a> ",
+        "<a href=\"httpx://z\">httpx://z</a></p>\n",
+    );
+    assert_eq!(html(text), expected);
+    // Zola's safe characters are kept as typed.
+    let url = "http://x.org/!#$%()*+,-./:;=?@^_~";
+    let expected = format!("<p><a rel=\"external\" href=\"{url}\">{url}</a></p>\n");
+    assert_eq!(html(&format!("<{url}>\n")), expected);
+}
+
+#[test]
+fn backslash_escapes_and_the_four_references_are_text() {
+    let text = "\\* \\_ \\[ \\` \\< \\\\ \\a \\é \\&amp; &amp; &lt; &gt; &quot; AT&T & x; &#; &;\n";
+    let expected = concat!(
+        "<p>* _ [ ` &lt; \\ \\a \\é &amp;amp; &amp; &lt; &gt; \" AT&amp;T &amp; x; ",
+        "&amp;#; &amp;;</p>\n",
+    );
+    assert_eq!(html(text), expected);
+}
+
+#[test]
+fn two_spaces_or_a_backslash_before_a_line_break_keep_it() {
+    let text = "one  \ntwo \nthree\\\nfour  \\\n`five`   \nsix\\  \n";
+    let expected =
+        "<p>one<br />\ntwo\nthree<br />\nfour  <br />\n<code>five</code><br />\nsix\\</p>\n";
+    assert_eq!(html(text), expected);
+    let expected = "<ul>\n<li>a<br />\nb</li>\n<li>c</li>\n</ul>\n";
+    assert_eq!(html("- a  \n  b\n- c  \n"), expected);
+    let expected = "<blockquote>\n<p>a<br />\nb</p>\n</blockquote>\n";
+    assert_eq!(html("> a  \n> b  \n"), expected);
+}
+
+#[test]
+fn a_heading_s_id_is_made_from_its_text_without_markup() {
+    let text = "## The `foo` crate\n## A &amp; B\n## a\\*b\\#\n## <https://x.org> and `<b>`\n";
+    let expected = concat!(
+        "<h2 id=\"the-foo-crate\">The <code>foo</code> crate</h2>\n",
+        "<h2 id=\"a-b\">A &amp; B</h2>\n",
+        "<h2 id=\"a-b-1\">a*b#</h2>\n",
+        "<h2 id=\"https-x-org-and-b\"><a rel=\"external\" href=\"https://x.org\">",
+        "https://x.org</a> and <code>&lt;b&gt;</code></h2>\n",
+    );
+    assert_eq!(html(text), expected);
+    assert_eq!(error("## a `é`\n"), Some((1, 7, NonAsciiInHeading('é'))));
+    assert_eq!(error("## `--`\n"), Some((1, 1, NoHeadingId)));
+}
+
+#[test]
+fn html_and_other_references_are_errors() {
+    let cases = [
+        ("<b>bold</b>\n", 1, 1, RawHtml),
+        ("a\n`b` Vec<T>\n", 2, 8, RawHtml),
+        ("x </i> <!-- c -->\n", 1, 3, RawHtml),
+        ("<?php ?>\n", 1, 1, RawHtml),
+        ("<http://a b>\n", 1, 1, RawHtml),
+        ("<https://a<b>\n", 1, 1, RawHtml),
+        ("<x:y>\n", 1, 1, RawHtml),
+        ("<a@b..c>\n", 1, 1, RawHtml),
+        ("<a@-b.c>\n", 1, 1, RawHtml),
+        ("<a@b-.c>\n", 1, 1, RawHtml),
+        ("&nbsp;\n", 1, 1, Entity),
+        ("- a &#160;\n", 1, 5, Entity),
+        ("## &copy; 2026\n", 1, 4, Entity),
+    ];
+    for (text, line, col, kind) in cases {
+        assert_eq!(error(text), Some((line, col, kind)), "{text:?}");
+    }
+}
+
+/// Every inline of the subset, for the random test to damage. The spaces of a hard line break are
+/// written before `\n`, as editors may remove spaces at the end of a line.
+const SAMPLE: &str = "\
+## The `edu` crate &amp; <https://rust-edu.org>
+
+Text with `code` and ``more `code` ``, <https://example.org/a_(b)?c=1&d=2> or <a@b.c>,
+\\*escapes\\*, a line break  \n\
+and another\\
+end, as 1 < 2 & 3 > 2.
+
+- `item`  \n  next
+";
+
+#[test]
+fn a_damaged_text_gives_html_or_an_error_never_a_panic() {
+    to_html(SAMPLE).unwrap();
+    let sample: Vec<char> = SAMPLE.chars().collect();
+    let damage = ['<', '>', '`', '\\', '&', ';', ':', '@', '/', ' ', '\n', 'é'];
+    // xorshift64 with a fixed seed: every run tries the same 5,000 texts, each with two random
+    // characters replaced, inserted or removed.
+    let mut state: u64 = 0x2545_F491_4F6C_DD1D;
+    for _ in 0..5_000 {
+        let mut text = sample.clone();
+        for _ in 0..2 {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let [low, high, how, what, ..] = state.to_le_bytes();
+            let at = usize::from(u16::from_le_bytes([low, high])) % text.len();
+            let c = damage[usize::from(what) % damage.len()];
+            match how % 3 {
+                0 => text[at] = c,
+                1 => text.insert(at, c),
+                _ => _ = text.remove(at),
+            }
+        }
+        let text: String = text.into_iter().collect();
+        let _ = to_html(&text);
+    }
+}
