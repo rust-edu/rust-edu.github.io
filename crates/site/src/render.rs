@@ -117,6 +117,11 @@ impl Layouts {
         self.0.len()
     }
 
+    /// The names of the layouts, in order.
+    pub(crate) fn names(&self) -> impl Iterator<Item = &str> {
+        self.0.iter().map(|(name, _)| name.as_str())
+    }
+
     fn get(&self, name: &str) -> Option<&Template> {
         self.0
             .iter()

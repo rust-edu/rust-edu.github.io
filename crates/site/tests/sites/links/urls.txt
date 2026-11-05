@@ -1,0 +1,7 @@
+# Addresses that must keep working.
+/
+/a/#part
+/style.css
+/gone.pdf
+/a
+/sitemap.xml

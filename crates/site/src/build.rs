@@ -11,9 +11,13 @@ use std::path::{Path, PathBuf};
 
 use crate::Error;
 use crate::check::{self, Rendered};
+use crate::links;
 
 /// The file that marks a folder as made by `edu build`, which may then delete it.
 const MARKER: &str = ".edu-output";
+
+/// The files that the build makes at the top of the site, besides the pages.
+pub(crate) const MADE: [&str; 3] = ["404.html", "robots.txt", "sitemap.xml"];
 
 /// The page for an address without a file, as Zola writes it.
 const NOT_FOUND: &str = "<!doctype html>\n<title>404 Not Found</title>\n<h1>404 Not Found</h1>\n";
@@ -87,24 +91,24 @@ enum Output<'a> {
 /// only if an earlier build made it.
 pub(crate) fn site(root: &Path, out: &Path, options: &Options) -> Result<Built, Error> {
     let mut checked = check::pages(root, options)?;
-    let mut statics = Vec::new();
-    check::walk(root, Path::new("static"), &mut statics)?;
     let base_url = &checked.base_url;
     for page in &mut checked.rendered {
         page.html = rebase(&page.html, base_url.path());
     }
-    let made = [
-        ("404.html", NOT_FOUND.to_owned()),
-        ("robots.txt", robots(base_url)),
-        ("sitemap.xml", sitemap(base_url, &checked.rendered)),
+    // The texts of the files of `MADE`, in its order.
+    let texts = [
+        NOT_FOUND.to_owned(),
+        robots(base_url),
+        sitemap(base_url, &checked.rendered),
     ];
+    let made: Vec<(&str, String)> = MADE.into_iter().zip(texts).collect();
     // Each file of the output, with the file of the site that it comes from.
     let mut outputs = BTreeMap::new();
     for page in &checked.rendered {
         let path = Path::new(page.url.trim_start_matches('/')).join("index.html");
         add(&mut outputs, path, &page.path, Output::Page(&page.html))?;
     }
-    for (dir, files) in [("content", &checked.files), ("static", &statics)] {
+    for (dir, files) in [("content", &checked.files), ("static", &checked.statics)] {
         for file in files {
             let path = file.strip_prefix(dir).unwrap_or(file).to_owned();
             add(&mut outputs, path, file, Output::Copy(file))?;
@@ -127,7 +131,7 @@ pub(crate) fn site(root: &Path, out: &Path, options: &Options) -> Result<Built, 
     clear(root, out)?;
     fs::rename(root.join(&tmp), root.join(out)).map_err(output_error(out))?;
     let pages = checked.rendered.len();
-    let files = checked.files.len() + statics.len() + made.len();
+    let files = checked.files.len() + checked.statics.len() + made.len();
     Ok(Built { pages, files })
 }
 
@@ -158,25 +162,19 @@ fn sitemap(base_url: &BaseUrl, pages: &[Rendered]) -> String {
     xml
 }
 
-/// `html` with `path`, the path of the base URL, before each `href` or `src` that starts with one
-/// `/`, so that the links between the pages and files of the site work under that path too.
+/// `html` with `path`, the path of the base URL, before each link that starts with one `/`, so
+/// that the links between the pages and files of the site work under that path too.
 fn rebase(html: &str, path: &str) -> String {
     let mut rebased = String::with_capacity(html.len());
-    let mut rest = html;
-    while let Some(at) = rest.find("=\"/") {
-        let (before, after) = rest.split_at(at + 2);
-        rebased.push_str(before);
-        let name = before.strip_suffix("=\"").unwrap_or(before);
-        let is_link = ["href", "src"].into_iter().any(|attribute| {
-            let start = name.strip_suffix(attribute);
-            start.is_some_and(|start| start.ends_with(|c: char| c.is_ascii_whitespace()))
-        });
-        if is_link && !after.starts_with("//") {
+    let mut last = 0;
+    for (at, link) in links::links(html) {
+        if link.starts_with('/') && !link.starts_with("//") {
+            rebased.push_str(html.get(last..at).unwrap_or_default());
             rebased.push_str(path);
+            last = at;
         }
-        rest = after;
     }
-    rebased.push_str(rest);
+    rebased.push_str(html.get(last..).unwrap_or_default());
     rebased
 }
 
@@ -417,7 +415,8 @@ mod tests {
         for (html, rebased) in cases {
             assert_eq!(rebase(html, "/edu"), rebased);
         }
-        let others = "<a href=\"//a.org/\"><a data-href=\"/a\"><a href=\"https://a.org/\">";
+        let others = "<a href=\"//a.org/\"><a data-href=\"/a\"><a href=\"https://a.org/\">\
+                      <code>&lt;a href=\"/a\"&gt;</code>";
         assert_eq!(rebase(others, "/edu"), others);
     }
 

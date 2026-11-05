@@ -77,6 +77,11 @@ underlined with `===`, indented code, and web or email addresses not written as 
 - **Another site:** the full `https://` address.
 - **Email:** `[contact@rust-edu.org](mailto:contact@rust-edu.org)`.
 
+The automatic check follows every link to a page or file of the site, the menu's too, and stops at one that goes
+nowhere: a page, file or id that the site does not have, a page's URL without its `/` at the end, a relative link,
+a link from a page to a draft, or an address that starts with something other than `https:`, `http:` or `mailto:`.
+It does not check links to other sites.
+
 ## Common changes
 
 - **A news post:** add `content/news/<name>.md` with `title`, `date` and `authors`, as in the header example above.
@@ -85,6 +90,9 @@ underlined with `===`, indented code, and web or email addresses not written as 
   none).
 - **Menu and footer links:** the `navbar` and `external` lists at the end of `config.toml`, and the same links in
   the `menu` and `footer` lists of `site.yaml`, which the site's next generator reads.
+- **Moving or removing a page or file:** other sites may link to it, so its address is in `urls.txt`, and the check
+  stops while that address goes nowhere. Delete its line there on purpose, or keep the old address of a page with an
+  `_index.md` at it that has `redirect_to`.
 
 ## Proposing a change on GitHub
 
