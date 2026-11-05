@@ -1,5 +1,5 @@
-//! The settings of `site.yaml`, the layouts of `layouts/`, and what each page of `content/`
-//! renders with: its layout and the values that the layout reads.
+//! Rendering pages: the settings of `site.yaml`, the layouts of `layouts/`, and the values that
+//! the layouts read for each page of `content/`.
 
 use std::ffi::OsStr;
 use std::fs;
@@ -15,15 +15,16 @@ use crate::page::{Kind, Order, Page, TOP};
 /// The layout that wraps every page's own layout, at `{{ content | safe }}`.
 const LAYOUT: &str = "layout.html";
 
-/// The settings of `site.yaml` in `root`, as the value `site`; an error in them goes to `errors`.
-pub(crate) fn site(root: &Path, errors: &mut Vec<ContentError>) -> Result<Value, Error> {
+/// The settings of `site.yaml` in `root`, as the value `site`, or `None` after an error in them,
+/// which goes to `errors`.
+pub(crate) fn site(root: &Path, errors: &mut Vec<ContentError>) -> Result<Option<Value>, Error> {
     let path = PathBuf::from("site.yaml");
     match edu_yaml::parse(&read(root, &path)?) {
-        Ok(entries) => Ok(map(&entries)),
+        Ok(entries) => Ok(Some(map(&entries))),
         Err(error) => {
             let error = PageError::Header(error);
             errors.push(ContentError { path, error });
-            Ok(Value::Map(Vec::new()))
+            Ok(None)
         }
     }
 }
@@ -93,13 +94,46 @@ impl Layouts {
     }
 }
 
-/// What `page` renders with: its layout, and its values, which the layout reads as `page`. The
-/// layout is the page's `template`, or else `home.html`, `section.html` or `page.html` by its kind.
-pub(crate) fn prepare<'a>(
+/// Renders `page` with its layout, wrapped in `layout.html`. The layouts read the value `site`,
+/// the page's values as `page`, and in `layout.html` the page layout's HTML as `content`.
+pub(crate) fn render(
     page: &Page,
     pages: &[Page],
+    site: &Value,
+    layouts: &Layouts,
+) -> Result<String, ContentError> {
+    let (name, layout, values) = prepare(page, pages, layouts)?;
+    let Some(wrapper) = layouts.get(LAYOUT) else {
+        return Err(page.error(TOP, ValueError::NoLayout(LAYOUT.to_owned())));
+    };
+    let mut context = vec![
+        ("site".to_owned(), site.clone()),
+        ("page".to_owned(), values),
+    ];
+    let rendered = layout.render(&Value::Map(context.clone()));
+    let html = rendered.map_err(|error| render_error(name, page, error))?;
+    context.push(("content".to_owned(), Value::Str(html)));
+    let rendered = wrapper.render(&Value::Map(context));
+    rendered.map_err(|error| render_error(LAYOUT, page, error))
+}
+
+fn render_error(layout: &str, page: &Page, error: edu_template::Error) -> ContentError {
+    let path = Path::new("layouts").join(layout);
+    let error = PageError::Render {
+        page: page.path.clone(),
+        error,
+    };
+    ContentError { path, error }
+}
+
+/// What `page` renders with: the name of its layout, the layout, and the page's values, which the
+/// layout reads as `page`. The layout is the page's `template`, or else `home.html`,
+/// `section.html` or `page.html` by its kind.
+fn prepare<'a>(
+    page: &'a Page,
+    pages: &[Page],
     layouts: &'a Layouts,
-) -> Result<(&'a Template, Value), ContentError> {
+) -> Result<(&'a str, &'a Template, Value), ContentError> {
     let (name, pos) = match &page.template {
         Some((name, pos)) => (name.as_str(), *pos),
         None => (page.kind.layout(), TOP),
@@ -107,7 +141,7 @@ pub(crate) fn prepare<'a>(
     let Some(layout) = layouts.get(name) else {
         return Err(page.error(pos, ValueError::NoLayout(name.to_owned())));
     };
-    Ok((layout, values(page, pages)?))
+    Ok((name, layout, values(page, pages)?))
 }
 
 /// The values of `page` for the layouts, and for a section's page also `pages`, the pages in its
@@ -194,12 +228,68 @@ mod tests {
         let page = pages
             .iter()
             .find(|page| page.path == Path::new("content").join(path));
-        let shown = prepare(page.unwrap(), pages, layouts).map(|(layout, values)| {
+        let shown = prepare(page.unwrap(), pages, layouts).map(|(_, layout, values)| {
             let context = Value::Map(vec![("page".into(), values)]);
             let shown = layout.render(&context);
             shown.unwrap_or_else(|error| format!("error {}", error.kind))
         });
         shown.unwrap_or_else(|error| format!("error {error}"))
+    }
+
+    /// What the page at `path` of `pages` renders with `layouts`, or its error.
+    fn render_page(pages: &[Page], path: &str, layouts: &Layouts) -> String {
+        let site = Value::Map(vec![("title".into(), Value::Str("Site".into()))]);
+        let page = pages
+            .iter()
+            .find(|page| page.path == Path::new("content").join(path));
+        let rendered = render(page.unwrap(), pages, &site, layouts);
+        rendered.unwrap_or_else(|error| format!("error {error}"))
+    }
+
+    #[test]
+    fn a_page_renders_with_its_layout_inside_layout_html() {
+        let pages = pages(&[("a.md", "---\ntitle: A\n---\n*text*\n")]);
+        let layout = "<title>{{ page.title }} - {{ site.title }}</title>{{ content | safe }}";
+        let page = "<main>{{ page.content | safe }}</main>";
+        let expected = "<title>A - Site</title><main><p><em>text</em></p>\n</main>";
+        let layouts = parse(&[("layout.html", layout), ("page.html", page)]);
+        assert_eq!(render_page(&pages, "a.md", &layouts), expected);
+        let cases = [
+            (("{{ page.date }}", ""), "layout.html"),
+            (("", "{{ page.date }}"), "page.html"),
+        ];
+        for ((layout, page), name) in cases {
+            let expected = format!(
+                "error layouts/{name}:1:4: error: unknown variable `page.date` while rendering \
+                 content/a.md"
+            );
+            let layouts = parse(&[("layout.html", layout), ("page.html", page)]);
+            assert_eq!(render_page(&pages, "a.md", &layouts), expected, "{name}");
+        }
+        let expected = "error content/a.md:1:1: error: `layouts/layout.html` does not exist";
+        assert_eq!(
+            render_page(&pages, "a.md", &parse(&[("page.html", "")])),
+            expected
+        );
+    }
+
+    #[test]
+    fn settings_or_layouts_with_an_error_are_none() {
+        let site = |name| {
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("tests/sites")
+                .join(name)
+        };
+        let mut errors = Vec::new();
+        // `broken` has an error in `site.yaml` and one in `layouts/layout.html`.
+        assert!(super::site(&site("broken"), &mut errors).unwrap().is_none());
+        let layouts = Layouts::read(&site("broken"), &mut errors).unwrap();
+        assert!(layouts.is_none());
+        assert_eq!(errors.len(), 2);
+        assert!(super::site(&site("valid"), &mut errors).unwrap().is_some());
+        let layouts = Layouts::read(&site("valid"), &mut errors).unwrap();
+        assert!(layouts.is_some());
+        assert_eq!(errors.len(), 2);
     }
 
     #[test]

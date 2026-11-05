@@ -1,6 +1,6 @@
 //! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset whose
-//! values the site can use, its text is in the Markdown subset and its layout is in `layouts/`;
-//! `site.yaml` is in the YAML subset, and every layout is in the template language.
+//! values the site can use, its text is in the Markdown subset, and the layouts of `layouts/`
+//! render it with the settings of `site.yaml`.
 
 use std::ffi::OsStr;
 use std::fmt;
@@ -29,6 +29,11 @@ pub enum PageError {
     Text(edu_markdown::Error),
     /// An error in a layout's text.
     Layout(edu_template::Error),
+    /// An error in a layout while it renders `page`.
+    Render {
+        page: PathBuf,
+        error: edu_template::Error,
+    },
 }
 
 /// Why the site cannot use a value of a page's header.
@@ -64,8 +69,8 @@ pub(crate) struct Checked {
 }
 
 /// Checks the header and the text of every Markdown page under `content/` in `root`, the settings
-/// of `site.yaml` and the text of every layout of `layouts/`, and then the layout and the values of
-/// each page that has no error and does not redirect.
+/// of `site.yaml` and the text of every layout of `layouts/`, and then renders with them each page
+/// that has no error and does not redirect.
 pub(crate) fn pages(root: &Path) -> Result<Checked, Error> {
     let mut paths = Vec::new();
     markdown_files(root, Path::new("content"), &mut paths)?;
@@ -79,13 +84,14 @@ pub(crate) fn pages(root: &Path) -> Result<Checked, Error> {
             }
         }
     }
-    render::site(root, &mut errors)?;
-    // A layout with an error would be missing for every page that needs it.
-    let Some(layouts) = Layouts::read(root, &mut errors)? else {
+    let site = render::site(root, &mut errors)?;
+    let layouts = Layouts::read(root, &mut errors)?;
+    // An error in `site.yaml` or in a layout would fail every page.
+    let (Some(site), Some(layouts)) = (site, layouts) else {
         return Err(Error::Content(errors));
     };
     for page in pages.iter().filter(|page| page.redirect_to.is_none()) {
-        if let Err(error) = render::prepare(page, &pages, &layouts) {
+        if let Err(error) = render::render(page, &pages, &site, &layouts) {
             errors.push(error);
         }
     }
@@ -138,6 +144,14 @@ impl fmt::Display for ContentError {
             PageError::Value(pos, kind) => write!(f, "{path}:{pos}: error: {kind}"),
             PageError::Text(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
             PageError::Layout(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
+            PageError::Render { page, error } => {
+                let page = page.display();
+                write!(
+                    f,
+                    "{path}:{}: error: {} while rendering {page}",
+                    error.pos, error.kind
+                )
+            }
         }
     }
 }
@@ -227,6 +241,8 @@ mod tests {
             "content/typo.md:2:1: error: a page's header has `title`, `date`, `authors`, \
              `template` and `draft`, not `titel`",
             "content/a.md:3:11: error: `layouts/missing.html` does not exist",
+            "layouts/page.html:1:7: error: unknown variable `page.authors` while rendering \
+             content/b.md",
             "content/news/undated.md:1:1: error: a page in a section with `sort_by: date` needs a \
              `date`",
         ];

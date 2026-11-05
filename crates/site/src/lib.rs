@@ -18,7 +18,7 @@ pub const USAGE: &str = "\
 Usage: edu <command>
 
 Commands:
-  check    Check every page in content/, site.yaml and every layout in layouts/
+  check    Check every page in content/, and render it with layouts/ and site.yaml
   help     Print this help
   version  Print the version
 ";

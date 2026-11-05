@@ -1,6 +1,6 @@
 # Plan 0002 — Own Markdown Site Generator
 
-**Date:** 2026-10-28 · **Status:** steps 0–5 done · **Supersedes:** Spec 0001 and Plan 0001 (archived at tag
+**Date:** 2026-10-28 · **Status:** steps 0–6 done · **Supersedes:** Spec 0001 and Plan 0001 (archived at tag
 [`archive/initial-project-plan`](https://github.com/kenesparta/rust-edu.github.io/tree/archive/initial-project-plan/docs)
 on the fork kenesparta/rust-edu.github.io) · **Research:**
 [0001 inventory](../research/0001-current-site-inventory.md) ·
@@ -113,11 +113,12 @@ PRs; research 0002 §9 sizes a broader subset at ~4,650.
    anything else is an error.
    *Done when:* one golden test per content file passes, its HTML diffed against Zola 0.22.1's output with each
    difference explained in the PR; rejected syntax has error tests; the seeded random-input test finds no panic.
-6. `feat/edu-template` (~2,050, six PRs: values, `{{ }}` and comments; `if`, `else` and `for`; the ported layouts
-   and `site.yaml`; the values of each page; the header's keys; rendering every page) — `{{ x }}` (escaped),
-   `{{ x | safe }}`, `if`/`else`, `for` and one layout; the step-3 templates ported to `layouts/` (Zola keeps
-   `templates/`), menu and footer links in `site.yaml`; the header keys of the stable format above, each checked,
-   and `sort_by: date`. *Done when:* every page renders and template errors name the file and line.
+6. *Done (fork PRs #15 to #20).* `feat/edu-template` (~2,050, six PRs: values, `{{ }}` and comments; `if`, `else`
+   and `for`; the ported layouts and `site.yaml`; the values of each page; the header's keys; rendering every page)
+   — `{{ x }}` (escaped), `{{ x | safe }}`, `if`/`else`, `for` and one layout; the step-3 templates ported to
+   `layouts/` (Zola keeps `templates/`), menu and footer links in `site.yaml`; the header keys of the stable format
+   above, each checked, and `sort_by: date`. *Done when:* every page renders and template errors name the file and
+   line.
 7. `feat/edu-build` (~1,600, four PRs: build and assets; sections, sitemap, robots, 404 and `--base-url`; check;
    serve) — `edu build` (pretty URLs, assets, `redirect_to` pages, drafts only with `--drafts`,
    `sitemap.xml`, `robots.txt`, `404.html`, `--base-url` for fork previews), `edu check` (internal links, anchors,

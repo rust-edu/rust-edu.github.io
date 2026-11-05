@@ -91,8 +91,8 @@ flowchart LR
     outer `layouts/layout.html` wrapping each page layout (`home.html`, `page.html`, `section.html`, `news.html`) at
     `{{ content | safe }}` instead of `extends` and `block`.
   - `crates/site` (`edu-site`, binary `edu`) — the command-line tool. `edu check` checks `site.yaml`, the layouts in
-    `layouts/`, and the YAML header and Markdown text of every page in `content/`; `edu build` and `edu serve` follow
-    in step 7.
+    `layouts/`, and the YAML header and Markdown text of every page in `content/`, then renders every page with
+    them; `edu build` and `edu serve` follow in step 7.
 
 ```mermaid
 flowchart LR
