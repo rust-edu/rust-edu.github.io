@@ -1,19 +1,50 @@
-//! `edu build`: the site as files. Each page that does not redirect becomes `index.html` in the
-//! folder of its URL, the files of `static/` are copied to the top, and the other files of
-//! `content/` beside the pages of their folder.
+//! `edu build`: the site as files. Each page becomes `index.html` in the folder of its URL, the
+//! files of `static/` are copied to the top, and the other files of `content/` beside the pages of
+//! their folder; `404.html`, `robots.txt` and `sitemap.xml` go at the top.
 
 use std::collections::BTreeMap;
+use std::fmt;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::Error;
-use crate::check;
+use crate::check::{self, Rendered};
 
 /// The file that marks a folder as made by `edu build`, which may then delete it.
 const MARKER: &str = ".edu-output";
 
-/// How many pages `edu build` wrote, and how many files it copied.
+/// The page for an address without a file, as Zola writes it.
+const NOT_FOUND: &str = "<!doctype html>\n<title>404 Not Found</title>\n<h1>404 Not Found</h1>\n";
+
+/// The address of the built site, such as `https://rust-edu.org`, without a `/` at its end.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct BaseUrl(String);
+
+impl BaseUrl {
+    /// `text` as an address: `https://` or `http://`, then a host and maybe a path, as names of
+    /// ASCII letters, digits, `-`, `.`, `_`, `~` and `:` between single `/`, and maybe a `/` at
+    /// the end, which the address leaves out.
+    pub(crate) fn parse(text: &str) -> Option<Self> {
+        let text = text.strip_suffix('/').unwrap_or(text);
+        let rest = text
+            .strip_prefix("https://")
+            .or_else(|| text.strip_prefix("http://"))?;
+        let is_name = |name: &str| {
+            let is_allowed = |c: char| c.is_ascii_alphanumeric() || "-._~:".contains(c);
+            !name.is_empty() && name.chars().all(is_allowed)
+        };
+        rest.split('/').all(is_name).then(|| Self(text.to_owned()))
+    }
+}
+
+impl fmt::Display for BaseUrl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+/// How many pages `edu build` wrote, and how many other files.
 #[derive(Debug)]
 pub(crate) struct Built {
     pub(crate) pages: usize,
@@ -33,6 +64,12 @@ pub(crate) fn site(root: &Path, out: &Path) -> Result<Built, Error> {
     let checked = check::pages(root)?;
     let mut statics = Vec::new();
     check::walk(root, Path::new("static"), &mut statics)?;
+    let base_url = &checked.base_url;
+    let made = [
+        ("404.html", NOT_FOUND.to_owned()),
+        ("robots.txt", robots(base_url)),
+        ("sitemap.xml", sitemap(base_url, &checked.rendered)),
+    ];
     // Each file of the output, with the file of the site that it comes from.
     let mut outputs = BTreeMap::new();
     for page in &checked.rendered {
@@ -45,9 +82,15 @@ pub(crate) fn site(root: &Path, out: &Path) -> Result<Built, Error> {
             add(&mut outputs, path, file, Output::Copy(file))?;
         }
     }
+    for (name, _) in &made {
+        if let Some((file, _)) = outputs.get(Path::new(name)) {
+            let (path, file) = (PathBuf::from(name), file.to_path_buf());
+            return Err(Error::Reserved { path, file });
+        }
+    }
     let tmp = out.with_extension("tmp");
     clear(root, &tmp)?;
-    let written = write(root, &tmp, &outputs);
+    let written = write(root, &tmp, &outputs, &made);
     if written.is_err() {
         // A folder with the marker is deleted by the next build anyway.
         let _ = fs::remove_dir_all(root.join(&tmp));
@@ -56,8 +99,35 @@ pub(crate) fn site(root: &Path, out: &Path) -> Result<Built, Error> {
     clear(root, out)?;
     fs::rename(root.join(&tmp), root.join(out)).map_err(output_error(out))?;
     let pages = checked.rendered.len();
-    let files = checked.files.len() + statics.len();
+    let files = checked.files.len() + statics.len() + made.len();
     Ok(Built { pages, files })
+}
+
+/// `robots.txt`, as Zola writes it: every page may be crawled, and the sitemap is at `base_url`.
+fn robots(base_url: &BaseUrl) -> String {
+    format!("User-agent: *\nDisallow:\nAllow: /\nSitemap: {base_url}/sitemap.xml\n")
+}
+
+/// `sitemap.xml`, as Zola writes it: the address of each page at `base_url`, by URL, with the
+/// `date` of a page that has one.
+fn sitemap(base_url: &BaseUrl, pages: &[Rendered]) -> String {
+    let mut pages: Vec<&Rendered> = pages.iter().collect();
+    pages.sort_by(|a, b| a.url.cmp(&b.url));
+    let mut xml = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+         <urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
+    );
+    for page in pages {
+        // Neither the base URL nor a page's URL has a character that XML escapes.
+        let url = &page.url;
+        xml.push_str(&format!("    <url>\n        <loc>{base_url}{url}</loc>\n"));
+        if let Some(date) = &page.date {
+            xml.push_str(&format!("        <lastmod>{date}</lastmod>\n"));
+        }
+        xml.push_str("    </url>\n");
+    }
+    xml.push_str("</urlset>\n");
+    xml
 }
 
 /// Adds the file `path` of the output, from `source`, unless another file of the site is `path`.
@@ -91,11 +161,13 @@ fn clear(root: &Path, dir: &Path) -> Result<(), Error> {
     fs::remove_dir_all(full).map_err(output_error(dir))
 }
 
-/// Writes the marker and every file of `outputs` into the folder `dir`, relative to `root`.
+/// Writes the marker, every file of `outputs` and the files that the build `made` into the folder
+/// `dir`, relative to `root`.
 fn write(
     root: &Path,
     dir: &Path,
     outputs: &BTreeMap<PathBuf, (&Path, Output<'_>)>,
+    made: &[(&str, String)],
 ) -> Result<(), Error> {
     let marker =
         "This folder is the output of `edu build`, which deletes it when it builds again.\n";
@@ -112,6 +184,10 @@ fn write(
             Output::Copy(from) => fs::copy(root.join(from), &full).map(|_| ()),
         };
         written.map_err(output_error(&to))?;
+    }
+    for (name, text) in made {
+        let to = dir.join(name);
+        fs::write(root.join(&to), text).map_err(output_error(&to))?;
     }
     Ok(())
 }
@@ -157,14 +233,19 @@ mod tests {
     fn each_page_is_index_html_at_its_url_beside_the_files_of_static_and_content() {
         let out = out("valid");
         let built = site(&test_site("valid"), &out).unwrap();
-        assert_eq!((built.pages, built.files), (2, 4));
+        assert_eq!((built.pages, built.files), (4, 7));
         let expected = [
             ".edu-output",
+            "2027/index.html",
+            "404.html",
+            "chat/index.html",
             "images/logo.svg",
             "index.html",
             "news/notes.txt",
             "news/post/index.html",
             "news/sample.bib",
+            "robots.txt",
+            "sitemap.xml",
             "style.css",
         ];
         assert_eq!(files(&out), expected);
@@ -177,6 +258,55 @@ mod tests {
         );
         assert!(!out.with_extension("tmp").exists());
         fs::remove_dir_all(out).unwrap();
+    }
+
+    #[test]
+    fn the_build_makes_404_html_robots_txt_and_the_sitemap_as_zola_does() {
+        let out = out("made");
+        site(&test_site("valid"), &out).unwrap();
+        let read = |path| fs::read_to_string(out.join(path)).unwrap();
+        let not_found = "<!doctype html>\n<title>404 Not Found</title>\n<h1>404 Not Found</h1>\n";
+        assert_eq!(read("404.html"), not_found);
+        let robots =
+            "User-agent: *\nDisallow:\nAllow: /\nSitemap: https://example.org/sitemap.xml\n";
+        assert_eq!(read("robots.txt"), robots);
+        let mut sitemap = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        sitemap.push_str("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+        let urls = [
+            ("/", ""),
+            ("/2027/", ""),
+            ("/chat/", ""),
+            ("/news/post/", "2027-03-01"),
+        ];
+        for (url, date) in urls {
+            let loc = format!("        <loc>https://example.org{url}</loc>\n");
+            let lastmod = format!("        <lastmod>{date}</lastmod>\n");
+            let lastmod = if date.is_empty() { "" } else { &lastmod };
+            sitemap.push_str(&format!("    <url>\n{loc}{lastmod}    </url>\n"));
+        }
+        sitemap.push_str("</urlset>\n");
+        assert_eq!(read("sitemap.xml"), sitemap);
+        let chat = read("chat/index.html");
+        assert!(chat.contains("url=https://example.org/chat/\">"), "{chat}");
+        fs::remove_dir_all(out).unwrap();
+    }
+
+    #[test]
+    fn a_base_url_is_an_address_without_a_slash_at_its_end() {
+        let cases = [
+            ("https://rust-edu.org/", "https://rust-edu.org"),
+            ("http://127.0.0.1:1111", "http://127.0.0.1:1111"),
+            ("https://a.github.io/b/c_d~e", "https://a.github.io/b/c_d~e"),
+        ];
+        for (text, url) in cases {
+            let base_url = BaseUrl::parse(text).map(|url| url.to_string());
+            assert_eq!(base_url.as_deref(), Some(url));
+        }
+        let not_urls = "rust-edu.org ftp://a.org https:// https:///a https://a.org// https://a.org//b \
+                        https://a.org/?a https://a.org/#a https://a.org/\" https://é.org";
+        for text in not_urls.split(' ').chain(["", "https://a.org/a b"]) {
+            assert_eq!(BaseUrl::parse(text), None, "{text}");
+        }
     }
 
     #[test]
@@ -211,7 +341,7 @@ mod tests {
     fn a_file_that_cannot_be_copied_is_an_error_and_leaves_no_output() {
         let site = out("site");
         let files = [
-            ("site.yaml", "title: Test\n"),
+            ("site.yaml", "base_url: https://example.org\n"),
             ("layouts/layout.html", "{{ content | safe }}"),
             ("layouts/home.html", "{{ page.title }}"),
             ("content/_index.md", "---\ntitle: Home\n---\n"),
@@ -239,9 +369,12 @@ mod tests {
         let out = out("broken");
         let result = site(&test_site("broken"), &out);
         assert!(matches!(result, Err(Error::Content(_))), "{result:?}");
-        let error = site(&test_site("clash"), &out).unwrap_err().to_string();
+        let error = site(&test_site("clash"), &out).unwrap_err();
         let expected = "content/_index.md and static/index.html would both be /index.html";
-        assert_eq!(error, expected);
+        assert_eq!(error.to_string(), expected);
+        let error = site(&test_site("reserved"), &out).unwrap_err();
+        let expected = "static/sitemap.xml would be /sitemap.xml, which `edu build` writes itself";
+        assert_eq!(error.to_string(), expected);
         assert!(!out.exists() && !out.with_extension("tmp").exists());
     }
 }

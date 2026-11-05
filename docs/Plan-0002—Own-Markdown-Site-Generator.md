@@ -95,7 +95,7 @@ Each PR merges into the fork's `main` after review; the upstream PR comes after 
 
 Code follows our Rust rules (no `unwrap`, `expect` or `panic!` on input paths, no `mod.rs`, the workspace lints of
 research 0002 §1) with two std-only exceptions: hand-written error enums instead of `thiserror`/`anyhow`, and a seeded
-random-input test instead of a property-testing crate. Part B is about 7,400 lines including tests in about nineteen
+random-input test instead of a property-testing crate. Part B is about 7,800 lines including tests in about twenty
 PRs; research 0002 §9 sizes a broader subset at ~4,650.
 
 4. *Done (fork PRs #6, #7 and #8).* `feat/edu-workspace` (~1,250, three PRs: workspace, Docker and CI; YAML maps,
@@ -119,8 +119,8 @@ PRs; research 0002 §9 sizes a broader subset at ~4,650.
    `layouts/` (Zola keeps `templates/`), menu and footer links in `site.yaml`; the header keys of the stable format
    above, each checked, and `sort_by: date`. *Done when:* every page renders and template errors name the file and
    line.
-7. `feat/edu-build` (~1,600, four PRs: build and assets; sections, sitemap, robots, 404 and `--base-url`; check;
-   serve) — `edu build` (pretty URLs, assets, `redirect_to` pages, drafts only with `--drafts`,
+7. `feat/edu-build` (~2,000, five PRs: build and assets; redirects, sitemap, robots and 404; drafts and
+   `--base-url`; check; serve) — `edu build` (pretty URLs, assets, `redirect_to` pages, drafts only with `--drafts`,
    `sitemap.xml`, `robots.txt`, `404.html`, `--base-url` for fork previews), `edu check` (internal links, anchors,
    and the URL-parity list in research 0001), `edu serve` (std::net, rebuilds on request); `compose.yaml`; `ci.yml`
    attaches the `--drafts` build to each PR. *Done when:* the checks pass on real content and two builds are

@@ -1,5 +1,5 @@
 //! Rendering pages: the settings of `site.yaml`, the layouts of `layouts/`, and the values that
-//! the layouts read for each page of `content/`.
+//! the layouts read for each page of `content/`; and the page of a redirect.
 
 use std::ffi::OsStr;
 use std::fs;
@@ -9,24 +9,45 @@ use edu_template::{Template, Value};
 use edu_yaml::{Entry, Node};
 
 use crate::Error;
+use crate::build::BaseUrl;
 use crate::check::{ContentError, PageError, ValueError, read};
 use crate::page::{Kind, Order, Page, TOP};
 
 /// The layout that wraps every page's own layout, at `{{ content | safe }}`.
 const LAYOUT: &str = "layout.html";
 
-/// The settings of `site.yaml` in `root`, as the value `site`, or `None` after an error in them,
-/// which goes to `errors`.
-pub(crate) fn site(root: &Path, errors: &mut Vec<ContentError>) -> Result<Option<Value>, Error> {
+/// The settings of `site.yaml`: the value `site` of the layouts, and the site's address.
+pub(crate) struct Site {
+    pub(crate) value: Value,
+    pub(crate) base_url: BaseUrl,
+}
+
+/// The settings of `site.yaml` in `root`, or `None` after an error in them, which goes to
+/// `errors`.
+pub(crate) fn site(root: &Path, errors: &mut Vec<ContentError>) -> Result<Option<Site>, Error> {
     let path = PathBuf::from("site.yaml");
-    match edu_yaml::parse(&read(root, &path)?) {
-        Ok(entries) => Ok(Some(map(&entries))),
+    match settings(&read(root, &path)?) {
+        Ok(site) => Ok(Some(site)),
         Err(error) => {
-            let error = PageError::Header(error);
             errors.push(ContentError { path, error });
             Ok(None)
         }
     }
+}
+
+/// The settings in `text`, the YAML of `site.yaml`, which must have `base_url`.
+fn settings(text: &str) -> Result<Site, PageError> {
+    let entries = edu_yaml::parse(text).map_err(PageError::Header)?;
+    let Some(entry) = entries.iter().find(|entry| entry.key == "base_url") else {
+        return Err(PageError::Value(TOP, ValueError::NoBaseUrl));
+    };
+    let base_url = match &entry.value.value {
+        edu_yaml::Value::Str(text) => BaseUrl::parse(text),
+        edu_yaml::Value::List(_) | edu_yaml::Value::Map(_) => None,
+    };
+    let base_url = base_url.ok_or(PageError::Value(entry.value.pos, ValueError::BadBaseUrl))?;
+    let value = map(&entries);
+    Ok(Site { value, base_url })
 }
 
 fn map(entries: &[Entry]) -> Value {
@@ -115,6 +136,18 @@ pub(crate) fn render(
     context.push(("content".to_owned(), Value::Str(html)));
     let rendered = wrapper.render(&Value::Map(context));
     rendered.map_err(|error| render_error(LAYOUT, page, error))
+}
+
+/// The page of an `_index.md` with `redirect_to`, which sends the browser on to `to` at once:
+/// Zola's redirect without its JavaScript.
+pub(crate) fn redirect(to: &str) -> String {
+    let mut url = String::new();
+    edu_template::escape(&mut url, to);
+    format!(
+        "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Redirect</title>\n\
+         <meta http-equiv=\"refresh\" content=\"0; url={url}\">\n\
+         <p><a href=\"{url}\">Click here</a> to be redirected.</p>\n"
+    )
 }
 
 fn render_error(layout: &str, page: &Page, error: edu_template::Error) -> ContentError {
@@ -290,6 +323,41 @@ mod tests {
         let layouts = Layouts::read(&site("valid"), &mut errors).unwrap();
         assert!(layouts.is_some());
         assert_eq!(errors.len(), 2);
+    }
+
+    #[test]
+    fn the_settings_have_the_address_of_the_site() {
+        let site = settings("title: T\nbase_url: https://a.org/\n").unwrap();
+        assert_eq!(site.base_url.to_string(), "https://a.org");
+        let (no, bad) = (
+            "the settings need `base_url`, the site's address",
+            "`base_url` is an address such as `https://rust-edu.org` or \
+             `https://example.github.io/rust-edu`",
+        );
+        let cases = [
+            ("title: T\n", format!("1:1: error: {no}")),
+            ("base_url: rust-edu.org\n", format!("1:11: error: {bad}")),
+            (
+                "base_url:\n  - https://a.org\n",
+                format!("2:3: error: {bad}"),
+            ),
+        ];
+        for (text, expected) in cases {
+            let (path, error) = (PathBuf::from("site.yaml"), settings(text).err().unwrap());
+            let error = ContentError { path, error }.to_string();
+            assert_eq!(error, format!("site.yaml:{expected}"), "{text}");
+        }
+    }
+
+    #[test]
+    fn a_redirect_sends_the_browser_on_without_javascript() {
+        let url = "https://a.org/?b=1&amp;c=2";
+        let expected = format!(
+            "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Redirect</title>\n\
+             <meta http-equiv=\"refresh\" content=\"0; url={url}\">\n\
+             <p><a href=\"{url}\">Click here</a> to be redirected.</p>\n"
+        );
+        assert_eq!(redirect("https://a.org/?b=1&c=2"), expected);
     }
 
     #[test]

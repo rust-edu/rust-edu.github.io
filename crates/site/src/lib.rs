@@ -64,6 +64,8 @@ pub enum Error {
         first: PathBuf,
         second: PathBuf,
     },
+    /// A file of the site that would be `path`, a file that the build makes itself.
+    Reserved { path: PathBuf, file: PathBuf },
 }
 
 impl Command {
@@ -153,6 +155,13 @@ impl fmt::Display for Error {
                 let (path, first, second) = (path.display(), first.display(), second.display());
                 write!(f, "{first} and {second} would both be /{path}")
             }
+            Self::Reserved { path, file } => {
+                let (path, file) = (path.display(), file.display());
+                write!(
+                    f,
+                    "{file} would be /{path}, which `edu build` writes itself"
+                )
+            }
         }
     }
 }
@@ -163,7 +172,9 @@ impl std::error::Error for Error {
             Self::Read { source, .. } | Self::Write(source) | Self::Output { source, .. } => {
                 Some(source)
             }
-            Self::Content(_) | Self::Foreign(_) | Self::Clash { .. } => None,
+            Self::Content(_) | Self::Foreign(_) | Self::Clash { .. } | Self::Reserved { .. } => {
+                None
+            }
         }
     }
 }
@@ -236,7 +247,7 @@ mod tests {
 
     #[test]
     fn check_writes_how_many_pages_it_checked() {
-        assert_eq!(output(&Command::Check), "checked 3 pages with 3 layouts\n");
+        assert_eq!(output(&Command::Check), "checked 4 pages with 3 layouts\n");
     }
 
     #[test]

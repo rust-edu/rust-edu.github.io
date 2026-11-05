@@ -90,7 +90,7 @@ fn build_writes_the_site_into_public_and_says_how_much() {
 
     assert!(output.status.success(), "{output:?}");
     let stdout = String::from_utf8(output.stdout).unwrap();
-    assert_eq!(stdout, "wrote 2 pages and 4 files to public/\n");
+    assert_eq!(stdout, "wrote 4 pages and 7 files to public/\n");
     assert!(dir.join("public/news/post/index.html").is_file());
 }
 

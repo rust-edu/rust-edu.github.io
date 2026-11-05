@@ -162,7 +162,11 @@ impl Page {
                 _ => return Err((pos, ValueError::BadSortBy)),
             },
             ("redirect_to", Kind::Home | Kind::Section) => {
-                self.redirect_to = Some(text(entry)?.to_owned());
+                let to = text(entry)?;
+                if !(to.starts_with("https://") || to.starts_with("http://")) {
+                    return Err((pos, ValueError::BadRedirect));
+                }
+                self.redirect_to = Some(to.to_owned());
             }
             (key, Kind::Page) => return Err((entry.pos, ValueError::NotPageKey(key.to_owned()))),
             (key, Kind::Home | Kind::Section) => {
@@ -290,10 +294,10 @@ mod tests {
         let chat = page("chat/_index.md", "redirect_to: https://example.org/\n");
         assert_eq!(chat.redirect_to.as_deref(), Some("https://example.org/"));
         assert_eq!((chat.order, chat.title), (Order::Url, None));
-        let home = page("_index.md", "sort_by: date\nredirect_to: /news/\n");
+        let home = page("_index.md", "sort_by: date\nredirect_to: http://a.org/\n");
         assert_eq!(
             (home.order, home.redirect_to.as_deref()),
-            (Order::Date, Some("/news/"))
+            (Order::Date, Some("http://a.org/"))
         );
     }
 
