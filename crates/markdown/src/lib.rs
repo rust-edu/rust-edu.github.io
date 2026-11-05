@@ -1,12 +1,16 @@
-//! A strict subset of CommonMark for the pages of the site, rendered to HTML.
+//! A strict subset of CommonMark for the pages of the site, rendered to HTML as Zola renders it.
 //!
 //! The blocks are paragraphs; `#` headings, each with an id made from its text; code between
 //! ```` ``` ```` or `~~~` fences; `>` quotes; and lists of `-`, `*` or `+` items or of numbered
-//! items such as `1.`, nested by the column where an item's text starts. Text is escaped for HTML
-//! as written: inline syntax is not interpreted, and raw HTML and link reference definitions read
-//! as text. Tabs, indented code, underlined headings, horizontal rules, and lines that CommonMark
-//! reads in a way that is easy to miss, such as a line that continues a list item without its
+//! items such as `1.`, nested by the column where an item's text starts. In paragraphs and
+//! headings are code spans, `<url>` and `<email>` autolinks, backslash escapes, the references
+//! `&amp;`, `&lt;`, `&gt;` and `&quot;`, and line breaks after two spaces or a `\`; links, images
+//! and emphasis are text, and so are link reference definitions. Tabs, indented code, underlined
+//! headings, horizontal rules, HTML, other character references, and lines that CommonMark reads
+//! in a way that is easy to miss, such as a line that continues a list item without its
 //! indentation, are errors with a line and column; [`ErrorKind`] lists them.
+
+mod inline;
 
 use std::fmt;
 
@@ -49,6 +53,11 @@ pub enum ErrorKind {
     NoHeadingId,
     /// A list or quote inside 8 others.
     TooDeep,
+    /// A `<` before a letter, `/`, `!` or `?` that does not start an autolink: CommonMark may read
+    /// it as HTML.
+    RawHtml,
+    /// A character reference other than `&amp;`, `&lt;`, `&gt;` and `&quot;`.
+    Entity,
 }
 
 /// Renders `text`, the Markdown of a page after its header, to HTML. An error's line counts from
@@ -458,11 +467,11 @@ impl Html {
     fn blocks(&mut self, blocks: &[Block<'_>], tight: bool) -> Result<(), Error> {
         for block in blocks {
             match block {
-                Block::Paragraph(lines) if tight => self.paragraph(lines),
+                Block::Paragraph(lines) if tight => self.paragraph(lines)?,
                 Block::Paragraph(lines) => {
                     self.newline();
                     self.text.push_str("<p>");
-                    self.paragraph(lines);
+                    self.paragraph(lines)?;
                     self.text.push_str("</p>\n");
                 }
                 Block::Heading(heading) => self.heading(heading)?,
@@ -479,26 +488,38 @@ impl Html {
         Ok(())
     }
 
-    /// The text of a paragraph's lines, without the spaces that end them.
-    fn paragraph(&mut self, lines: &[Line<'_>]) {
-        for (index, line) in lines.iter().enumerate() {
-            if index > 0 {
-                self.text.push('\n');
-            }
-            escape(&mut self.text, line.text.trim_end_matches(' '));
-        }
+    /// The inlines of a paragraph: its lines joined by line breaks, without the spaces that end it.
+    fn paragraph(&mut self, lines: &[Line<'_>]) -> Result<(), Error> {
+        let Some(first) = lines.first() else {
+            return Ok(());
+        };
+        let texts: Vec<&str> = lines.iter().map(|line| line.text).collect();
+        let joined = texts.join("\n");
+        let text = joined.trim_end_matches(' ');
+        let inlines = inline::parse(text).map_err(|(at, kind)| {
+            // The line that holds byte `at`, and where that line starts.
+            let before = text.get(..at).unwrap_or_default();
+            let line = lines.get(before.matches('\n').count()).unwrap_or(first);
+            let start = before.rfind('\n').map_or(0, |index| index + 1);
+            line.error_at(line.text.get(at - start..).unwrap_or_default(), kind)
+        })?;
+        inline::write(&mut self.text, &inlines);
+        Ok(())
     }
 
     /// A heading with Zola's id for it, made unique on the page with `-1`, `-2` and so on.
     fn heading(&mut self, heading: &Heading<'_>) -> Result<(), Error> {
         let Heading { level, line, text } = heading;
+        let error = |at: usize, kind| line.error_at(text.get(at..).unwrap_or_default(), kind);
         let shown = without_closing_marks(text);
-        let is_foreign = |&(_, c): &(usize, char)| c.is_alphanumeric() && !c.is_ascii();
-        if let Some((index, c)) = shown.char_indices().find(is_foreign) {
-            let part = text.get(index..).unwrap_or_default();
-            return Err(line.error_at(part, ErrorKind::NonAsciiInHeading(c)));
+        let inlines = inline::parse(shown).map_err(|(at, kind)| error(at, kind))?;
+        // Zola makes the id from the heading's text without its markup.
+        let words = inline::plain(&inlines);
+        if let Some(c) = words.chars().find(|c| c.is_alphanumeric() && !c.is_ascii()) {
+            let at = text.find(c).unwrap_or_default();
+            return Err(error(at, ErrorKind::NonAsciiInHeading(c)));
         }
-        let base = slug(shown);
+        let base = slug(&words);
         if base.is_empty() {
             return Err(line.error(ErrorKind::NoHeadingId));
         }
@@ -508,7 +529,7 @@ impl Html {
             id = format!("{base}-{n}");
         }
         self.text.push_str(&format!("<h{level} id=\"{id}\">"));
-        escape(&mut self.text, shown);
+        inline::write(&mut self.text, &inlines);
         self.text.push_str(&format!("</h{level}>\n"));
         self.ids.push(id);
         Ok(())
@@ -629,6 +650,13 @@ impl fmt::Display for ErrorKind {
             Self::NoHeadingId => "a heading needs an ASCII letter or digit, for its id",
             Self::TooDeep => {
                 return write!(f, "lists and quotes nest at most {MAX_DEPTH} deep");
+            }
+            Self::RawHtml => {
+                "HTML is not supported; write `\\<` for a `<`, or put code in backticks"
+            }
+            Self::Entity => {
+                "the only character references are `&amp;`, `&lt;`, `&gt;` and `&quot;`; type the \
+                 character itself"
             }
         };
         f.write_str(message)
