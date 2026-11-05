@@ -92,7 +92,7 @@ flowchart LR
     `{{ content | safe }}` instead of `extends` and `block`.
   - `crates/site` (`edu-site`, binary `edu`) — the command-line tool. `edu check` checks `site.yaml`, the layouts in
     `layouts/`, and the YAML header and Markdown text of every page in `content/`, then renders every page with
-    them; `edu build` and `edu serve` follow in step 7.
+    them; `edu build` checks the same, then writes the site into `public/`; `edu serve` follows in step 7.
 
 ```mermaid
 flowchart LR
@@ -104,7 +104,8 @@ flowchart LR
 ```
 
 ### Check locally
-CI runs the generator checks and `edu check` inside the pinned Docker image; the same check runs locally with:
+CI runs the generator checks, `edu check`, and two builds that must be the same, inside the pinned Docker image; the
+same check runs locally with:
 ```bash
 docker build --target check .
 ```

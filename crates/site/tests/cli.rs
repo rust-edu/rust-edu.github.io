@@ -1,5 +1,6 @@
 //! Runs the `edu` binary as a user or CI would, for its exit statuses and output streams.
 
+use std::fs;
 use std::io;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -58,6 +59,39 @@ fn check_lists_each_bad_header_or_text_on_stderr_and_exits_with_1() {
         "edu: 5 errors in the site\n",
     );
     assert_eq!(String::from_utf8(output.stderr).unwrap(), expected);
+}
+
+/// Copies the folder `from` to `to`, with everything in it.
+fn copy(from: &Path, to: &Path) -> io::Result<()> {
+    fs::create_dir_all(to)?;
+    for entry in fs::read_dir(from)? {
+        let entry = entry?;
+        let to = to.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy(&entry.path(), &to)?;
+        } else {
+            fs::copy(entry.path(), to)?;
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn build_writes_the_site_into_public_and_says_how_much() {
+    let sites = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/sites");
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("valid");
+    let _ = fs::remove_dir_all(&dir);
+    copy(&sites.join("valid"), &dir).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_edu"))
+        .arg("build")
+        .current_dir(&dir)
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "{output:?}");
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert_eq!(stdout, "wrote 2 pages and 4 files to public/\n");
+    assert!(dir.join("public/news/post/index.html").is_file());
 }
 
 #[test]
