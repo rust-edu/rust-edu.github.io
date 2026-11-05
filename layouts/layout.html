@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{{ site.description }}">
+    <link rel="stylesheet" href="/style.css">
+
+    <title>{% if page.home %}Home{% else %}{{ page.title }}{% endif %} - {{ site.title }}</title>
+</head>
+
+<body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+        <a class="site-logo" href="/">
+            <img src="/rust-edu-banner.svg" alt="Rust Edu home" width="150" height="36">
+        </a>
+        <nav class="site-nav" aria-label="Main">
+            <ul>
+                {% for item in site.menu %}
+                <li><a href="{{ item.url }}">{{ item.name }}</a></li>
+                {% endfor %}
+            </ul>
+        </nav>
+    </header>
+
+    <main id="main">
+        {{ content | safe }}
+    </main>
+
+    <footer class="site-footer">
+        <div class="site-footer-links">
+            <nav aria-labelledby="footer-navigation">
+                <h2 id="footer-navigation">Navigation</h2>
+                <ul>
+                    {% for item in site.menu %}
+                    <li><a href="{{ item.url }}">{{ item.name }}</a></li>
+                    {% endfor %}
+                </ul>
+            </nav>
+            <nav aria-labelledby="footer-useful-links">
+                <h2 id="footer-useful-links">Useful links</h2>
+                <ul>
+                    {% for item in site.footer %}
+                    <li><a href="{{ item.url }}">{{ item.name }}</a></li>
+                    {% endfor %}
+                </ul>
+            </nav>
+        </div>
+
+        <p>The content of this website is licensed
+            <a href="https://creativecommons.org/share-your-work/public-domain/cc0/">CC0</a>.</p>
+        <p>View the source on <a href="https://github.com/rust-edu/rust-edu.github.io">GitHub</a>.</p>
+    </footer>
+</body>
+
+</html>

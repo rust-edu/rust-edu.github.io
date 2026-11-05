@@ -11,6 +11,7 @@ name = "edu-site"
 version = "0.1.0"
 dependencies = [
  "edu-markdown",
+ "edu-template",
  "edu-yaml",
 ]
 

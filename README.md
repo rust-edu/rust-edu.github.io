@@ -40,6 +40,8 @@ Zola will auto-reload when changes are made.
 - `templates/`: the HTML layout of each kind of page (Zola's Tera templates)
 - `static/style.css`: the whole stylesheet, plain CSS with its colors in one token block at the top
 - `config.toml`: the site title and description, and the menu and footer links
+- `layouts/` and `site.yaml`: the same layouts and settings for the new generator below; until it replaces Zola,
+  a change to `templates/` or `config.toml` goes in both
 
 ## 🦀 The New Generator (in progress)
 [Plan 0002](docs/Plan-0002—Own-Markdown-Site-Generator.md) replaces Zola, step by step, with a small generator in

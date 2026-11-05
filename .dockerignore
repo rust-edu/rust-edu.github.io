@@ -6,3 +6,5 @@
 !rust-toolchain.toml
 !crates
 !content
+!layouts
+!site.yaml

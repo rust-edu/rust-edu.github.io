@@ -82,7 +82,8 @@ underlined with `===`, indented code, and web or email addresses not written as 
 - **A resource:** add one line under the right heading of `content/resources/_index.md`:
   `- [Title](https://example.org/) — Author. One or two sentences on what it is.` (leave out `Author.` when there is
   none).
-- **Menu and footer links:** the `navbar` and `external` lists at the end of `config.toml`.
+- **Menu and footer links:** the `navbar` and `external` lists at the end of `config.toml`, and the same links in
+  the `menu` and `footer` lists of `site.yaml`, which the site's next generator reads.
 
 ## Proposing a change on GitHub
 
