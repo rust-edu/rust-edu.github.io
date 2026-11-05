@@ -3,12 +3,12 @@
 //! The blocks are paragraphs; `#` headings, each with an id made from its text; code between
 //! ```` ``` ```` or `~~~` fences; `>` quotes; and lists of `-`, `*` or `+` items or of numbered
 //! items such as `1.`, nested by the column where an item's text starts. In paragraphs and
-//! headings are code spans, `<url>` and `<email>` autolinks, backslash escapes, the references
-//! `&amp;`, `&lt;`, `&gt;` and `&quot;`, and line breaks after two spaces or a `\`; links, images
-//! and emphasis are text, and so are link reference definitions. Tabs, indented code, underlined
-//! headings, horizontal rules, HTML, other character references, and lines that CommonMark reads
-//! in a way that is easy to miss, such as a line that continues a list item without its
-//! indentation, are errors with a line and column; [`ErrorKind`] lists them.
+//! headings are code spans, `[text](url)` links, `![description](url)` images, `<url>` and
+//! `<email>` autolinks, backslash escapes, the references `&amp;`, `&lt;`, `&gt;` and `&quot;`,
+//! and line breaks after two spaces or a `\`; `*` and `_` are text. Tabs, indented code,
+//! underlined headings, horizontal rules, HTML, other character references, reference links, and
+//! lines that CommonMark reads in a way that is easy to miss, such as a line that continues a list
+//! item without its indentation, are errors with a line and column; [`ErrorKind`] lists them.
 
 mod inline;
 
@@ -58,6 +58,15 @@ pub enum ErrorKind {
     RawHtml,
     /// A character reference other than `&amp;`, `&lt;`, `&gt;` and `&quot;`.
     Entity,
+    /// A link's `(` without a destination after it that ends at `)` on the same line and has no
+    /// space or title.
+    LinkDestination,
+    /// A link in a link's text, which CommonMark leaves as text, or an image in an image's
+    /// description, which Zola fails on.
+    NestedLink,
+    /// A reference link, `[text][label]`, or a paragraph or heading that starts with `[label]:`,
+    /// which CommonMark may read as the definition of one.
+    ReferenceLink,
 }
 
 /// Renders `text`, the Markdown of a page after its header, to HTML. An error's line counts from
@@ -513,7 +522,7 @@ impl Html {
         let error = |at: usize, kind| line.error_at(text.get(at..).unwrap_or_default(), kind);
         let shown = without_closing_marks(text);
         let inlines = inline::parse(shown).map_err(|(at, kind)| error(at, kind))?;
-        // Zola makes the id from the heading's text without its markup.
+        // Zola makes the id from the heading's text without markup and images.
         let words = inline::plain(&inlines);
         if let Some(c) = words.chars().find(|c| c.is_alphanumeric() && !c.is_ascii()) {
             let at = text.find(c).unwrap_or_default();
@@ -657,6 +666,14 @@ impl fmt::Display for ErrorKind {
             Self::Entity => {
                 "the only character references are `&amp;`, `&lt;`, `&gt;` and `&quot;`; type the \
                  character itself"
+            }
+            Self::LinkDestination => {
+                "write a link as `[text](url)`, with the url on the same line and no title, and \
+                 spaces in it as `%20`"
+            }
+            Self::NestedLink => "a link cannot hold another link, nor an image another image",
+            Self::ReferenceLink => {
+                "reference links are not supported; write `[text](url)`, or `\\[` for a `[`"
             }
         };
         f.write_str(message)

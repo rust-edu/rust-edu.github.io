@@ -1,7 +1,9 @@
 //! The inlines of the subset through the public API: the HTML of each, and where each error
 //! points.
 
-use edu_markdown::ErrorKind::{Entity, NoHeadingId, NonAsciiInHeading, RawHtml};
+use edu_markdown::ErrorKind::{
+    Entity, LinkDestination, NestedLink, NoHeadingId, NonAsciiInHeading, RawHtml, ReferenceLink,
+};
 use edu_markdown::{ErrorKind, to_html};
 
 /// The HTML of `text`, or its error.
@@ -86,18 +88,68 @@ fn two_spaces_or_a_backslash_before_a_line_break_keep_it() {
 }
 
 #[test]
-fn a_heading_s_id_is_made_from_its_text_without_markup() {
-    let text = "## The `foo` crate\n## A &amp; B\n## a\\*b\\#\n## <https://x.org> and `<b>`\n";
+fn a_link_s_url_balances_its_parentheses_and_is_escaped_as_in_zola() {
+    let text =
+        "[a](https://e.org/a_(b)?x=1&y=2) [`b`](/news/) [c [d] e](/x/#top) [f](mailto:a@b.c)\n";
+    let expected = concat!(
+        "<p><a rel=\"external\" href=\"https://e.org/a_(b)?x=1&amp;y=2\">a</a> ",
+        "<a href=\"/news/\"><code>b</code></a> <a href=\"/x/#top\">c [d] e</a> ",
+        "<a href=\"mailto:a@b.c\">f</a></p>\n",
+    );
+    assert_eq!(html(text), expected);
+    let text =
+        "[a](/é?q=ü#ß) [b](/x%20y\\)z) [c](/a\"b'c<d>{e}|^\\[\\]`\\\\) [d](/?q=&quot;&amp;&lt;)\n";
+    let expected = concat!(
+        "<p><a href=\"/%C3%A9?q=%C3%BC#%C3%9F\">a</a> <a href=\"/x%20y)z\">b</a> ",
+        "<a href=\"/a%22b&#x27;c%3Cd%3E%7Be%7D%7C^%5B%5D%60%5C\">c</a> ",
+        "<a href=\"/?q=%22&amp;%3C\">d</a></p>\n",
+    );
+    assert_eq!(html(text), expected);
+    // A `\` before anything but ASCII punctuation stays in the URL.
+    let expected = "<p><a href=\"/%5Ca%5C%C3%A9\">e</a></p>\n";
+    assert_eq!(html("[e](/\\a\\é)\n"), expected);
+}
+
+#[test]
+fn brackets_without_a_url_right_after_them_are_text() {
+    let expected = "<p>[a] (b) [c]\n(d) e](f) [g [h <a href=\"/j\">i</a></p>\n";
+    assert_eq!(html("[a] (b) [c]\n(d) e](f) [g [h [i](/j)\n"), expected);
+}
+
+#[test]
+fn an_image_s_description_is_its_text_without_markup() {
+    let text = concat!(
+        "![Ferris & \"friends\" `<x>`](/a.png) [![b](/b.png)](/c) ![](/d.png) ",
+        "![e [f](/g)\nh](/i)\n",
+    );
+    let expected = concat!(
+        "<p><img src=\"/a.png\" alt=\"Ferris &amp; &quot;friends&quot; &lt;x&gt;\" /> ",
+        "<a href=\"/c\"><img src=\"/b.png\" alt=\"b\" /></a> <img src=\"/d.png\" alt=\"\" /> ",
+        "<img src=\"/i\" alt=\"e fh\" /></p>\n",
+    );
+    assert_eq!(html(text), expected);
+}
+
+#[test]
+fn a_heading_s_id_is_made_from_its_text_without_markup_or_images() {
+    let text = concat!(
+        "## The `foo` crate\n## A &amp; B\n## a\\*b\\#\n## <https://x.org> and `<b>`\n",
+        "## [Docs](/x) &amp; more\n## ![logo](/i.png) [![x](/i.png) Rust](/l)\n",
+    );
     let expected = concat!(
         "<h2 id=\"the-foo-crate\">The <code>foo</code> crate</h2>\n",
         "<h2 id=\"a-b\">A &amp; B</h2>\n",
         "<h2 id=\"a-b-1\">a*b#</h2>\n",
         "<h2 id=\"https-x-org-and-b\"><a rel=\"external\" href=\"https://x.org\">",
         "https://x.org</a> and <code>&lt;b&gt;</code></h2>\n",
+        "<h2 id=\"docs-more\"><a href=\"/x\">Docs</a> &amp; more</h2>\n",
+        "<h2 id=\"rust\"><img src=\"/i.png\" alt=\"logo\" /> ",
+        "<a href=\"/l\"><img src=\"/i.png\" alt=\"x\" /> Rust</a></h2>\n",
     );
     assert_eq!(html(text), expected);
     assert_eq!(error("## a `é`\n"), Some((1, 7, NonAsciiInHeading('é'))));
     assert_eq!(error("## `--`\n"), Some((1, 1, NoHeadingId)));
+    assert_eq!(error("## ![Rust](/i.png)\n"), Some((1, 1, NoHeadingId)));
 }
 
 #[test]
@@ -116,30 +168,68 @@ fn html_and_other_references_are_errors() {
         ("&nbsp;\n", 1, 1, Entity),
         ("- a &#160;\n", 1, 5, Entity),
         ("## &copy; 2026\n", 1, 4, Entity),
+        ("[a](/?&copy;)\n", 1, 7, Entity),
     ];
     for (text, line, col, kind) in cases {
         assert_eq!(error(text), Some((line, col, kind)), "{text:?}");
     }
 }
 
+#[test]
+fn a_link_needs_its_url_right_after_it_and_cannot_hold_a_link() {
+    let cases = [
+        ("[a](b c)\n", 1, 4, LinkDestination),
+        ("[a](/x \"title\")\n", 1, 4, LinkDestination),
+        ("[a]()\n", 1, 4, LinkDestination),
+        ("[a](</x>)\n", 1, 4, LinkDestination),
+        ("text [a](/x\n", 1, 9, LinkDestination),
+        ("- a\n  [b](/c\n  d)\n", 2, 6, LinkDestination),
+        ("[a [b](/c) d](/e)\n", 1, 1, NestedLink),
+        ("x [<https://x.org>](/y)\n", 1, 3, NestedLink),
+        ("![a ![b](/c)](/d)\n", 1, 1, NestedLink),
+    ];
+    for (text, line, col, kind) in cases {
+        assert_eq!(error(text), Some((line, col, kind)), "{text:?}");
+    }
+}
+
+#[test]
+fn reference_links_and_their_definitions_are_errors() {
+    let cases = [
+        ("[a][b]\n", 1, 1, ReferenceLink),
+        ("see ![a][] here\n", 1, 5, ReferenceLink),
+        ("[x]: /url\n", 1, 1, ReferenceLink),
+        ("> [x\n> y]: /url\n", 1, 3, ReferenceLink),
+        ("## [x]: y\n", 1, 4, ReferenceLink),
+    ];
+    for (text, line, col, kind) in cases {
+        assert_eq!(error(text), Some((line, col, kind)), "{text:?}");
+    }
+    // Elsewhere, `[label]:` is text, as in CommonMark.
+    let expected = "<p>![y]: c</p>\n<p>a [x]: b</p>\n";
+    assert_eq!(html("![y]: c\n\na [x]: b\n"), expected);
+}
+
 /// Every inline of the subset, for the random test to damage. The spaces of a hard line break are
 /// written before `\n`, as editors may remove spaces at the end of a line.
 const SAMPLE: &str = "\
-## The `edu` crate &amp; <https://rust-edu.org>
+## The `edu` [crate](/crates/) &amp; <https://rust-edu.org>
 
-Text with `code` and ``more `code` ``, <https://example.org/a_(b)?c=1&d=2> or <a@b.c>,
-\\*escapes\\*, a line break  \n\
+Text with `code` and ``more `code` ``, a [link](https://example.org/a_(b)?c=1&d=2), an
+![image](/i.png), <https://example.org> or <a@b.c>, \\*escapes\\*, a line break  \n\
 and another\\
 end, as 1 < 2 & 3 > 2.
 
-- `item`  \n  next
+- [![badge](/b.png)](/x) `item`  \n  next
 ";
 
 #[test]
 fn a_damaged_text_gives_html_or_an_error_never_a_panic() {
     to_html(SAMPLE).unwrap();
     let sample: Vec<char> = SAMPLE.chars().collect();
-    let damage = ['<', '>', '`', '\\', '&', ';', ':', '@', '/', ' ', '\n', 'é'];
+    let damage = [
+        '[', ']', '(', ')', '!', '<', '>', '`', '\\', '&', ';', ':', '@', '/', ' ', '\n', 'é',
+    ];
     // xorshift64 with a fixed seed: every run tries the same 5,000 texts, each with two random
     // characters replaced, inserted or removed.
     let mut state: u64 = 0x2545_F491_4F6C_DD1D;

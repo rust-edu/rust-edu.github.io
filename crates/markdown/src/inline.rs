@@ -1,8 +1,8 @@
-//! The inline syntax of paragraphs and headings, rendered as Zola renders it: code spans,
-//! autolinks, backslash escapes, the character references `&amp;`, `&lt;`, `&gt;` and `&quot;`,
-//! and hard line breaks. Links, images and emphasis are text.
+//! The inline syntax of paragraphs and headings, rendered as Zola renders it: code spans, links,
+//! images, autolinks, backslash escapes, the character references `&amp;`, `&lt;`, `&gt;` and
+//! `&quot;`, and hard line breaks. `*` and `_` are text.
 
-use crate::{ErrorKind, escape};
+use crate::{ErrorKind, escape, escape_attribute};
 
 /// A piece of the text of a paragraph or heading.
 pub(crate) enum Inline<'a> {
@@ -12,10 +12,25 @@ pub(crate) enum Inline<'a> {
     Code(String),
     /// A link: where it points, and its text.
     Link { url: String, text: Vec<Inline<'a>> },
+    /// An image: where it is, and its description.
+    Image { url: String, text: Vec<Inline<'a>> },
     /// The end of a line inside the text.
     LineBreak,
     /// A line break kept in the HTML, after two spaces or more, or a `\`.
     HardBreak,
+}
+
+/// A `[`, or a `![`, that a later `]` may close.
+struct Bracket {
+    /// Where it is in the text.
+    at: usize,
+    /// The node that holds it as text until it is closed.
+    node: usize,
+    image: bool,
+    /// Whether it may still start a link or image. A link makes the `[`s around it inactive, as
+    /// in CommonMark; an image makes the `![`s around it inactive, as Zola fails on an image in an
+    /// image.
+    active: bool,
 }
 
 /// The parser of one text.
@@ -26,17 +41,19 @@ struct Inlines<'a> {
     /// The first byte of the text not in a node yet.
     start: usize,
     nodes: Vec<Inline<'a>>,
+    brackets: Vec<Bracket>,
 }
 
 /// Parses `text`: the lines of a paragraph joined by `\n`, without the spaces that end it, or the
 /// text of a heading. An error has the byte of `text` where it starts.
 pub(crate) fn parse(text: &str) -> Result<Vec<Inline<'_>>, (usize, ErrorKind)> {
-    let (next, start, nodes) = (0, 0, Vec::new());
+    let (next, start, nodes, brackets) = (0, 0, Vec::new(), Vec::new());
     let mut inlines = Inlines {
         text,
         next,
         start,
         nodes,
+        brackets,
     };
     while let Some(&byte) = text.as_bytes().get(inlines.next) {
         match byte {
@@ -44,6 +61,9 @@ pub(crate) fn parse(text: &str) -> Result<Vec<Inline<'_>>, (usize, ErrorKind)> {
             b'`' => inlines.code(),
             b'<' => inlines.angle()?,
             b'&' => inlines.reference()?,
+            b'[' => inlines.open(false),
+            b'!' if inlines.rest().starts_with("![") => inlines.open(true),
+            b']' => inlines.close()?,
             b'\n' => inlines.line_break(),
             _ => inlines.next += 1,
         }
@@ -128,6 +148,7 @@ impl<'a> Inlines<'a> {
             None
         };
         if let Some(url) = url {
+            self.deactivate(false);
             let text = vec![Inline::Text(target)];
             self.push(Inline::Link { url, text }, target.len() + 2);
         } else if inside.starts_with(|c: char| c.is_ascii_alphabetic() || "/!?".contains(c)) {
@@ -146,6 +167,68 @@ impl<'a> Inlines<'a> {
             None => self.next += 1,
         }
         Ok(())
+    }
+
+    /// A `[`, or with `image` a `![`, kept as text unless a `]` closes it.
+    fn open(&mut self, image: bool) {
+        let (at, len) = (self.next, if image { 2 } else { 1 });
+        let marker = self.text.get(at..at + len).unwrap_or_default();
+        self.push(Inline::Text(marker), len);
+        let node = self.nodes.len() - 1;
+        let active = true;
+        self.brackets.push(Bracket {
+            at,
+            node,
+            image,
+            active,
+        });
+    }
+
+    /// A `]`: with `(` after it, the end of the text of the link or image that the last bracket
+    /// starts; else text.
+    fn close(&mut self) -> Result<(), (usize, ErrorKind)> {
+        let after = self.rest().get(1..).unwrap_or_default();
+        let Some(bracket) = self.brackets.pop() else {
+            self.next += 1;
+            return Ok(());
+        };
+        // CommonMark may read `[label]:` at the start of a paragraph as a link's definition.
+        let definition = bracket.at == 0 && !bracket.image && after.starts_with(':');
+        if after.starts_with('[') || definition {
+            return Err((bracket.at, ErrorKind::ReferenceLink));
+        }
+        if !after.starts_with('(') {
+            self.next += 1;
+            return Ok(());
+        }
+        if !bracket.active {
+            return Err((bracket.at, ErrorKind::NestedLink));
+        }
+        let open = self.next + 1;
+        let error = (open, ErrorKind::LinkDestination);
+        let destination = after.get(1..).and_then(destination).ok_or(error)?;
+        let url = decode(destination).map_err(|index| (open + 1 + index, ErrorKind::Entity))?;
+        self.flush();
+        let text = self.nodes.split_off(bracket.node + 1);
+        self.nodes.truncate(bracket.node);
+        self.deactivate(bracket.image);
+        self.nodes.push(if bracket.image {
+            Inline::Image { url, text }
+        } else {
+            Inline::Link { url, text }
+        });
+        self.next = open + destination.len() + 2;
+        self.start = self.next;
+        Ok(())
+    }
+
+    /// Makes the brackets around a new link, or around a new image, unable to start another.
+    fn deactivate(&mut self, image: bool) {
+        for bracket in &mut self.brackets {
+            if bracket.image == image {
+                bracket.active = false;
+            }
+        }
     }
 
     /// A `\n`, without the spaces before it: a hard line break after two of them or more.
@@ -214,6 +297,49 @@ fn reference(text: &str) -> Option<(usize, Option<&'static str>)> {
     Some((body.len() + 2, decoded))
 }
 
+/// The destination that starts `text`, after a link's `(`: the text up to the `)` that balances
+/// the `(`s in it, if it is not empty, does not start with `<` and has no space or line break.
+fn destination(text: &str) -> Option<&str> {
+    let mut depth = 0_usize;
+    let mut chars = text.char_indices().peekable();
+    while let Some((index, c)) = chars.next() {
+        match c {
+            // An escaped punctuation character neither opens nor closes.
+            '\\' => _ = chars.next_if(|&(_, c)| c.is_ascii_punctuation()),
+            '(' => depth += 1,
+            ')' if depth == 0 => return text.get(..index).filter(|url| !url.is_empty()),
+            ')' => depth -= 1,
+            '<' if index == 0 => return None,
+            ' ' => return None,
+            c if c.is_control() => return None,
+            _ => {}
+        }
+    }
+    None
+}
+
+/// A link's destination with its backslash escapes and character references replaced, or the
+/// byte where a reference other than the four starts.
+fn decode(url: &str) -> Result<String, usize> {
+    let mut decoded = String::new();
+    let mut index = 0;
+    while let Some(rest) = url.get(index..).filter(|rest| !rest.is_empty()) {
+        let escaped = rest.strip_prefix('\\').and_then(|after| after.get(..1));
+        let (text, len) =
+            if let Some(c) = escaped.filter(|c| c.bytes().all(|b| b.is_ascii_punctuation())) {
+                (c, 2)
+            } else if let Some((len, text)) = reference(rest) {
+                (text.ok_or(index)?, len)
+            } else {
+                let len = rest.chars().next().map_or(1, char::len_utf8);
+                (rest.get(..len).unwrap_or_default(), len)
+            };
+        decoded.push_str(text);
+        index += len;
+    }
+    Ok(decoded)
+}
+
 /// Appends `inlines` to `html`.
 pub(crate) fn write(html: &mut String, inlines: &[Inline<'_>]) {
     for inline in inlines {
@@ -236,14 +362,21 @@ pub(crate) fn write(html: &mut String, inlines: &[Inline<'_>]) {
                 write(html, text);
                 html.push_str("</a>");
             }
+            Inline::Image { url, text } => {
+                html.push_str("<img src=\"");
+                escape_url(html, url);
+                html.push_str("\" alt=\"");
+                escape_attribute(html, &plain(text));
+                html.push_str("\" />");
+            }
             Inline::LineBreak => html.push('\n'),
             Inline::HardBreak => html.push_str("<br />\n"),
         }
     }
 }
 
-/// The text of `inlines` without markup, from which Zola makes a heading's id: line breaks add
-/// nothing.
+/// The text of `inlines` without markup, from which Zola makes a heading's id and an image's
+/// description: line breaks and images add nothing.
 pub(crate) fn plain(inlines: &[Inline<'_>]) -> String {
     let mut plain = String::new();
     for inline in inlines {
@@ -251,7 +384,7 @@ pub(crate) fn plain(inlines: &[Inline<'_>]) -> String {
             Inline::Text(text) => plain.push_str(text),
             Inline::Code(code) => plain.push_str(code),
             Inline::Link { text, .. } => plain.push_str(&self::plain(text)),
-            Inline::LineBreak | Inline::HardBreak => {}
+            Inline::Image { .. } | Inline::LineBreak | Inline::HardBreak => {}
         }
     }
     plain
