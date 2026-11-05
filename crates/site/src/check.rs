@@ -1,5 +1,6 @@
-//! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset, and
-//! the text after it is in the Markdown subset.
+//! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset and
+//! its text is in the Markdown subset, `site.yaml` is in the YAML subset, and every layout of
+//! `layouts/` is in the template language.
 
 use std::ffi::OsStr;
 use std::fmt;
@@ -7,41 +8,50 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::Error;
+use crate::render::{self, Layouts};
 
-/// A page whose header or text is not in the subsets.
+/// A file of the site with an error: a page, `site.yaml` or a layout.
 #[derive(Debug)]
 pub struct ContentError {
-    /// The page, relative to the site root.
+    /// The file, relative to the site root.
     pub path: PathBuf,
     pub error: PageError,
 }
 
-/// What is wrong with a page; positions count lines from the top of the page.
+/// What is wrong with a file; in a page, positions count lines from the top of the page.
 #[derive(Debug)]
 pub enum PageError {
+    /// An error in the YAML of a page's header or of `site.yaml`.
     Header(edu_yaml::Error),
     Text(edu_markdown::Error),
+    /// An error in a layout's text.
+    Layout(edu_template::Error),
 }
 
-/// Checks the header and the text of every Markdown page under `content/` in `root`, and returns
-/// how many pages there are.
-pub(crate) fn pages(root: &Path) -> Result<usize, Error> {
-    let mut pages = Vec::new();
-    markdown_files(root, Path::new("content"), &mut pages)?;
+/// How many pages and layouts `edu check` checked.
+#[derive(Debug)]
+pub(crate) struct Checked {
+    pub(crate) pages: usize,
+    pub(crate) layouts: usize,
+}
+
+/// Checks the header and the text of every Markdown page under `content/` in `root`, the settings
+/// of `site.yaml`, and the text of every layout of `layouts/`.
+pub(crate) fn pages(root: &Path) -> Result<Checked, Error> {
+    let mut paths = Vec::new();
+    markdown_files(root, Path::new("content"), &mut paths)?;
     let mut errors = Vec::new();
-    for path in &pages {
-        let read_error = |source| Error::Read {
-            path: path.clone(),
-            source,
-        };
-        let text = fs::read_to_string(root.join(path)).map_err(read_error)?;
-        if let Some(error) = page_error(&text) {
+    for path in &paths {
+        if let Some(error) = page_error(&read(root, path)?) {
             let path = path.clone();
             errors.push(ContentError { path, error });
         }
     }
+    render::site(root, &mut errors)?;
+    let layouts = Layouts::read(root, &mut errors)?;
     if errors.is_empty() {
-        Ok(pages.len())
+        let (pages, layouts) = (paths.len(), layouts.len());
+        Ok(Checked { pages, layouts })
     } else {
         Err(Error::Content(errors))
     }
@@ -58,6 +68,15 @@ fn page_error(text: &str) -> Option<PageError> {
     let header = text.get(..text.len() - body.len()).unwrap_or_default();
     error.pos.line += header.matches('\n').count();
     Some(PageError::Text(error))
+}
+
+/// The text of the file at `path`, relative to `root`.
+pub(crate) fn read(root: &Path, path: &Path) -> Result<String, Error> {
+    let read_error = |source| Error::Read {
+        path: path.to_owned(),
+        source,
+    };
+    fs::read_to_string(root.join(path)).map_err(read_error)
 }
 
 /// Adds the Markdown files under `dir`, a directory relative to `root`, to `files` in path order.
@@ -90,6 +109,7 @@ impl fmt::Display for ContentError {
         match &self.error {
             PageError::Header(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
             PageError::Text(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
+            PageError::Layout(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
         }
     }
 }
@@ -106,9 +126,10 @@ mod tests {
     }
 
     #[test]
-    fn every_markdown_file_under_content_is_a_page() {
-        // `valid` holds two pages and `news/notes.txt`.
-        assert_eq!(pages(&site("valid")).unwrap(), 2);
+    fn every_markdown_file_under_content_is_a_page_and_every_html_file_a_layout() {
+        // `valid` holds two pages and `news/notes.txt`, and three layouts and `notes.txt`.
+        let checked = pages(&site("valid")).unwrap();
+        assert_eq!((checked.pages, checked.layouts), (2, 3));
     }
 
     #[test]
@@ -122,8 +143,21 @@ mod tests {
             "content/b.md:2:8: error: a value with `: ` in it or `:` at its end needs quotes",
             "content/d.md:5:11: error: HTML is not supported; write `\\<` for a `<`, or put code \
              in backticks",
+            "site.yaml:1:8: error: a value with `: ` in it or `:` at its end needs quotes",
+            "layouts/layout.html:1:11: error: unknown filter `upper`; the only filter is `safe`",
         ];
         assert_eq!(errors, expected);
+    }
+
+    #[test]
+    fn a_site_without_layout_html_is_a_read_error() {
+        // `no-layout` has a page, `site.yaml` and `layouts/page.html`.
+        let result = pages(&site("no-layout"));
+        let is_layout = |path: &PathBuf| path == Path::new("layouts/layout.html");
+        assert!(
+            matches!(&result, Err(Error::Read { path, .. }) if is_layout(path)),
+            "{result:?}"
+        );
     }
 
     #[test]

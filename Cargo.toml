@@ -9,6 +9,7 @@ members = [
 
 [workspace.dependencies]
 edu-markdown = { path = "crates/markdown" }
+edu-template = { path = "crates/template" }
 edu-yaml = { path = "crates/yaml" }
 
 [workspace.package]

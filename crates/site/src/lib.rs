@@ -3,6 +3,7 @@
 //! (stdout); `main` reports errors on stderr.
 
 mod check;
+mod render;
 
 use std::ffi::{OsStr, OsString};
 use std::fmt;
@@ -16,7 +17,7 @@ pub const USAGE: &str = "\
 Usage: edu <command>
 
 Commands:
-  check    Check the header and the text of every page in content/
+  check    Check every page in content/, site.yaml and every layout in layouts/
   help     Print this help
   version  Print the version
 ";
@@ -41,7 +42,7 @@ pub enum UsageError {
 pub enum Error {
     /// A file or directory of the site cannot be read, or a page is not UTF-8.
     Read { path: PathBuf, source: io::Error },
-    /// Pages whose header or text is not in the subsets, in path order.
+    /// Files of the site with errors: pages in path order, then `site.yaml` and the layouts.
     Content(Vec<ContentError>),
     /// The output cannot be written.
     Write(io::Error),
@@ -77,8 +78,12 @@ fn lossy(arg: &OsStr) -> String {
 pub fn run(command: &Command, root: &Path, out: &mut impl Write) -> Result<(), Error> {
     let written = match command {
         Command::Check => {
-            let pages = check::pages(root)?;
-            writeln!(out, "checked {}", count(pages, "page"))
+            let checked = check::pages(root)?;
+            let (pages, layouts) = (
+                count(checked.pages, "page"),
+                count(checked.layouts, "layout"),
+            );
+            writeln!(out, "checked {pages} with {layouts}")
         }
         Command::Help => out.write_all(USAGE.as_bytes()),
         Command::Version => writeln!(out, "edu {}", env!("CARGO_PKG_VERSION")),
@@ -108,7 +113,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Read { path, .. } => write!(f, "cannot read {}", path.display()),
-            Self::Content(errors) => write!(f, "{} in content/", count(errors.len(), "error")),
+            Self::Content(errors) => write!(f, "{} in the site", count(errors.len(), "error")),
             Self::Write(_) => f.write_str("cannot write the output"),
         }
     }
@@ -190,7 +195,7 @@ mod tests {
 
     #[test]
     fn check_writes_how_many_pages_it_checked() {
-        assert_eq!(output(&Command::Check), "checked 2 pages\n");
+        assert_eq!(output(&Command::Check), "checked 2 pages with 3 layouts\n");
     }
 
     #[test]

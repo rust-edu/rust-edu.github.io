@@ -1,0 +1,18 @@
+# The site's settings for the generator in crates/. Until it replaces Zola (Plan 0002, step 8), Zola
+# reads config.toml instead: change the menu and footer links in both.
+title: Rust Edu
+description: Rust education in academia (and beyond)
+menu:
+  - name: Home
+    url: /
+  - name: News
+    url: /news/
+  - name: Zulip
+    url: /zulip/
+  - name: Resources
+    url: /resources/
+footer:
+  - name: Rust Language Website
+    url: https://rust-lang.org
+  - name: Official Rust Book
+    url: https://doc.rust-lang.org/book/

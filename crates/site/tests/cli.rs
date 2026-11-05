@@ -53,7 +53,9 @@ fn check_lists_each_bad_header_or_text_on_stderr_and_exits_with_1() {
         "content/b.md:2:8: error: a value with `: ` in it or `:` at its end needs quotes\n",
         "content/d.md:5:11: error: HTML is not supported; write `\\<` for a `<`, or put code in \
          backticks\n",
-        "edu: 3 errors in content/\n",
+        "site.yaml:1:8: error: a value with `: ` in it or `:` at its end needs quotes\n",
+        "layouts/layout.html:1:11: error: unknown filter `upper`; the only filter is `safe`\n",
+        "edu: 5 errors in the site\n",
     );
     assert_eq!(String::from_utf8(output.stderr).unwrap(), expected);
 }

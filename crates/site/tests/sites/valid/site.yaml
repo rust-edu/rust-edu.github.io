@@ -1,0 +1,5 @@
+title: Test
+description: A site for the tests
+menu:
+  - name: Home
+    url: /

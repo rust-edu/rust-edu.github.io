@@ -16,6 +16,9 @@ RUN --network=none cargo fmt --all --check
 RUN --network=none cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 RUN --network=none cargo test --workspace --locked --offline
 RUN --network=none cargo build --workspace --release --locked --offline
-# The pages come last, so that editing one reuses every layer above.
+# The settings, the layouts and then the pages come last, so that editing one reuses every layer
+# above.
+COPY site.yaml ./
+COPY layouts/ layouts/
 COPY content/ content/
 RUN --network=none target/release/edu check
