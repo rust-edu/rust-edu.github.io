@@ -208,8 +208,9 @@ impl Path {
     }
 }
 
-/// Appends `text` to `out` with `&`, `<`, `>`, `"` and `'` escaped, for HTML text and attributes.
-fn escape(out: &mut String, text: &str) {
+/// Appends `text` to `out` with `&`, `<`, `>`, `"` and `'` escaped, for HTML text and attributes,
+/// as `{{ }}` writes it.
+pub fn escape(out: &mut String, text: &str) {
     for c in text.chars() {
         match c {
             '&' => out.push_str("&amp;"),

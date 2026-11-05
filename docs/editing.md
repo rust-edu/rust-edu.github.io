@@ -40,7 +40,7 @@ The text of the page starts here.
 | `draft` | pages | `draft: true` keeps the page off the live site; pull request builds still include it. |
 | `template` | `content/news/_index.md` | The layout of the news list, a file of `layouts/`. |
 | `sort_by` | `content/news/_index.md` | `date`, the only value. |
-| `redirect_to` | `content/zulip/_index.md` | The address that `/zulip/` forwards to. |
+| `redirect_to` | `content/zulip/_index.md` | The full address, starting with `https://`, that `/zulip/` forwards to. |
 
 `title`, `template` and `draft` go in any file, `date` and `authors` only in pages, and `sort_by` and `redirect_to`
 only in `_index.md` files. The automatic check (see below) stops at any other key, because the site's planned

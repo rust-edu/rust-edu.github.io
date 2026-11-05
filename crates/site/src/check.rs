@@ -8,6 +8,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::Error;
+use crate::build::BaseUrl;
 use crate::page::Page;
 use crate::render::{self, Layouts};
 
@@ -36,7 +37,8 @@ pub enum PageError {
     },
 }
 
-/// Why the site cannot use a page: a value of its header, its path, or a layout it needs.
+/// Why the site cannot use a page or `site.yaml`: a value of its header, its path, or a layout it
+/// needs.
 #[derive(Debug, PartialEq, Eq)]
 pub enum ValueError {
     /// A file or folder name in the page's path that Zola would change to make the URL.
@@ -57,33 +59,41 @@ pub enum ValueError {
     NotNames,
     /// A `sort_by` other than `date`.
     BadSortBy,
+    /// A `redirect_to` that is not a URL starting with `https://` or `http://`.
+    BadRedirect,
     /// A page without a `date` in a section with `sort_by: date`.
     NoDate,
     /// A `template`, or the layout a page needs without one, that is not a file of `layouts/`.
     NoLayout(String),
+    /// A `site.yaml` without `base_url`.
+    NoBaseUrl,
+    /// A `base_url` that is not an address such as `https://rust-edu.org`.
+    BadBaseUrl,
 }
 
-/// What `edu check` checked: how many pages and layouts, each page it rendered, and the files of
-/// `content/` that are not pages.
+/// What `edu check` checked: how many pages and layouts; and for the build, the pages it rendered,
+/// the files of `content/` that are not pages, and the site's address.
 #[derive(Debug)]
 pub(crate) struct Checked {
     pub(crate) pages: usize,
     pub(crate) layouts: usize,
     pub(crate) rendered: Vec<Rendered>,
     pub(crate) files: Vec<PathBuf>,
+    pub(crate) base_url: BaseUrl,
 }
 
-/// A page that does not redirect: its path, its URL and its HTML.
+/// A page as the build writes it: its path, its URL, its HTML and its `date`.
 #[derive(Debug)]
 pub(crate) struct Rendered {
     pub(crate) path: PathBuf,
     pub(crate) url: String,
     pub(crate) html: String,
+    pub(crate) date: Option<String>,
 }
 
 /// Checks the header and the text of every Markdown page under `content/` in `root`, the settings
 /// of `site.yaml` and the text of every layout of `layouts/`, and then renders with them each page
-/// that has no error and does not redirect.
+/// that has no error, as a redirect if it has `redirect_to`.
 pub(crate) fn pages(root: &Path) -> Result<Checked, Error> {
     let mut paths = Vec::new();
     walk(root, Path::new("content"), &mut paths)?;
@@ -106,22 +116,33 @@ pub(crate) fn pages(root: &Path) -> Result<Checked, Error> {
         return Err(Error::Content(errors));
     };
     let mut rendered = Vec::new();
-    for page in pages.iter().filter(|page| page.redirect_to.is_none()) {
-        match render::render(page, &pages, &site, &layouts) {
+    for page in &pages {
+        let html = match &page.redirect_to {
+            Some(to) => Ok(render::redirect(to)),
+            None => render::render(page, &pages, &site.value, &layouts),
+        };
+        match html {
             Ok(html) => {
                 let (path, url) = (page.path.clone(), page.url.clone());
-                rendered.push(Rendered { path, url, html });
+                let date = page.date.as_ref().map(|date| date.text.clone());
+                rendered.push(Rendered {
+                    path,
+                    url,
+                    html,
+                    date,
+                });
             }
             Err(error) => errors.push(error),
         }
     }
     if errors.is_empty() {
-        let (pages, layouts) = (paths.len(), layouts.len());
+        let (pages, layouts, base_url) = (paths.len(), layouts.len(), site.base_url);
         Ok(Checked {
             pages,
             layouts,
             rendered,
             files,
+            base_url,
         })
     } else {
         Err(Error::Content(errors))
@@ -204,8 +225,16 @@ impl fmt::Display for ValueError {
             Self::BadDate => f.write_str("a date is a day written as `2027-03-01`"),
             Self::NotNames => f.write_str("`authors` is a list of names, one `- name` per line"),
             Self::BadSortBy => f.write_str("the only `sort_by` is `date`"),
+            Self::BadRedirect => f.write_str(
+                "`redirect_to` is a full address, starting with `https://` or `http://`",
+            ),
             Self::NoDate => f.write_str("a page in a section with `sort_by: date` needs a `date`"),
             Self::NoLayout(name) => write!(f, "`layouts/{name}` does not exist"),
+            Self::NoBaseUrl => f.write_str("the settings need `base_url`, the site's address"),
+            Self::BadBaseUrl => f.write_str(
+                "`base_url` is an address such as `https://rust-edu.org` or \
+                 `https://example.github.io/rust-edu`",
+            ),
         }
     }
 }
@@ -223,10 +252,10 @@ mod tests {
 
     #[test]
     fn every_markdown_file_under_content_is_a_page_and_every_html_file_a_layout() {
-        // `valid` holds three pages, one of them a redirect, and two other files in `news/`, and
+        // `valid` holds four pages, one of them a redirect, and two other files in `news/`, and
         // three layouts and `notes.txt`.
         let checked = pages(&site("valid")).unwrap();
-        assert_eq!((checked.pages, checked.layouts), (3, 3));
+        assert_eq!((checked.pages, checked.layouts), (4, 3));
     }
 
     #[test]
@@ -256,6 +285,8 @@ mod tests {
             "content/author-map.md:4:3: error: `authors` is a list of names, one `- name` per line",
             "content/bad-date.md:3:7: error: a date is a day written as `2027-03-01`",
             "content/bad-draft.md:3:8: error: `draft` is `true` or `false`",
+            "content/bad-redirect/_index.md:2:14: error: `redirect_to` is a full address, \
+             starting with `https://` or `http://`",
             "content/list-title.md:3:3: error: this value must be text",
             "content/no-title.md:1:1: error: a page needs a `title`",
             "content/one-author.md:3:10: error: `authors` is a list of names, one `- name` per line",

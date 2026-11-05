@@ -92,7 +92,8 @@ flowchart LR
     `{{ content | safe }}` instead of `extends` and `block`.
   - `crates/site` (`edu-site`, binary `edu`) — the command-line tool. `edu check` checks `site.yaml`, the layouts in
     `layouts/`, and the YAML header and Markdown text of every page in `content/`, then renders every page with
-    them; `edu build` checks the same, then writes the site into `public/`; `edu serve` follows in step 7.
+    them; `edu build` checks the same, then writes the site into `public/`, with a page for each `redirect_to`,
+    `404.html`, `robots.txt` and `sitemap.xml`; `edu serve` follows in step 7.
 
 ```mermaid
 flowchart LR
