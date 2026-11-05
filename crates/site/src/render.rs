@@ -22,11 +22,15 @@ pub(crate) struct Site {
     pub(crate) base_url: BaseUrl,
 }
 
-/// The settings of `site.yaml` in `root`, or `None` after an error in them, which goes to
-/// `errors`.
-pub(crate) fn site(root: &Path, errors: &mut Vec<ContentError>) -> Result<Option<Site>, Error> {
+/// The settings of `site.yaml` in `root`, with `base_url` in place of their own if given, or
+/// `None` after an error in them, which goes to `errors`.
+pub(crate) fn site(
+    root: &Path,
+    base_url: Option<&BaseUrl>,
+    errors: &mut Vec<ContentError>,
+) -> Result<Option<Site>, Error> {
     let path = PathBuf::from("site.yaml");
-    match settings(&read(root, &path)?) {
+    match settings(&read(root, &path)?, base_url) {
         Ok(site) => Ok(Some(site)),
         Err(error) => {
             errors.push(ContentError { path, error });
@@ -35,18 +39,24 @@ pub(crate) fn site(root: &Path, errors: &mut Vec<ContentError>) -> Result<Option
     }
 }
 
-/// The settings in `text`, the YAML of `site.yaml`, which must have `base_url`.
-fn settings(text: &str) -> Result<Site, PageError> {
+/// The settings in `text`, the YAML of `site.yaml`, which must have `base_url`; with `base_url`
+/// in its place if given, also as the value `site.base_url` of the layouts.
+fn settings(text: &str, base_url: Option<&BaseUrl>) -> Result<Site, PageError> {
     let entries = edu_yaml::parse(text).map_err(PageError::Header)?;
     let Some(entry) = entries.iter().find(|entry| entry.key == "base_url") else {
         return Err(PageError::Value(TOP, ValueError::NoBaseUrl));
     };
-    let base_url = match &entry.value.value {
+    let own = match &entry.value.value {
         edu_yaml::Value::Str(text) => BaseUrl::parse(text),
         edu_yaml::Value::List(_) | edu_yaml::Value::Map(_) => None,
     };
-    let base_url = base_url.ok_or(PageError::Value(entry.value.pos, ValueError::BadBaseUrl))?;
-    let value = map(&entries);
+    let own = own.ok_or(PageError::Value(entry.value.pos, ValueError::BadBaseUrl))?;
+    let base_url = base_url.cloned().unwrap_or(own);
+    let values = entries.iter().map(|entry| match entry.key.as_str() {
+        "base_url" => (entry.key.clone(), Value::Str(base_url.to_string())),
+        _ => (entry.key.clone(), value(&entry.value)),
+    });
+    let value = Value::Map(values.collect());
     Ok(Site { value, base_url })
 }
 
@@ -315,20 +325,38 @@ mod tests {
         };
         let mut errors = Vec::new();
         // `broken` has an error in `site.yaml` and one in `layouts/layout.html`.
-        assert!(super::site(&site("broken"), &mut errors).unwrap().is_none());
+        assert!(
+            super::site(&site("broken"), None, &mut errors)
+                .unwrap()
+                .is_none()
+        );
         let layouts = Layouts::read(&site("broken"), &mut errors).unwrap();
         assert!(layouts.is_none());
         assert_eq!(errors.len(), 2);
-        assert!(super::site(&site("valid"), &mut errors).unwrap().is_some());
+        assert!(
+            super::site(&site("valid"), None, &mut errors)
+                .unwrap()
+                .is_some()
+        );
         let layouts = Layouts::read(&site("valid"), &mut errors).unwrap();
         assert!(layouts.is_some());
         assert_eq!(errors.len(), 2);
     }
 
     #[test]
-    fn the_settings_have_the_address_of_the_site() {
-        let site = settings("title: T\nbase_url: https://a.org/\n").unwrap();
+    fn the_settings_have_the_address_of_the_site_or_the_one_given() {
+        let text = "title: T\nbase_url: https://a.org/\n";
+        let site = settings(text, None).unwrap();
         assert_eq!(site.base_url.to_string(), "https://a.org");
+        let given = BaseUrl::parse("https://b.org/c");
+        let site = settings(text, given.as_ref()).unwrap();
+        let url = (
+            "base_url".to_owned(),
+            Value::Str("https://b.org/c".to_owned()),
+        );
+        let values = vec![("title".to_owned(), Value::Str("T".to_owned())), url];
+        assert_eq!(site.base_url.to_string(), "https://b.org/c");
+        assert_eq!(site.value, Value::Map(values));
         let (no, bad) = (
             "the settings need `base_url`, the site's address",
             "`base_url` is an address such as `https://rust-edu.org` or \
@@ -343,7 +371,8 @@ mod tests {
             ),
         ];
         for (text, expected) in cases {
-            let (path, error) = (PathBuf::from("site.yaml"), settings(text).err().unwrap());
+            let error = settings(text, None).err().unwrap();
+            let path = PathBuf::from("site.yaml");
             let error = ContentError { path, error }.to_string();
             assert_eq!(error, format!("site.yaml:{expected}"), "{text}");
         }

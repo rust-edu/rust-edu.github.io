@@ -1,6 +1,7 @@
 //! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset whose
 //! values the site can use, its text is in the Markdown subset, and the layouts of `layouts/`
-//! render it with the settings of `site.yaml`.
+//! render it with the settings of `site.yaml`. `edu build` checks the same, and renders the pages
+//! that it writes.
 
 use std::ffi::OsStr;
 use std::fmt;
@@ -8,8 +9,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::Error;
-use crate::build::BaseUrl;
-use crate::page::Page;
+use crate::build::{BaseUrl, Drafts, Options};
+use crate::page::{Kind, Page};
 use crate::render::{self, Layouts};
 
 /// A file of the site with an error: a page, `site.yaml` or a layout.
@@ -53,6 +54,8 @@ pub enum ValueError {
     NotText,
     /// A `draft` other than `true` and `false`.
     BadDraft,
+    /// `draft: true` in `content/_index.md`, which every page is in.
+    DraftHome,
     /// A `date` that is not a day of the calendar written as `2027-03-01`.
     BadDate,
     /// `authors` that is not a list of names.
@@ -93,8 +96,9 @@ pub(crate) struct Rendered {
 
 /// Checks the header and the text of every Markdown page under `content/` in `root`, the settings
 /// of `site.yaml` and the text of every layout of `layouts/`, and then renders with them each page
-/// that has no error, as a redirect if it has `redirect_to`.
-pub(crate) fn pages(root: &Path) -> Result<Checked, Error> {
+/// that has no error, as a redirect if it has `redirect_to`. Without drafts, it leaves out each
+/// page with `draft: true` and everything in the folder of an `_index.md` with it.
+pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
     let mut paths = Vec::new();
     walk(root, Path::new("content"), &mut paths)?;
     let is_page = |path: &PathBuf| path.extension() == Some(OsStr::new("md"));
@@ -109,12 +113,23 @@ pub(crate) fn pages(root: &Path) -> Result<Checked, Error> {
             }
         }
     }
-    let site = render::site(root, &mut errors)?;
+    let site = render::site(root, options.base_url.as_ref(), &mut errors)?;
     let layouts = Layouts::read(root, &mut errors)?;
     // An error in `site.yaml` or in a layout would fail every page.
     let (Some(site), Some(layouts)) = (site, layouts) else {
         return Err(Error::Content(errors));
     };
+    let drafts: Vec<PathBuf> = match options.drafts {
+        Drafts::Include => Vec::new(),
+        Drafts::Exclude => pages
+            .iter()
+            .filter(|page| page.draft)
+            .map(left_out)
+            .collect(),
+    };
+    let is_kept = |path: &Path| !drafts.iter().any(|draft| path.starts_with(draft));
+    pages.retain(|page| is_kept(&page.path));
+    let files = files.into_iter().filter(|file| is_kept(file)).collect();
     let mut rendered = Vec::new();
     for page in &pages {
         let html = match &page.redirect_to {
@@ -146,6 +161,14 @@ pub(crate) fn pages(root: &Path) -> Result<Checked, Error> {
         })
     } else {
         Err(Error::Content(errors))
+    }
+}
+
+/// What a draft leaves out of the build: the page, or for an `_index.md` its folder.
+fn left_out(page: &Page) -> PathBuf {
+    match page.kind {
+        Kind::Home | Kind::Section => page.path.parent().unwrap_or(&page.path).to_owned(),
+        Kind::Page => page.path.clone(),
     }
 }
 
@@ -222,6 +245,7 @@ impl fmt::Display for ValueError {
             ),
             Self::NotText => f.write_str("this value must be text"),
             Self::BadDraft => f.write_str("`draft` is `true` or `false`"),
+            Self::DraftHome => f.write_str("the home page cannot be a draft"),
             Self::BadDate => f.write_str("a date is a day written as `2027-03-01`"),
             Self::NotNames => f.write_str("`authors` is a list of names, one `- name` per line"),
             Self::BadSortBy => f.write_str("the only `sort_by` is `date`"),
@@ -243,24 +267,48 @@ impl fmt::Display for ValueError {
 mod tests {
     use super::*;
 
-    /// A site under `crates/site/tests/sites/`.
-    fn site(name: &str) -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR"))
+    /// A site under `crates/site/tests/sites/`, and how `edu check` checks it.
+    fn site(name: &str) -> (PathBuf, Options) {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests/sites")
-            .join(name)
+            .join(name);
+        let options = Options {
+            drafts: Drafts::Include,
+            base_url: None,
+        };
+        (path, options)
+    }
+
+    /// The URLs of the pages of `checked` and the files of its `content/`.
+    fn built(checked: &Checked) -> (Vec<&str>, Vec<String>) {
+        let urls = checked.rendered.iter().map(|page| page.url.as_str());
+        let files = checked.files.iter().map(|file| file.display().to_string());
+        (urls.collect(), files.collect())
     }
 
     #[test]
     fn every_markdown_file_under_content_is_a_page_and_every_html_file_a_layout() {
-        // `valid` holds four pages, one of them a redirect, and two other files in `news/`, and
-        // three layouts and `notes.txt`.
-        let checked = pages(&site("valid")).unwrap();
-        assert_eq!((checked.pages, checked.layouts), (4, 3));
+        // `valid` holds seven pages, one of them a redirect and three of them drafts or in the
+        // folder of one, three other files, one of them in that folder, and three layouts and
+        // `notes.txt`.
+        let (root, mut options) = site("valid");
+        let checked = pages(&root, &options).unwrap();
+        assert_eq!((checked.pages, checked.layouts), (7, 3));
+        let (urls, files) = built(&checked);
+        let all = "/2027/ / /chat/ /news/draft/ /news/post/ /wip/ /wip/page/";
+        assert_eq!((urls.join(" ").as_str(), files.len()), (all, 3));
+        options.drafts = Drafts::Exclude;
+        let checked = pages(&root, &options).unwrap();
+        assert_eq!(checked.pages, 7);
+        let (urls, files) = built(&checked);
+        assert_eq!(urls.join(" "), "/2027/ / /chat/ /news/post/");
+        assert_eq!(files, ["content/news/notes.txt", "content/news/sample.bib"]);
     }
 
     #[test]
     fn each_bad_header_or_text_is_an_error_with_its_page_line_and_column_in_path_order() {
-        let Err(Error::Content(errors)) = pages(&site("broken")) else {
+        let (root, options) = site("broken");
+        let Err(Error::Content(errors)) = pages(&root, &options) else {
             panic!("expected content errors");
         };
         let errors: Vec<String> = errors.iter().map(ToString::to_string).collect();
@@ -277,11 +325,13 @@ mod tests {
 
     #[test]
     fn each_value_or_layout_that_a_page_cannot_render_with_is_an_error() {
-        let Err(Error::Content(errors)) = pages(&site("unrenderable")) else {
+        let (root, options) = site("unrenderable");
+        let Err(Error::Content(errors)) = pages(&root, &options) else {
             panic!("expected content errors");
         };
         let errors: Vec<String> = errors.iter().map(ToString::to_string).collect();
         let expected = [
+            "content/_index.md:3:8: error: the home page cannot be a draft",
             "content/author-map.md:4:3: error: `authors` is a list of names, one `- name` per line",
             "content/bad-date.md:3:7: error: a date is a day written as `2027-03-01`",
             "content/bad-draft.md:3:8: error: `draft` is `true` or `false`",
@@ -306,6 +356,8 @@ mod tests {
             "content/a.md:3:11: error: `layouts/missing.html` does not exist",
             "layouts/page.html:1:7: error: unknown variable `page.authors` while rendering \
              content/b.md",
+            "layouts/page.html:1:7: error: unknown variable `page.authors` while rendering \
+             content/draft.md",
             "content/news/undated.md:1:1: error: a page in a section with `sort_by: date` needs a \
              `date`",
         ];
@@ -315,7 +367,8 @@ mod tests {
     #[test]
     fn a_site_without_layout_html_is_a_read_error() {
         // `no-layout` has a page, `site.yaml` and `layouts/page.html`.
-        let result = pages(&site("no-layout"));
+        let (root, options) = site("no-layout");
+        let result = pages(&root, &options);
         let is_layout = |path: &PathBuf| path == Path::new("layouts/layout.html");
         assert!(
             matches!(&result, Err(Error::Read { path, .. }) if is_layout(path)),
@@ -325,7 +378,8 @@ mod tests {
 
     #[test]
     fn a_site_without_content_is_a_read_error() {
-        let result = pages(&site("missing"));
+        let (root, options) = site("missing");
+        let result = pages(&root, &options);
         let is_content = |path: &PathBuf| path == Path::new("content");
         assert!(
             matches!(&result, Err(Error::Read { path, .. }) if is_content(path)),

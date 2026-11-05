@@ -93,7 +93,9 @@ flowchart LR
   - `crates/site` (`edu-site`, binary `edu`) — the command-line tool. `edu check` checks `site.yaml`, the layouts in
     `layouts/`, and the YAML header and Markdown text of every page in `content/`, then renders every page with
     them; `edu build` checks the same, then writes the site into `public/`, with a page for each `redirect_to`,
-    `404.html`, `robots.txt` and `sitemap.xml`; `edu serve` follows in step 7.
+    `404.html`, `robots.txt` and `sitemap.xml`. It leaves out the drafts, unless `--drafts`, and builds for the
+    `base_url` of `site.yaml`, unless `--base-url` gives another, such as a fork's Pages site; `edu serve` follows
+    in step 7.
 
 ```mermaid
 flowchart LR
