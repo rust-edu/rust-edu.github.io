@@ -1,0 +1,13 @@
+# A preview of the site at http://127.0.0.1:1111, drafts too, built again after each change:
+#   docker compose up
+# Ctrl-C stops it. The server reads the files of the site, mounted read-only, and writes nothing.
+services:
+  site:
+    build:
+      context: .
+      target: serve
+    init: true
+    ports:
+      - "127.0.0.1:1111:1111"
+    volumes:
+      - .:/site:ro

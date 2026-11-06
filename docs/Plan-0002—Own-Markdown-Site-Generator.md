@@ -1,6 +1,6 @@
 # Plan 0002 — Own Markdown Site Generator
 
-**Date:** 2026-10-28 · **Status:** steps 0–6 done · **Supersedes:** Spec 0001 and Plan 0001 (archived at tag
+**Date:** 2026-10-28 · **Status:** steps 0–7 done · **Supersedes:** Spec 0001 and Plan 0001 (archived at tag
 [`archive/initial-project-plan`](https://github.com/kenesparta/rust-edu.github.io/tree/archive/initial-project-plan/docs)
 on the fork kenesparta/rust-edu.github.io) · **Research:**
 [0001 inventory](../research/0001-current-site-inventory.md) ·
@@ -119,12 +119,13 @@ twenty-two PRs; research 0002 §9 sizes a broader subset at ~4,650.
    `layouts/` (Zola keeps `templates/`), menu and footer links in `site.yaml`; the header keys of the stable format
    above, each checked, and `sort_by: date`. *Done when:* every page renders and template errors name the file and
    line.
-7. `feat/edu-build` (~2,600, seven PRs: build and assets; redirects, sitemap, robots and 404; drafts and
-   `--base-url`; check; the site in memory; serve; `compose.yaml` and the preview of each PR) — `edu build` (pretty
-   URLs, assets, `redirect_to` pages, drafts only with `--drafts`, `sitemap.xml`, `robots.txt`, `404.html`,
-   `--base-url` for fork previews), `edu check` (internal links, anchors, and the URL-parity list in research 0001,
-   as `urls.txt`), `edu serve` (std::net, rebuilds on request); `compose.yaml`; `ci.yml` attaches the `--drafts`
-   build to each PR. *Done when:* the checks pass on real content and two builds are byte-identical.
+7. *Done (fork PRs #21 to #27).* `feat/edu-build` (~2,600, seven PRs: build and assets; redirects, sitemap,
+   robots and 404; drafts and `--base-url`; check; the site in memory; serve; `compose.yaml` and the preview of each
+   PR) — `edu build` (pretty URLs, assets, `redirect_to` pages, drafts only with `--drafts`, `sitemap.xml`,
+   `robots.txt`, `404.html`, `--base-url` for fork previews), `edu check` (internal links, anchors, and the
+   URL-parity list in research 0001, as `urls.txt`), `edu serve` (std::net, rebuilds on request); `compose.yaml`;
+   `ci.yml` attaches the `--drafts` build to each PR. *Done when:* the checks pass on real content and two builds are
+   byte-identical.
 
 **Part C — switch over**
 

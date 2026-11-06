@@ -39,3 +39,15 @@ jobs:
           fi
       - name: Format, lint, test and build in Docker, then check the pages
         run: docker build --progress=plain --target check .
+      # A preview for the reviewers of a pull request: the site with its drafts, as a download.
+      - name: Build the site with its drafts
+        if: github.event_name == 'pull_request'
+        run: docker build --progress=plain --target preview -o preview .
+      - name: Attach the site to the checks of the pull request
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site-preview
+          path: preview/
+          retention-days: 7
+          if-no-files-found: error
