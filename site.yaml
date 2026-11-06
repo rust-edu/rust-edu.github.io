@@ -1,5 +1,4 @@
-# The site's settings for the generator in crates/. Until it replaces Zola (Plan 0002, step 8), Zola
-# reads config.toml instead: change the address and the menu and footer links in both.
+# The site's settings for the generator in crates/.
 # The site's address, for sitemap.xml and robots.txt; `edu build --base-url` builds for another.
 base_url: https://rust-edu.org
 title: Rust Edu
