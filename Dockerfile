@@ -1,6 +1,7 @@
 # The generator's toolchain, the same on laptops and in CI. Check the generator and every page,
 # and build the site twice to see that both builds are the same, with:
 #   docker build --target check .
+# Preview the site, drafts too, at http://127.0.0.1:1111 with `docker compose up`.
 # The tag names the Rust version of rust-toolchain.toml (CI fails when they differ); the digest
 # pins the image, since tags are re-pushed.
 FROM rust:1.99.1-slim-trixie@sha256:b8e062b1c3a80183df83d9ba187cadd2b5ab84bc78d453dbfeb2fccd5f982247 AS toolchain
@@ -25,3 +26,21 @@ COPY content/ content/
 RUN --network=none target/release/edu check
 RUN --network=none target/release/edu build && mv public /tmp/first \
     && target/release/edu build && diff -r /tmp/first public
+
+# The site with its drafts, which CI attaches to each pull request:
+#   docker build --target preview -o preview .
+FROM check AS drafts
+RUN --network=none target/release/edu build --drafts
+FROM scratch AS preview
+COPY --from=drafts /src/public /
+
+# `edu serve` on the files of the site, which compose.yaml mounts at /site, read-only: the server
+# builds the site in memory.
+FROM toolchain AS serve
+COPY Cargo.toml Cargo.lock clippy.toml rust-toolchain.toml ./
+COPY crates/ crates/
+RUN --network=none cargo build --release --locked --offline \
+    && install -m 0755 target/release/edu /usr/local/bin/edu
+WORKDIR /site
+EXPOSE 1111
+CMD ["edu", "serve", "--drafts", "--bind", "0.0.0.0:1111"]

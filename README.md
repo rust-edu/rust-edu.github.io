@@ -120,6 +120,15 @@ cargo test
 cargo run -p edu-site -- check
 ```
 
+### Preview with the new generator
+To see the site as the generator builds it, drafts too, at http://127.0.0.1:1111, built again after each change:
+```bash
+docker compose up
+```
+or with Rust, `cargo run -p edu-site -- serve --drafts`. The checks of each pull request also attach the site with
+its drafts as `site-preview`; its links start at the top of a site, so serve the unpacked folder at the root of an
+address, as with `python3 -m http.server -d site-preview 1111`, rather than opening its files.
+
 ## 📬 Get Involved
 Interested in contributing or learning more?
 * 🌐 Visit: [https://rust-edu.org/](https://rust-edu.org/)
