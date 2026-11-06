@@ -130,6 +130,9 @@ needs *Settings → Pages → Source* set to *GitHub Actions*; a fork with that 
 address. *Actions → Deploy to GitHub Pages → Run workflow* runs it again by hand. Locally,
 `docker build --target site -o site .` writes the same site, for rust-edu.org, into `site/`.
 
+Dependabot proposes updates of the actions, which are pinned by commit, and of the Docker image together with
+`rust-toolchain.toml`, so that a Rust release bumps both in one pull request.
+
 ## 📬 Get Involved
 Interested in contributing or learning more?
 * 🌐 Visit: [https://rust-edu.org/](https://rust-edu.org/)

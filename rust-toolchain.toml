@@ -1,4 +1,5 @@
-# The Dockerfile's FROM tag names the same Rust version; CI fails when they differ.
+# The Dockerfile's FROM tag names the same Rust version; CI fails when they differ, and Dependabot
+# bumps both in one pull request.
 [toolchain]
 channel = "1.99.1"
 components = ["rustfmt", "clippy"]
