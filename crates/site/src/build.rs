@@ -80,49 +80,30 @@ pub(crate) struct Built {
     pub(crate) files: usize,
 }
 
-/// What a file of the output holds: the HTML of a page, or a copy of a file of the site.
-enum Output<'a> {
-    Page(&'a str),
-    Copy(&'a Path),
+/// The built site in memory: each of its files by its path in the site, and how many are pages.
+pub(crate) struct Site {
+    pub(crate) files: BTreeMap<PathBuf, Output>,
+    pub(crate) pages: usize,
+}
+
+/// What a file of the built site holds.
+pub(crate) enum Output {
+    /// The HTML of the page of `content/` at the path.
+    Page(PathBuf, String),
+    /// A copy of the file of `content/` or `static/` at the path.
+    Copy(PathBuf),
+    /// A file that the build makes itself, one of `MADE`.
+    Made(String),
 }
 
 /// Builds the site in `root` with `options` into `out`, relative to `root`. The files go to `out`
 /// with `.tmp` added first, which then takes the place of `out`; a folder in the way is deleted
 /// only if an earlier build made it.
 pub(crate) fn site(root: &Path, out: &Path, options: &Options) -> Result<Built, Error> {
-    let mut checked = check::pages(root, options)?;
-    let base_url = &checked.base_url;
-    for page in &mut checked.rendered {
-        page.html = rebase(&page.html, base_url.path());
-    }
-    // The texts of the files of `MADE`, in its order.
-    let texts = [
-        NOT_FOUND.to_owned(),
-        robots(base_url),
-        sitemap(base_url, &checked.rendered),
-    ];
-    let made: Vec<(&str, String)> = MADE.into_iter().zip(texts).collect();
-    // Each file of the output, with the file of the site that it comes from.
-    let mut outputs = BTreeMap::new();
-    for page in &checked.rendered {
-        let path = Path::new(page.url.trim_start_matches('/')).join("index.html");
-        add(&mut outputs, path, &page.path, Output::Page(&page.html))?;
-    }
-    for (dir, files) in [("content", &checked.files), ("static", &checked.statics)] {
-        for file in files {
-            let path = file.strip_prefix(dir).unwrap_or(file).to_owned();
-            add(&mut outputs, path, file, Output::Copy(file))?;
-        }
-    }
-    for (name, _) in &made {
-        if let Some((file, _)) = outputs.get(Path::new(name)) {
-            let (path, file) = (PathBuf::from(name), file.to_path_buf());
-            return Err(Error::Reserved { path, file });
-        }
-    }
+    let site = plan(root, options)?;
     let tmp = out.with_extension("tmp");
     clear(root, &tmp)?;
-    let written = write(root, &tmp, &outputs, &made);
+    let written = write(root, &tmp, &site);
     if written.is_err() {
         // A folder with the marker is deleted by the next build anyway.
         let _ = fs::remove_dir_all(root.join(&tmp));
@@ -130,9 +111,38 @@ pub(crate) fn site(root: &Path, out: &Path, options: &Options) -> Result<Built, 
     written?;
     clear(root, out)?;
     fs::rename(root.join(&tmp), root.join(out)).map_err(output_error(out))?;
-    let pages = checked.rendered.len();
-    let files = checked.files.len() + checked.statics.len() + made.len();
+    let pages = site.pages;
+    let files = site.files.len() - pages;
     Ok(Built { pages, files })
+}
+
+/// The site in `root`, built with `options` in memory, as `edu build` then writes it.
+pub(crate) fn plan(root: &Path, options: &Options) -> Result<Site, Error> {
+    let checked = check::pages(root, options)?;
+    let base_url = &checked.base_url;
+    // The texts of the files of `MADE`, in its order.
+    let texts = [
+        NOT_FOUND.to_owned(),
+        robots(base_url),
+        sitemap(base_url, &checked.rendered),
+    ];
+    let mut files = BTreeMap::new();
+    for (name, text) in MADE.into_iter().zip(texts) {
+        files.insert(PathBuf::from(name), Output::Made(text));
+    }
+    let pages = checked.rendered.len();
+    for page in &checked.rendered {
+        let path = Path::new(page.url.trim_start_matches('/')).join("index.html");
+        let output = Output::Page(page.path.clone(), rebase(&page.html, base_url.path()));
+        add(&mut files, path, &page.path, output)?;
+    }
+    for (dir, sources) in [("content", &checked.files), ("static", &checked.statics)] {
+        for file in sources {
+            let path = file.strip_prefix(dir).unwrap_or(file).to_owned();
+            add(&mut files, path, file, Output::Copy(file.clone()))?;
+        }
+    }
+    Ok(Site { files, pages })
 }
 
 /// `robots.txt`, as Zola writes it: every page may be crawled, and the sitemap is at `base_url`.
@@ -178,23 +188,30 @@ fn rebase(html: &str, path: &str) -> String {
     rebased
 }
 
-/// Adds the file `path` of the output, from `source`, unless another file of the site is `path`.
-fn add<'a>(
-    outputs: &mut BTreeMap<PathBuf, (&'a Path, Output<'a>)>,
+/// Adds `output`, from the file `source` of the site, as the file `path` of the built site, unless
+/// the site has a file there already, from the site or from the build.
+fn add(
+    files: &mut BTreeMap<PathBuf, Output>,
     path: PathBuf,
-    source: &'a Path,
-    output: Output<'a>,
+    source: &Path,
+    output: Output,
 ) -> Result<(), Error> {
-    if let Some((first, _)) = outputs.get(&path) {
-        let (first, second) = (first.to_path_buf(), source.to_owned());
-        return Err(Error::Clash {
-            path,
-            first,
-            second,
-        });
+    let second = source.to_owned();
+    match files.get(&path) {
+        None => {
+            files.insert(path, output);
+            Ok(())
+        }
+        Some(Output::Page(first, _) | Output::Copy(first)) => {
+            let first = first.clone();
+            Err(Error::Clash {
+                path,
+                first,
+                second,
+            })
+        }
+        Some(Output::Made(_)) => Err(Error::Reserved { path, file: second }),
     }
-    outputs.insert(path, (source, output));
-    Ok(())
 }
 
 /// Deletes the folder `dir`, relative to `root`, if it is there and an earlier build made it.
@@ -209,33 +226,23 @@ fn clear(root: &Path, dir: &Path) -> Result<(), Error> {
     fs::remove_dir_all(full).map_err(output_error(dir))
 }
 
-/// Writes the marker, every file of `outputs` and the files that the build `made` into the folder
-/// `dir`, relative to `root`.
-fn write(
-    root: &Path,
-    dir: &Path,
-    outputs: &BTreeMap<PathBuf, (&Path, Output<'_>)>,
-    made: &[(&str, String)],
-) -> Result<(), Error> {
+/// Writes the marker and every file of `site` into the folder `dir`, relative to `root`.
+fn write(root: &Path, dir: &Path, site: &Site) -> Result<(), Error> {
     let marker =
         "This folder is the output of `edu build`, which deletes it when it builds again.\n";
     fs::create_dir_all(root.join(dir)).map_err(output_error(dir))?;
     fs::write(root.join(dir).join(MARKER), marker).map_err(output_error(dir))?;
-    for (path, (_, output)) in outputs {
+    for (path, output) in &site.files {
         let to = dir.join(path);
         let full = root.join(&to);
         if let Some(parent) = full.parent() {
             fs::create_dir_all(parent).map_err(output_error(&to))?;
         }
         let written = match output {
-            Output::Page(html) => fs::write(&full, html),
+            Output::Page(_, text) | Output::Made(text) => fs::write(&full, text),
             Output::Copy(from) => fs::copy(root.join(from), &full).map(|_| ()),
         };
         written.map_err(output_error(&to))?;
-    }
-    for (name, text) in made {
-        let to = dir.join(name);
-        fs::write(root.join(&to), text).map_err(output_error(&to))?;
     }
     Ok(())
 }
