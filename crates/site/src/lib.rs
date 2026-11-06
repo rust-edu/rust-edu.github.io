@@ -8,9 +8,11 @@ mod links;
 mod page;
 mod render;
 
+use std::error::Error as _;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::io::{self, Write};
+use std::iter;
 use std::path::{Path, PathBuf};
 
 pub use build::{BaseUrl, Drafts, Options};
@@ -146,6 +148,23 @@ pub fn run(command: &Command, root: &Path, out: &mut impl Write) -> Result<(), E
         Command::Version => writeln!(out, "edu {}", env!("CARGO_PKG_VERSION")),
     };
     written.map_err(Error::Write)
+}
+
+/// The report of `error` as the command line prints it: each error of the content on its own line,
+/// then the error and its causes.
+pub fn report(error: &Error) -> String {
+    let mut report = String::new();
+    if let Error::Content(errors) = error {
+        for error in errors {
+            report.push_str(&format!("{error}\n"));
+        }
+    }
+    report.push_str(&format!("edu: {error}"));
+    for cause in iter::successors(error.source(), |&cause| cause.source()) {
+        report.push_str(&format!(": {cause}"));
+    }
+    report.push('\n');
+    report
 }
 
 /// `1 page`, `2 pages`.
