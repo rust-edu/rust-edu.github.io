@@ -130,11 +130,11 @@ twenty-two PRs; research 0002 §9 sizes a broader subset at ~4,650.
 **Part C — switch over**
 
 8. `ci/pages-deploy` (~200 + deletions, two PRs) — `deploy.yml` on GitHub's Pages actions, building in Docker and
-   rehearsed on the fork's own Pages site (with `--base-url`); the second PR deletes `config.toml`, `templates/` and
-   `main.yml`; the README and `docs/editing.md` switch from Zola to `docker compose up` and `edu build`, with the badge
-   on the new workflow; Dependabot for `github-actions`, and for `docker` plus `rust-toolchain` in one
-   multi-ecosystem group, so a Rust release bumps the image and `rust-toolchain.toml` in one PR. *Done when:* the
-   fork's Pages site serves the new build.
+   rehearsed on the fork's own Pages site (with `--base-url`), run by hand until the second PR, which runs it on each
+   push to `main` and deletes `config.toml`, `templates/` and `main.yml`; the README and `docs/editing.md` switch
+   from Zola to `docker compose up` and `edu build`, with the badge on the new workflow; Dependabot for
+   `github-actions`, and for `docker` plus `rust-toolchain` in one multi-ecosystem group, so a Rust release bumps the
+   image and `rust-toolchain.toml` in one PR. *Done when:* the fork's Pages site serves the new build.
 9. **The upstream PR** — the fork's `main` to upstream `main`; an upstream admin sets Settings → Pages → Source to
    *GitHub Actions* (checklist in the PR) and merges it in the same sitting. *Done when:* rust-edu.org serves the new
    build. Rollback: revert and flip the source back; `gh-pages` stays for two weeks.

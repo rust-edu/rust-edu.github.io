@@ -129,6 +129,12 @@ or with Rust, `cargo run -p edu-site -- serve --drafts`. The checks of each pull
 its drafts as `site-preview`; its links start at the top of a site, so serve the unpacked folder at the root of an
 address, as with `python3 -m http.server -d site-preview 1111`, rather than opening its files.
 
+### Deploy
+`.github/workflows/deploy.yml` checks and builds the site in Docker and publishes it with GitHub's own Pages
+actions, at the address that Pages gives the site, which the build takes as `--base-url`. Until Zola stops
+deploying, it runs only by hand (*Actions → Deploy to GitHub Pages → Run workflow*), and only where *Settings →
+Pages → Source* is *GitHub Actions*, as on a fork that rehearses the switch.
+
 ## 📬 Get Involved
 Interested in contributing or learning more?
 * 🌐 Visit: [https://rust-edu.org/](https://rust-edu.org/)

@@ -1,0 +1,54 @@
+# Checks and builds the site in Docker, then publishes it with GitHub Pages, at the address that
+# Pages gives: rust-edu.org, or the Pages site of a fork. It needs Settings → Pages → Source set to
+# "GitHub Actions". Until Zola stops deploying (Plan 0002, step 8), it runs only when started by
+# hand, under Actions → Deploy to GitHub Pages → Run workflow.
+name: Deploy to GitHub Pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and none stopped halfway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Ask Pages for the address of the site
+        id: pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - name: Check and build the site for that address in Docker
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
+        run: docker build --progress=plain --target site --build-arg BASE_URL="$BASE_URL" -o site .
+      - name: Hand the site to Pages
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish the site
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
