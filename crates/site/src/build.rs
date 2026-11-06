@@ -116,7 +116,8 @@ pub(crate) fn site(root: &Path, out: &Path, options: &Options) -> Result<Built, 
     Ok(Built { pages, files })
 }
 
-/// The site in `root`, built with `options` in memory, as `edu build` then writes it.
+/// The site in `root`, built with `options` in memory, as `edu build` writes it and `edu serve`
+/// serves it.
 pub(crate) fn plan(root: &Path, options: &Options) -> Result<Site, Error> {
     let checked = check::pages(root, options)?;
     let base_url = &checked.base_url;
