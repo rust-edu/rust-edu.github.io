@@ -27,6 +27,16 @@ RUN --network=none target/release/edu check
 RUN --network=none target/release/edu build && mv public /tmp/first \
     && target/release/edu build && diff -r /tmp/first public
 
+# The live site, which deploy.yml publishes, at the address that GitHub Pages gives, or else at the
+# base_url of site.yaml:
+#   docker build --target site --build-arg BASE_URL=https://example.github.io/rust-edu -o site .
+FROM check AS live
+ARG BASE_URL
+RUN --network=none if [ -n "$BASE_URL" ]; then target/release/edu build --base-url "$BASE_URL"; \
+    else target/release/edu build; fi
+FROM scratch AS site
+COPY --from=live /src/public /
+
 # The site with its drafts, which CI attaches to each pull request:
 #   docker build --target preview -o preview .
 FROM check AS drafts
