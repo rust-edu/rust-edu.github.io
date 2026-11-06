@@ -1,0 +1,31 @@
+# The addresses that other sites may link to: each page and file that Zola 0.22.1 deployed before
+# the site moved to its own generator (docs/Plan-0002—Own-Markdown-Site-Generator.md). `edu check`
+# stops when one of them is no longer a page or file of the site. When a page or file moves on
+# purpose, delete its line here, or keep the old address of a page with an `_index.md` there that
+# has `redirect_to`. An address of a page may end with `#` and an id of the page.
+/
+/404.html
+/images/RAACampusTour1.png
+/images/RAACampusTour2.png
+/images/RAACampusTour3.png
+/images/RAACampusTour4.png
+/news/
+/news/announcement/
+/news/call-for-participation/
+/news/campus-tour/
+/resources/
+/robots.txt
+/rust-edu-banner.svg
+/sitemap.xml
+/style.css
+/workshop/
+/workshop/cfp-2022/
+/workshop/code-of-conduct/
+/workshop/paper-format-latex/
+/workshop/paper-format-latex/rust-edu-workshop.cls
+/workshop/paper-format-latex/sample.bib
+/workshop/paper-format-latex/sample.pdf
+/workshop/paper-format-latex/sample.tex
+/workshop/proceedings.pdf
+/workshop/statement-template.pdf
+/zulip/

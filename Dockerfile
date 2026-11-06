@@ -18,7 +18,7 @@ RUN --network=none cargo test --workspace --locked --offline
 RUN --network=none cargo build --workspace --release --locked --offline
 # The settings, the layouts, the static files and then the pages come last, so that editing one
 # reuses every layer above.
-COPY site.yaml ./
+COPY site.yaml urls.txt ./
 COPY layouts/ layouts/
 COPY static/ static/
 COPY content/ content/

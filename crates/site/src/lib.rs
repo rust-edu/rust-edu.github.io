@@ -4,6 +4,7 @@
 
 mod build;
 mod check;
+mod links;
 mod page;
 mod render;
 
@@ -14,6 +15,7 @@ use std::path::{Path, PathBuf};
 
 pub use build::{BaseUrl, Drafts, Options};
 pub use check::{ContentError, PageError, ValueError};
+pub use links::LinkError;
 
 /// The folder that `edu build` writes, in the root of the site.
 const OUT: &str = "public";

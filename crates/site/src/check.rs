@@ -1,19 +1,21 @@
 //! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset whose
-//! values the site can use, its text is in the Markdown subset, and the layouts of `layouts/`
-//! render it with the settings of `site.yaml`. `edu build` checks the same, and renders the pages
-//! that it writes.
+//! values the site can use, its text is in the Markdown subset, the layouts of `layouts/` render
+//! it with the settings of `site.yaml`, and its links go to pages and files of the site. `edu
+//! build` checks the same, and renders the pages that it writes.
 
+use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::Error;
-use crate::build::{BaseUrl, Drafts, Options};
+use crate::build::{self, BaseUrl, Drafts, Options};
+use crate::links::{self, LinkError, Target};
 use crate::page::{Kind, Page};
 use crate::render::{self, Layouts};
 
-/// A file of the site with an error: a page, `site.yaml` or a layout.
+/// A file of the site with an error: a page, `site.yaml`, a layout or `urls.txt`.
 #[derive(Debug)]
 pub struct ContentError {
     /// The file, relative to the site root.
@@ -36,6 +38,8 @@ pub enum PageError {
         page: PathBuf,
         error: edu_template::Error,
     },
+    /// A link that would not work, and where it is written.
+    Link(edu_yaml::Pos, LinkError),
 }
 
 /// Why the site cannot use a page or `site.yaml`: a value of its header, its path, or a layout it
@@ -75,34 +79,43 @@ pub enum ValueError {
 }
 
 /// What `edu check` checked: how many pages and layouts; and for the build, the pages it rendered,
-/// the files of `content/` that are not pages, and the site's address.
+/// the files of `content/` that are not pages, the files of `static/`, and the site's address.
 #[derive(Debug)]
 pub(crate) struct Checked {
     pub(crate) pages: usize,
     pub(crate) layouts: usize,
     pub(crate) rendered: Vec<Rendered>,
     pub(crate) files: Vec<PathBuf>,
+    pub(crate) statics: Vec<PathBuf>,
     pub(crate) base_url: BaseUrl,
 }
 
-/// A page as the build writes it: its path, its URL, its HTML and its `date`.
+/// A page as the build writes it: its path, its URL, its HTML, its `date`, and whether the live
+/// site has it.
 #[derive(Debug)]
 pub(crate) struct Rendered {
     pub(crate) path: PathBuf,
     pub(crate) url: String,
     pub(crate) html: String,
     pub(crate) date: Option<String>,
+    pub(crate) live: bool,
 }
 
 /// Checks the header and the text of every Markdown page under `content/` in `root`, the settings
 /// of `site.yaml` and the text of every layout of `layouts/`, and then renders with them each page
-/// that has no error, as a redirect if it has `redirect_to`. Without drafts, it leaves out each
-/// page with `draft: true` and everything in the folder of an `_index.md` with it.
+/// that has no error, as a redirect if it has `redirect_to`, and then checks their links. Without
+/// drafts, it leaves out each page with `draft: true` and everything in the folder of an
+/// `_index.md` with it.
 pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
     let mut paths = Vec::new();
     walk(root, Path::new("content"), &mut paths)?;
     let is_page = |path: &PathBuf| path.extension() == Some(OsStr::new("md"));
-    let (paths, files): (Vec<_>, Vec<_>) = paths.into_iter().partition(is_page);
+    let (paths, mut files): (Vec<_>, Vec<_>) = paths.into_iter().partition(is_page);
+    let mut statics = Vec::new();
+    // A site without `static/` has no static files, as in Zola.
+    if root.join("static").is_dir() {
+        walk(root, Path::new("static"), &mut statics)?;
+    }
     let (mut pages, mut errors) = (Vec::new(), Vec::new());
     for path in &paths {
         match Page::read(path, &read(root, path)?) {
@@ -119,17 +132,19 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
     let (Some(site), Some(layouts)) = (site, layouts) else {
         return Err(Error::Content(errors));
     };
-    let drafts: Vec<PathBuf> = match options.drafts {
-        Drafts::Include => Vec::new(),
-        Drafts::Exclude => pages
-            .iter()
-            .filter(|page| page.draft)
-            .map(left_out)
-            .collect(),
-    };
-    let is_kept = |path: &Path| !drafts.iter().any(|draft| path.starts_with(draft));
-    pages.retain(|page| is_kept(&page.path));
-    let files = files.into_iter().filter(|file| is_kept(file)).collect();
+    let drafts: Vec<PathBuf> = pages
+        .iter()
+        .filter(|page| page.draft)
+        .map(left_out)
+        .collect();
+    let is_live = |path: &Path| !drafts.iter().any(|draft| path.starts_with(draft));
+    match options.drafts {
+        Drafts::Include => {}
+        Drafts::Exclude => {
+            pages.retain(|page| is_live(&page.path));
+            files.retain(|file| is_live(file));
+        }
+    }
     let mut rendered = Vec::new();
     for page in &pages {
         let html = match &page.redirect_to {
@@ -140,15 +155,38 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             Ok(html) => {
                 let (path, url) = (page.path.clone(), page.url.clone());
                 let date = page.date.as_ref().map(|date| date.text.clone());
+                let live = is_live(&page.path);
                 rendered.push(Rendered {
                     path,
                     url,
                     html,
                     date,
+                    live,
                 });
             }
             Err(error) => errors.push(error),
         }
+    }
+    // The links are checked once every page renders, since a link to a page with an error would
+    // go nowhere.
+    if errors.is_empty() {
+        let mut targets = BTreeMap::new();
+        for page in &rendered {
+            let (live, ids) = (page.live, Some(links::ids(&page.html)));
+            targets.insert(links::key(&page.url), Target { live, ids });
+        }
+        for (dir, files) in [("content", &files), ("static", &statics)] {
+            for file in files {
+                let path = file.strip_prefix(dir).unwrap_or(file);
+                let (live, ids) = (is_live(file), None);
+                targets.insert(path.to_string_lossy().into_owned(), Target { live, ids });
+            }
+        }
+        for name in build::MADE {
+            let (live, ids) = (true, None);
+            targets.insert(name.to_owned(), Target { live, ids });
+        }
+        links::check(root, &rendered, &targets, &layouts, &mut errors)?;
     }
     if errors.is_empty() {
         let (pages, layouts, base_url) = (paths.len(), layouts.len(), site.base_url);
@@ -157,6 +195,7 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             layouts,
             rendered,
             files,
+            statics,
             base_url,
         })
     } else {
@@ -213,6 +252,7 @@ impl fmt::Display for ContentError {
             PageError::Value(pos, kind) => write!(f, "{path}:{pos}: error: {kind}"),
             PageError::Text(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
             PageError::Layout(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
+            PageError::Link(pos, kind) => write!(f, "{path}:{pos}: error: {kind}"),
             PageError::Render { page, error } => {
                 let page = page.display();
                 write!(
@@ -360,6 +400,38 @@ mod tests {
              content/draft.md",
             "content/news/undated.md:1:1: error: a page in a section with `sort_by: date` needs a \
              `date`",
+        ];
+        assert_eq!(errors, expected);
+    }
+
+    #[test]
+    fn each_link_that_would_not_work_is_an_error_where_it_is_written() {
+        let (root, options) = site("links");
+        let Err(Error::Content(errors)) = pages(&root, &options) else {
+            panic!("expected content errors");
+        };
+        let errors: Vec<String> = errors.iter().map(ToString::to_string).collect();
+        let bad = "cannot be checked: a link to a page or file of the site starts with `/`, as in \
+                   `/news/`, and other links with `#`, `https://`, `http://` or `mailto:`";
+        let relative = format!("content/_index.md:6:52: error: `a/` {bad}");
+        let scheme = format!("content/_index.md:6:58: error: `email:a@example.org` {bad}");
+        let expected = [
+            "site.yaml:7:10: error: `/gone/` is not a page or file of the site",
+            "content/_index.md:6:11: error: `/a/#nowhere` goes to an id that its page does not \
+             have",
+            "content/_index.md:6:36: error: a link to a page ends with `/`: `/a/`",
+            &relative,
+            &scheme,
+            "content/_index.md:7:11: error: `/draft/` goes to a draft, which the live site \
+             leaves out",
+            "layouts/layout.html:5:11: error: `/logo.png` is not a page or file of the site",
+            "content/a.md:6:53: error: `/draft/#top` goes to a draft, which the live site leaves \
+             out",
+            "content/a.md:7:8: error: `/wip/notes.txt` goes to a draft, which the live site leaves \
+             out",
+            "content/draft.md:5:24: error: `/a/#none` goes to an id that its page does not have",
+            "urls.txt:5:1: error: `/gone.pdf` is not a page or file of the site",
+            "urls.txt:6:1: error: a link to a page ends with `/`: `/a/`",
         ];
         assert_eq!(errors, expected);
     }
