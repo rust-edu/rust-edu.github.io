@@ -7,12 +7,14 @@ mod check;
 mod links;
 mod page;
 mod render;
+mod serve;
 
 use std::error::Error as _;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::io::{self, Write};
 use std::iter;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener};
 use std::path::{Path, PathBuf};
 
 pub use build::{BaseUrl, Drafts, Options};
@@ -22,6 +24,9 @@ pub use links::LinkError;
 /// The folder that `edu build` writes, in the root of the site.
 const OUT: &str = "public";
 
+/// Where `edu serve` listens: on this computer only, at Zola's port.
+const BIND: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 1111);
+
 /// What `edu help` prints, and what follows a usage error.
 pub const USAGE: &str = "\
 Usage: edu <command>
@@ -29,18 +34,24 @@ Usage: edu <command>
 Commands:
   build    Check the site, then write it into public/, without drafts
   check    Check every page in content/, and render it with layouts/ and site.yaml
+  serve    Serve the site at http://127.0.0.1:1111/, built again after each change
   help     Print this help
   version  Print the version
 
 Options of build:
   --drafts          Write the drafts too, as for a preview
   --base-url <url>  Build for this address instead of the base_url of site.yaml
+
+Options of serve:
+  --drafts          Serve the drafts too
+  --bind <address>  Listen on this address and port instead, such as 0.0.0.0:1111 in a container
 ";
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Command {
     Build(Options),
     Check,
+    Serve { drafts: Drafts, bind: SocketAddr },
     Help,
     Version,
 }
@@ -55,6 +66,10 @@ pub enum UsageError {
     MissingBaseUrl,
     /// The value of `--base-url`, which is not an address.
     BadBaseUrl(String),
+    /// `--bind` as the last argument.
+    MissingBind,
+    /// The value of `--bind`, which is not an IP address and a port.
+    BadBind(String),
 }
 
 /// Why a command failed; `main` exits with status 1.
@@ -79,6 +94,11 @@ pub enum Error {
     },
     /// A file of the site that would be `path`, a file that the build makes itself.
     Reserved { path: PathBuf, file: PathBuf },
+    /// `edu serve` cannot listen on the address.
+    Listen {
+        address: SocketAddr,
+        source: io::Error,
+    },
 }
 
 impl Command {
@@ -92,6 +112,7 @@ impl Command {
         let command = match name.to_str() {
             Some("build") => return build_options(args).map(Self::Build),
             Some("check") => Self::Check,
+            Some("serve") => return serve_options(args),
             Some("help" | "--help" | "-h") => Self::Help,
             Some("version" | "--version" | "-V") => Self::Version,
             _ => return Err(UsageError::UnknownCommand(lossy(&name))),
@@ -119,6 +140,23 @@ fn build_options(mut args: impl Iterator<Item = OsString>) -> Result<Options, Us
     Ok(Options { drafts, base_url })
 }
 
+/// The options of `edu serve` in `args`, each at most once.
+fn serve_options(mut args: impl Iterator<Item = OsString>) -> Result<Command, UsageError> {
+    let (mut drafts, mut bind) = (Drafts::Exclude, None);
+    while let Some(arg) = args.next() {
+        match arg.to_str() {
+            Some("--drafts") if drafts == Drafts::Exclude => drafts = Drafts::Include,
+            Some("--bind") if bind.is_none() => {
+                let address = lossy(&args.next().ok_or(UsageError::MissingBind)?);
+                bind = Some(address.parse().map_err(|_| UsageError::BadBind(address))?);
+            }
+            _ => return Err(UsageError::UnexpectedArgument(lossy(&arg))),
+        }
+    }
+    let bind = bind.unwrap_or(BIND);
+    Ok(Command::Serve { drafts, bind })
+}
+
 /// The argument as text, with invalid Unicode replaced by U+FFFD.
 fn lossy(arg: &OsStr) -> String {
     arg.to_string_lossy().into_owned()
@@ -144,6 +182,26 @@ pub fn run(command: &Command, root: &Path, out: &mut impl Write) -> Result<(), E
             );
             writeln!(out, "checked {pages} with {layouts}")
         }
+        Command::Serve { drafts, bind } => {
+            let listen_error = |source| Error::Listen {
+                address: *bind,
+                source,
+            };
+            let listener = TcpListener::bind(bind).map_err(listen_error)?;
+            let address = listener.local_addr().map_err(listen_error)?;
+            let started = writeln!(out, "serving http://{address}/ until Ctrl-C");
+            started.and_then(|()| out.flush()).map_err(Error::Write)?;
+            let drafts = *drafts;
+            serve::serve(
+                &listener,
+                root,
+                &Options {
+                    drafts,
+                    base_url: None,
+                },
+            );
+            Ok(())
+        }
         Command::Help => out.write_all(USAGE.as_bytes()),
         Command::Version => writeln!(out, "edu {}", env!("CARGO_PKG_VERSION")),
     };
@@ -168,7 +226,7 @@ pub fn report(error: &Error) -> String {
 }
 
 /// `1 page`, `2 pages`.
-fn count(n: usize, noun: &str) -> String {
+pub(crate) fn count(n: usize, noun: &str) -> String {
     let plural = if n == 1 { "" } else { "s" };
     format!("{n} {noun}{plural}")
 }
@@ -183,6 +241,11 @@ impl fmt::Display for UsageError {
             Self::BadBaseUrl(url) => write!(
                 f,
                 "`{url}` is not an address such as `https://example.github.io/rust-edu`"
+            ),
+            Self::MissingBind => f.write_str("`--bind` needs an address and a port after it"),
+            Self::BadBind(address) => write!(
+                f,
+                "`{address}` is not an IP address and a port such as `0.0.0.0:1111`"
             ),
         }
     }
@@ -210,6 +273,7 @@ impl fmt::Display for Error {
                 let (path, first, second) = (path.display(), first.display(), second.display());
                 write!(f, "{first} and {second} would both be /{path}")
             }
+            Self::Listen { address, .. } => write!(f, "cannot listen on {address}"),
             Self::Reserved { path, file } => {
                 let (path, file) = (path.display(), file.display());
                 write!(
@@ -224,9 +288,10 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::Read { source, .. } | Self::Write(source) | Self::Output { source, .. } => {
-                Some(source)
-            }
+            Self::Read { source, .. }
+            | Self::Write(source)
+            | Self::Output { source, .. }
+            | Self::Listen { source, .. } => Some(source),
             Self::Content(_) | Self::Foreign(_) | Self::Clash { .. } | Self::Reserved { .. } => {
                 None
             }
@@ -304,6 +369,56 @@ mod tests {
             "`a` is not an address such as `https://example.github.io/rust-edu`",
         ];
         assert_eq!(messages, expected);
+    }
+
+    #[test]
+    fn serve_takes_drafts_and_an_address_to_listen_on_once_each() {
+        let serve = |drafts, bind: [u8; 4]| {
+            Ok(Command::Serve {
+                drafts,
+                bind: (bind, 1111).into(),
+            })
+        };
+        assert_eq!(parse(&["serve"]), serve(Drafts::Exclude, [127, 0, 0, 1]));
+        let args = ["serve", "--bind", "0.0.0.0:1111", "--drafts"];
+        assert_eq!(parse(&args), serve(Drafts::Include, [0, 0, 0, 0]));
+        let unexpected = |arg: &str| Err(UsageError::UnexpectedArgument(arg.to_owned()));
+        let bad = Err(UsageError::BadBind(":1".into()));
+        let cases = [
+            (
+                &["serve", "--drafts", "--drafts"][..],
+                unexpected("--drafts"),
+            ),
+            (
+                &["serve", "--bind", "127.0.0.1:1", "--bind", "a"],
+                unexpected("--bind"),
+            ),
+            (
+                &["serve", "--base-url", "https://a.org"],
+                unexpected("--base-url"),
+            ),
+            (&["serve", "--bind", ":1"], bad),
+            (&["serve", "--bind"], Err(UsageError::MissingBind)),
+        ];
+        for (args, expected) in cases {
+            assert_eq!(parse(args), expected, "{args:?}");
+        }
+        let messages = [UsageError::MissingBind, UsageError::BadBind("a".into())];
+        let expected = [
+            "`--bind` needs an address and a port after it",
+            "`a` is not an IP address and a port such as `0.0.0.0:1111`",
+        ];
+        assert_eq!(messages.map(|message| message.to_string()), expected);
+    }
+
+    #[test]
+    fn serve_says_when_it_cannot_listen() {
+        let taken = TcpListener::bind("127.0.0.1:0").unwrap();
+        let bind = taken.local_addr().unwrap();
+        let drafts = Drafts::Exclude;
+        let site = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/sites/valid");
+        let error = run(&Command::Serve { drafts, bind }, &site, &mut Vec::new()).unwrap_err();
+        assert_eq!(error.to_string(), format!("cannot listen on {bind}"));
     }
 
     #[test]

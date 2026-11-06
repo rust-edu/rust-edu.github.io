@@ -1,9 +1,10 @@
 //! Runs the `edu` binary as a user or CI would, for its exit statuses and output streams.
 
 use std::fs;
-use std::io;
+use std::io::{self, BufRead, BufReader, Read, Write};
+use std::net::TcpStream;
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 
 fn edu(args: &[&str]) -> io::Result<Output> {
     Command::new(env!("CARGO_BIN_EXE_edu")).args(args).output()
@@ -109,4 +110,35 @@ fn check_names_what_it_cannot_read_and_why() {
     assert_eq!(output.status.code(), Some(1));
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(stderr.starts_with("edu: cannot read content: "), "{stderr}");
+}
+
+#[test]
+fn serve_says_where_it_listens_and_serves_the_site_there() {
+    let site = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/sites/valid");
+    let mut server = Command::new(env!("CARGO_BIN_EXE_edu"))
+        .args(["serve", "--bind", "127.0.0.1:0"])
+        .current_dir(&site)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    let mut line = String::new();
+    BufReader::new(server.stdout.take().unwrap())
+        .read_line(&mut line)
+        .unwrap();
+    let address = line
+        .strip_prefix("serving http://")
+        .and_then(|rest| rest.strip_suffix("/ until Ctrl-C\n"));
+    let mut stream = TcpStream::connect(address.unwrap()).unwrap();
+    stream
+        .write_all(b"GET /news/post/ HTTP/1.1\r\n\r\n")
+        .unwrap();
+    let mut response = String::new();
+    stream.read_to_string(&mut response).unwrap();
+    server.kill().unwrap();
+    server.wait().unwrap();
+
+    assert!(response.starts_with("HTTP/1.1 200 OK\r\n"), "{response}");
+    assert!(response.contains("<h1>Rust Week: 2027</h1>"), "{response}");
+    assert!(!site.join("public").exists());
 }

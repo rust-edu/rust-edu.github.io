@@ -244,7 +244,7 @@ fn unescape(value: &str) -> String {
 }
 
 /// `path` with each `%` and two hex digits as the byte that they stand for, if the bytes are UTF-8.
-fn decode(path: &str) -> Option<String> {
+pub(crate) fn decode(path: &str) -> Option<String> {
     let mut bytes = Vec::with_capacity(path.len());
     let mut rest = path.as_bytes();
     while let Some((&byte, tail)) = rest.split_first() {

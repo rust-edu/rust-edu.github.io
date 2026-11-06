@@ -95,8 +95,9 @@ flowchart LR
     and follows every link between the pages and files of the site and each address of `urls.txt`, the addresses
     that other sites may link to. `edu build` checks the same, then writes the site into `public/`, with a page for
     each `redirect_to`, `404.html`, `robots.txt` and `sitemap.xml`. It leaves out the drafts, unless `--drafts`, and
-    builds for the `base_url` of `site.yaml`, unless `--base-url` gives another, such as a fork's Pages site;
-    `edu serve` follows in step 7.
+    builds for the `base_url` of `site.yaml`, unless `--base-url` gives another, such as a fork's Pages site.
+    `edu serve` builds the site in memory and serves it at http://127.0.0.1:1111 as GitHub Pages would, building it
+    again on a request after a change, and showing the errors, if any, instead of the page.
 
 ```mermaid
 flowchart LR
