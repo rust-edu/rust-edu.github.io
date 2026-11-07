@@ -3,7 +3,8 @@
 #   docker build --target check .
 # Preview the site, drafts too, at http://127.0.0.1:1111 with `docker compose up`.
 # The tag names the Rust version of rust-toolchain.toml (CI fails when they differ); the digest
-# pins the image, since tags are re-pushed.
+# pins the image, since tags are re-pushed. Dependabot bumps the tag, the digest and
+# rust-toolchain.toml in one pull request.
 FROM rust:1.99.1-slim-trixie@sha256:b8e062b1c3a80183df83d9ba187cadd2b5ab84bc78d453dbfeb2fccd5f982247 AS toolchain
 # The image installs Rust's minimal profile, which lacks these two.
 RUN rustup component add clippy rustfmt

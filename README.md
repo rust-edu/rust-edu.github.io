@@ -1,9 +1,9 @@
 # Rust-edu
-[![Build Status](https://github.com/rust-edu/rust-edu.github.io/actions/workflows/main.yml/badge.svg)](https://github.com/rust-edu/rust-edu.github.io/actions)
+[![Deploy](https://github.com/rust-edu/rust-edu.github.io/actions/workflows/deploy.yml/badge.svg)](https://github.com/rust-edu/rust-edu.github.io/actions/workflows/deploy.yml)
 [![Zulip](https://img.shields.io/badge/chat-on%20Zulip-9146FF?logo=zulip&logoColor=white)](https://rust-edu.zulip.cs.pdx.edu/)
 
 
-Rust Edu is an organization dedicated to supporting Rust education in the academic environment. This website is built using [Zola](https://www.getzola.org/), a blazing-fast static site generator in Rust.
+Rust Edu is an organization dedicated to supporting Rust education in the academic environment. This website is built by its own small static site generator, written in Rust with only the standard library.
 
 ## 🚀 Setting Up on Local Machine
 To contribute or run this website locally, follow the steps below.
@@ -11,41 +11,35 @@ To contribute or run this website locally, follow the steps below.
 To change only the content, see [docs/editing.md](docs/editing.md): every page is a Markdown file under `content/`.
 
 ### ✅ Requirements
-- Zola **0.22.1** installed, the version CI builds and deploys with
+- [Docker](https://docs.docker.com/get-started/get-docker/) with Compose, which runs the generator in the image that
+  CI and the deploy use
+- or [Rust](https://www.rust-lang.org/tools/install), with Rust 1.99.1 selected by `rust-toolchain.toml`
 
 ## 📦 Installation Steps
-### 1. Clone the Repository
+Clone the repository:
 ```bash
 git clone https://github.com/rust-edu/rust-edu.github.io.git
 cd rust-edu.github.io
 ```
 
-### 2. Install Zola 0.22.1
-Download the binary for your system from [Zola 0.22.1](https://github.com/getzola/zola/releases/tag/v0.22.1),
-or, with [Rust](https://www.rust-lang.org/tools/install) installed, build it with Cargo:
-```bash
-cargo install --locked --git https://github.com/getzola/zola --tag v0.22.1 zola
-```
-
 ## 💻 Run Locally
-Start a local development server:
+Start a local server:
 ```bash
-zola serve
+docker compose up
 ```
-Your site will be live at: http://127.0.0.1:1111
+Your site will be live at: http://127.0.0.1:1111, drafts too.
 
-Zola will auto-reload when changes are made.
+After a change, reloading the page builds the site again; while the site has errors, the page shows them instead.
+With Rust installed, `cargo run -p edu-site -- serve --drafts` does the same.
 
 ## 🎨 Layout and Style
-- `templates/`: the HTML layout of each kind of page (Zola's Tera templates)
+- `layouts/`: the HTML layout of each kind of page
 - `static/style.css`: the whole stylesheet, plain CSS with its colors in one token block at the top
-- `config.toml`: the site title and description, and the menu and footer links
-- `layouts/` and `site.yaml`: the same layouts and settings for the new generator below; until it replaces Zola,
-  a change to `templates/` or `config.toml` goes in both
+- `site.yaml`: the site's address, title and description, and the menu and footer links
 
-## 🦀 The New Generator (in progress)
-[Plan 0002](docs/Plan-0002—Own-Markdown-Site-Generator.md) replaces Zola, step by step, with a small generator in
-`crates/` that uses only the Rust standard library; Zola builds and deploys the site until the switch.
+## 🦀 The Generator
+[Plan 0002](docs/Plan-0002—Own-Markdown-Site-Generator.md) replaced Zola with a small generator in `crates/` that
+uses only the Rust standard library.
 
 ### How it works
 ```mermaid
@@ -119,21 +113,25 @@ With [Rust](https://www.rust-lang.org/tools/install) installed, `rust-toolchain.
 cargo test
 cargo run -p edu-site -- check
 ```
-
-### Preview with the new generator
-To see the site as the generator builds it, drafts too, at http://127.0.0.1:1111, built again after each change:
+`edu build` writes the site into `public/`, for the `base_url` of `site.yaml` or for the address of `--base-url`:
 ```bash
-docker compose up
+cargo run -p edu-site -- build
 ```
-or with Rust, `cargo run -p edu-site -- serve --drafts`. The checks of each pull request also attach the site with
-its drafts as `site-preview`; its links start at the top of a site, so serve the unpacked folder at the root of an
-address, as with `python3 -m http.server -d site-preview 1111`, rather than opening its files.
+
+### Preview of a pull request
+The checks of each pull request attach the site with its drafts as `site-preview`; its links start at the top of a
+site, so serve the unpacked folder at the root of an address, as with `python3 -m http.server -d site-preview 1111`,
+rather than opening its files.
 
 ### Deploy
-`.github/workflows/deploy.yml` checks and builds the site in Docker and publishes it with GitHub's own Pages
-actions, at the address that Pages gives the site, which the build takes as `--base-url`. Until Zola stops
-deploying, it runs only by hand (*Actions → Deploy to GitHub Pages → Run workflow*), and only where *Settings →
-Pages → Source* is *GitHub Actions*, as on a fork that rehearses the switch.
+`.github/workflows/deploy.yml` runs on each push to `main`: it checks and builds the site in Docker and publishes it
+with GitHub's own Pages actions, at the address that Pages gives the site, which the build takes as `--base-url`. It
+needs *Settings → Pages → Source* set to *GitHub Actions*; a fork with that setting gets the site at its own Pages
+address. *Actions → Deploy to GitHub Pages → Run workflow* runs it again by hand. Locally,
+`docker build --target site -o site .` writes the same site, for rust-edu.org, into `site/`.
+
+Dependabot proposes updates of the actions, which are pinned by commit, and of the Docker image together with
+`rust-toolchain.toml`, so that a Rust release bumps both in one pull request.
 
 ## 📬 Get Involved
 Interested in contributing or learning more?

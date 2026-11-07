@@ -43,8 +43,8 @@ The text of the page starts here.
 | `redirect_to` | `content/zulip/_index.md` | The full address, starting with `https://`, that `/zulip/` forwards to. |
 
 `title`, `template` and `draft` go in any file, `date` and `authors` only in pages, and `sort_by` and `redirect_to`
-only in `_index.md` files. The automatic check (see below) stops at any other key, because the site's planned
-generator ([Plan 0002](Plan-0002—Own-Markdown-Site-Generator.md)) reads only these.
+only in `_index.md` files. The automatic check (see below) stops at any other key, because the site's generator
+reads only these.
 
 ## Markdown
 
@@ -88,8 +88,7 @@ It does not check links to other sites.
 - **A resource:** add one line under the right heading of `content/resources/_index.md`:
   `- [Title](https://example.org/) — Author. One or two sentences on what it is.` (leave out `Author.` when there is
   none).
-- **Menu and footer links:** the `navbar` and `external` lists at the end of `config.toml`, and the same links in
-  the `menu` and `footer` lists of `site.yaml`, which the site's next generator reads.
+- **Menu and footer links:** the `menu` and `footer` lists of `site.yaml`.
 - **Moving or removing a page or file:** other sites may link to it, so its address is in `urls.txt`, and the check
   stops while that address goes nowhere. Delete its line there on purpose, or keep the old address of a page with an
   `_index.md` at it that has `redirect_to`.
@@ -106,10 +105,11 @@ page's header or text; a maintainer reviews and merges it.
 
 ## Previewing locally (optional)
 
-With [Zola 0.22.1](https://github.com/getzola/zola/releases/tag/v0.22.1) installed (see the [README](../README.md)):
+With [Docker](https://docs.docker.com/get-started/get-docker/) installed (see the [README](../README.md)):
 
 ```bash
-zola serve
+docker compose up
 ```
 
-Then open http://127.0.0.1:1111; the page reloads on every saved change.
+Then open http://127.0.0.1:1111, where drafts show too. After saving a change, reload the page: it shows the site
+built again or, when a page has a mistake, the message of the automatic check, with its file, line and column.

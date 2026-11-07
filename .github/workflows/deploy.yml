@@ -1,10 +1,12 @@
 # Checks and builds the site in Docker, then publishes it with GitHub Pages, at the address that
-# Pages gives: rust-edu.org, or the Pages site of a fork. It needs Settings → Pages → Source set to
-# "GitHub Actions". Until Zola stops deploying (Plan 0002, step 8), it runs only when started by
-# hand, under Actions → Deploy to GitHub Pages → Run workflow.
+# Pages gives: rust-edu.org, or the Pages site of a fork. It runs on each push to main, and by hand
+# under Actions → Deploy to GitHub Pages → Run workflow. It needs Settings → Pages → Source set to
+# "GitHub Actions".
 name: Deploy to GitHub Pages
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
