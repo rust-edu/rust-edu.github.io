@@ -4,6 +4,7 @@
 
 mod build;
 mod check;
+mod file;
 mod links;
 mod page;
 mod render;
@@ -19,6 +20,7 @@ use std::path::{Path, PathBuf};
 
 pub use build::{BaseUrl, Drafts, Options};
 pub use check::{ContentError, PageError, ValueError};
+pub use file::FileError;
 pub use links::LinkError;
 
 /// The folder that `edu build` writes, in the root of the site.
@@ -77,8 +79,12 @@ pub enum UsageError {
 pub enum Error {
     /// A file or directory of the site cannot be read, or a page is not UTF-8.
     Read { path: PathBuf, source: io::Error },
-    /// Files of the site with errors: pages in path order, then `site.yaml` and the layouts, and
-    /// then the pages that cannot render, in path order.
+    /// A symbolic link among the files of the site, relative to the root, which could bring a file
+    /// from outside the site into it.
+    Symlink(PathBuf),
+    /// Files of the site with errors: pages in path order, then the other files of `content/` and
+    /// `static/`, then `site.yaml` and the layouts, and then the pages that cannot render, in path
+    /// order.
     Content(Vec<ContentError>),
     /// The output cannot be written.
     Write(io::Error),
@@ -257,6 +263,12 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Read { path, .. } => write!(f, "cannot read {}", path.display()),
+            Self::Symlink(path) => write!(
+                f,
+                "{} is a symbolic link, which could bring a file from outside the site into it; \
+                 put the file or folder itself there",
+                path.display()
+            ),
             Self::Content(errors) => write!(f, "{} in the site", count(errors.len(), "error")),
             Self::Write(_) => f.write_str("cannot write the output"),
             Self::Output { path, .. } => write!(f, "cannot write {}", path.display()),
@@ -292,9 +304,11 @@ impl std::error::Error for Error {
             | Self::Write(source)
             | Self::Output { source, .. }
             | Self::Listen { source, .. } => Some(source),
-            Self::Content(_) | Self::Foreign(_) | Self::Clash { .. } | Self::Reserved { .. } => {
-                None
-            }
+            Self::Symlink(_)
+            | Self::Content(_)
+            | Self::Foreign(_)
+            | Self::Clash { .. }
+            | Self::Reserved { .. } => None,
         }
     }
 }

@@ -1,7 +1,8 @@
 //! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset whose
 //! values the site can use, its text is in the Markdown subset, the layouts of `layouts/` render
-//! it with the settings of `site.yaml`, and its links go to pages and files of the site. `edu
-//! build` checks the same, and renders the pages that it writes.
+//! it with the settings of `site.yaml`, and its links go to pages and files of the site; and the
+//! other files of `content/` and `static/` are of a type that the site publishes. `edu build`
+//! checks the same, and renders the pages that it writes.
 
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
@@ -11,11 +12,13 @@ use std::path::{Path, PathBuf};
 
 use crate::Error;
 use crate::build::{self, BaseUrl, Drafts, Options};
+use crate::file::{self, FileError};
 use crate::links::{self, LinkError, Target};
 use crate::page::{Kind, Page};
 use crate::render::{self, Layouts};
 
-/// A file of the site with an error: a page, `site.yaml`, a layout or `urls.txt`.
+/// A file of the site with an error: a page, another file of `content/` or `static/`,
+/// `site.yaml`, a layout or `urls.txt`.
 #[derive(Debug)]
 pub struct ContentError {
     /// The file, relative to the site root.
@@ -40,6 +43,9 @@ pub enum PageError {
     },
     /// A link that would not work, and where it is written.
     Link(edu_yaml::Pos, LinkError),
+    /// A file of `content/` or `static/` that is not a page and that the site does not publish,
+    /// and where in it the reason is.
+    File(edu_yaml::Pos, FileError),
 }
 
 /// Why the site cannot use a page or `site.yaml`: a value of its header, its path, or a layout it
@@ -126,6 +132,9 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             }
         }
     }
+    for path in files.iter().chain(&statics) {
+        file::check(path, &mut errors);
+    }
     let site = render::site(root, options.base_url.as_ref(), &mut errors)?;
     let layouts = Layouts::read(root, &mut errors)?;
     // An error in `site.yaml` or in a layout would fail every page.
@@ -211,8 +220,9 @@ fn left_out(page: &Page) -> PathBuf {
     }
 }
 
-/// The text of the file at `path`, relative to `root`.
+/// The text of the file at `path`, relative to `root`, which is not a symbolic link.
 pub(crate) fn read(root: &Path, path: &Path) -> Result<String, Error> {
+    refuse_symlink(root, path)?;
     let read_error = |source| Error::Read {
         path: path.to_owned(),
         source,
@@ -220,8 +230,30 @@ pub(crate) fn read(root: &Path, path: &Path) -> Result<String, Error> {
     fs::read_to_string(root.join(path)).map_err(read_error)
 }
 
-/// Adds the files under `dir`, a directory relative to `root`, to `files` in path order.
+/// Fails with `Error::Symlink` if `path`, relative to `root`, is a symbolic link, which could bring
+/// a file from outside the site into it.
+pub(crate) fn refuse_symlink(root: &Path, path: &Path) -> Result<(), Error> {
+    let read_error = |source| Error::Read {
+        path: path.to_owned(),
+        source,
+    };
+    let metadata = fs::symlink_metadata(root.join(path)).map_err(read_error)?;
+    if metadata.file_type().is_symlink() {
+        return Err(Error::Symlink(path.to_owned()));
+    }
+    Ok(())
+}
+
+/// Adds the files under `dir`, a folder relative to `root`, to `files` in path order. A file or
+/// folder whose name starts with `.`, such as `.DS_Store`, is not part of the site; a symbolic link
+/// is an error.
 pub(crate) fn walk(root: &Path, dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), Error> {
+    refuse_symlink(root, dir)?;
+    walk_in(root, dir, files)
+}
+
+/// `walk` under `dir`, which is not a symbolic link.
+fn walk_in(root: &Path, dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), Error> {
     let read_error = |source| Error::Read {
         path: dir.to_owned(),
         source,
@@ -229,14 +261,19 @@ pub(crate) fn walk(root: &Path, dir: &Path, files: &mut Vec<PathBuf>) -> Result<
     let mut entries = Vec::new();
     for entry in fs::read_dir(root.join(dir)).map_err(read_error)? {
         let entry = entry.map_err(read_error)?;
-        let is_dir = entry.file_type().map_err(read_error)?.is_dir();
-        entries.push((entry.file_name(), is_dir));
+        let name = entry.file_name();
+        if name.as_encoded_bytes().starts_with(b".") {
+            continue;
+        }
+        entries.push((name, entry.file_type().map_err(read_error)?));
     }
-    entries.sort();
-    for (name, is_dir) in entries {
+    entries.sort_by(|(a, _), (b, _)| a.cmp(b));
+    for (name, file_type) in entries {
         let path = dir.join(name);
-        if is_dir {
-            walk(root, &path, files)?;
+        if file_type.is_symlink() {
+            return Err(Error::Symlink(path));
+        } else if file_type.is_dir() {
+            walk_in(root, &path, files)?;
         } else {
             files.push(path);
         }
@@ -253,6 +290,7 @@ impl fmt::Display for ContentError {
             PageError::Text(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
             PageError::Layout(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
             PageError::Link(pos, kind) => write!(f, "{path}:{pos}: error: {kind}"),
+            PageError::File(pos, kind) => write!(f, "{path}:{pos}: error: {kind}"),
             PageError::Render { page, error } => {
                 let page = page.display();
                 write!(
@@ -434,6 +472,108 @@ mod tests {
             "urls.txt:6:1: error: a link to a page ends with `/`: `/a/`",
         ];
         assert_eq!(errors, expected);
+    }
+
+    #[test]
+    fn a_file_that_is_not_a_page_is_published_only_if_a_browser_does_not_run_it() {
+        // `files` holds files of types that the site publishes (`report.PDF` and `CNAME` at the top
+        // of `static/`), three that it does not, and `.hidden.html`, which is not part of the site.
+        let (root, options) = site("files");
+        let Err(Error::Content(errors)) = pages(&root, &options) else {
+            panic!("expected content errors");
+        };
+        let errors: Vec<String> = errors.iter().map(ToString::to_string).collect();
+        let types = "besides its pages, it publishes `.avif`, `.bib`, `.cls`, `.css`, `.gif`, \
+                     `.ico`, `.jpeg`, `.jpg`, `.pdf`, `.png`, `.svg`, `.tex`, `.txt` and `.webp` \
+                     files";
+        let none = "the site publishes no files without an extension";
+        let expected = [
+            format!("content/notes:1:1: error: {none}; {types}"),
+            "content/page.HTML:1:1: error: the site publishes no HTML files; write the page in \
+             Markdown, as a `.md` file"
+                .to_owned(),
+            format!("static/app.js:1:1: error: the site publishes no `.js` files; {types}"),
+            format!("static/sub/CNAME:1:1: error: {none}; {types}"),
+        ];
+        assert_eq!(errors, expected);
+    }
+
+    /// A site in a new temporary folder: a home page, its layouts, `site.yaml` and a stylesheet.
+    fn temp_site(test: &str) -> PathBuf {
+        let name = format!("edu-check-{}-{test}", std::process::id());
+        let root = std::env::temp_dir().join(name);
+        let _ = fs::remove_dir_all(&root);
+        let files = [
+            ("site.yaml", "base_url: https://example.org\n"),
+            ("layouts/layout.html", "{{ content | safe }}"),
+            ("layouts/home.html", "{{ page.title }}"),
+            ("content/_index.md", "---\ntitle: Home\n---\n"),
+            ("static/style.css", "a {}\n"),
+            ("elsewhere/post.md", "---\ntitle: Post\n---\n"),
+        ];
+        for (path, text) in files {
+            let path = root.join(path);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, text).unwrap();
+        }
+        root
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symbolic_link_in_the_site_is_an_error_that_names_it() {
+        use std::os::unix::fs::symlink;
+
+        const OPTIONS: Options = Options {
+            drafts: Drafts::Include,
+            base_url: None,
+        };
+
+        /// Checks a site that passes until `make` puts the symbolic link `link` in it.
+        fn refused(link: &str, make: impl Fn(&Path)) {
+            let root = temp_site("symlink");
+            assert!(pages(&root, &OPTIONS).is_ok(), "{link}");
+            make(&root);
+            let result = pages(&root, &OPTIONS);
+            assert!(
+                matches!(&result, Err(Error::Symlink(path)) if path == Path::new(link)),
+                "{link}: {result:?}"
+            );
+            fs::remove_dir_all(root).unwrap();
+        }
+
+        /// Moves `path` aside and puts a link to it in its place.
+        fn move_and_link(root: &Path, path: &str) {
+            let moved = format!("{path}.moved");
+            fs::rename(root.join(path), root.join(&moved)).unwrap();
+            symlink(moved, root.join(path)).unwrap();
+        }
+
+        refused("static/linked.css", |root| {
+            symlink("style.css", root.join("static/linked.css")).unwrap();
+        });
+        refused("content/news", |root| {
+            symlink("../elsewhere", root.join("content/news")).unwrap();
+        });
+        refused("content/gone.md", |root| {
+            symlink("nowhere.md", root.join("content/gone.md")).unwrap();
+        });
+        refused("layouts/page.html", |root| {
+            symlink("layout.html", root.join("layouts/page.html")).unwrap();
+        });
+        refused("site.yaml", |root| move_and_link(root, "site.yaml"));
+        refused("layouts", |root| move_and_link(root, "layouts"));
+        refused("static", |root| move_and_link(root, "static"));
+        refused("urls.txt", |root| {
+            fs::write(root.join("elsewhere/urls.txt"), "/\n").unwrap();
+            symlink("elsewhere/urls.txt", root.join("urls.txt")).unwrap();
+        });
+        // A link whose name starts with `.` is not part of the site, as no such file is.
+        let root = temp_site("hidden");
+        symlink("style.css", root.join("static/.linked.css")).unwrap();
+        let checked = pages(&root, &OPTIONS).unwrap();
+        assert_eq!(checked.statics, [Path::new("static/style.css")]);
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

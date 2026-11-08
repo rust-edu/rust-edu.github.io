@@ -31,6 +31,8 @@ on the fork kenesparta/rust-edu.github.io) · **Research:**
 | Smart quotes | None: quotes and apostrophes render as typed, in Zola too (decision 4, 2026-11-03) |
 | External links | `rel="external"` on every link to an `http:` or `https:` URL, as Zola writes it (2026-11-05) |
 | Character references | Only `&amp;`, `&lt;`, `&gt;` and `&quot;`; any other fails the build with a hint to type the character itself (2026-11-05) |
+| Symbolic links | None in the site, which they could bring outside files into; names starting with `.` are left out (2026-11-07) |
+| Other files | Besides pages, only images, `.pdf`, `.txt`, LaTeX files, `.css` and `static/CNAME` (2026-11-07) |
 
 ## Editing with only Markdown
 
