@@ -1,12 +1,19 @@
 //! The files of `content/` and `static/` that are not pages, which the build copies as they are:
 //! only images, PDF and text files, LaTeX files and stylesheets. A browser runs the scripts of
-//! other types of file, such as HTML, as if they were pages of the site.
+//! other types of file, such as HTML, as if they were pages of the site, and those of an SVG image
+//! opened on its own too, so the site publishes an SVG image only if the scan of `svg.rs` lets it
+//! through.
 
 use std::fmt;
+use std::fs;
 use std::path::Path;
 
+use edu_yaml::Pos;
+
+use crate::Error;
 use crate::check::{ContentError, PageError};
 use crate::page::TOP;
+use crate::svg::{self, SvgError};
 
 /// The extensions, in lowercase, of the files that the site publishes besides its pages.
 const PUBLISHED: [&str; 14] = [
@@ -24,25 +31,45 @@ pub enum FileError {
     Html,
     /// A file with another extension than those the site publishes, in lowercase, or with none.
     Type(Option<String>),
+    /// An SVG image that the scan refuses.
+    Svg(SvgError),
 }
 
-/// Checks the type of the file at `path`, relative to the site's root, which the build would
-/// copy. An error goes to `errors`.
-pub(crate) fn check(path: &Path, errors: &mut Vec<ContentError>) {
+/// Checks the file at `path`, relative to `root`, which the build would copy: its type, and the
+/// text of an SVG image. An error in the file goes to `errors`.
+pub(crate) fn check(root: &Path, path: &Path, errors: &mut Vec<ContentError>) -> Result<(), Error> {
     if path == Path::new(CNAME) {
-        return;
+        return Ok(());
     }
     let extension = path
         .extension()
         .map(|extension| extension.to_string_lossy().to_ascii_lowercase());
-    let error = match extension.as_deref() {
-        Some(extension) if PUBLISHED.contains(&extension) => return,
-        Some("htm" | "html" | "xhtml") => FileError::Html,
-        _ => FileError::Type(extension),
+    let (pos, error) = match extension.as_deref() {
+        Some("svg") => match svg(root, path)? {
+            Ok(()) => return Ok(()),
+            Err((pos, error)) => (pos, FileError::Svg(error)),
+        },
+        Some(extension) if PUBLISHED.contains(&extension) => return Ok(()),
+        Some("htm" | "html" | "xhtml") => (TOP, FileError::Html),
+        _ => (TOP, FileError::Type(extension)),
     };
     let path = path.to_owned();
-    let error = PageError::File(TOP, error);
+    let error = PageError::File(pos, error);
     errors.push(ContentError { path, error });
+    Ok(())
+}
+
+/// The scan of the SVG image at `path`, relative to `root`.
+fn svg(root: &Path, path: &Path) -> Result<Result<(), (Pos, SvgError)>, Error> {
+    let read_error = |source| Error::Read {
+        path: path.to_owned(),
+        source,
+    };
+    let bytes = fs::read(root.join(path)).map_err(read_error)?;
+    Ok(match String::from_utf8(bytes) {
+        Ok(text) => svg::scan(&text),
+        Err(_) => Err((TOP, SvgError::NotText)),
+    })
 }
 
 impl fmt::Display for FileError {
@@ -68,6 +95,7 @@ impl fmt::Display for FileError {
                 }
                 f.write_str(" files")
             }
+            Self::Svg(error) => error.fmt(f),
         }
     }
 }

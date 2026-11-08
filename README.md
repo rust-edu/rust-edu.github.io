@@ -74,7 +74,8 @@ flowchart LR
   the site uses, and rejects anything outside it with `file:line:col` and a hint. Input paths never call `unwrap`,
   `expect` or `panic!`, and a seeded random-input test in each parser crate checks 5,000 damaged inputs per run.
 - **Safe types of file:** Besides the pages, which have no HTML, `content/` and `static/` hold only images, PDF
-  and text files, LaTeX files and stylesheets.
+  and text files, LaTeX files and stylesheets; an SVG image passes only without scripts, event attributes,
+  `javascript:` addresses or HTML.
 - **Only the site's own files:** The generator refuses symbolic links, which could bring files from outside the
   repository into the site, and leaves out files and folders whose names start with `.`, such as `.DS_Store`.
 - **Four crates under `crates/`:**
