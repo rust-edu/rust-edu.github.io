@@ -18,6 +18,9 @@ The file name becomes the URL: `content/news/rust-week-2027.md` is served at `/n
 lowercase kebab-case. Images go in `static/images/` and are linked as `/images/<file>`; other files (PDFs, LaTeX)
 sit next to the page that links them.
 
+The automatic check stops at a symbolic link, which could bring a file from outside the site into it. Files and
+folders whose names start with `.`, such as `.DS_Store`, are not part of the site.
+
 ## The header
 
 Each file starts with a short YAML header between two `---` lines:

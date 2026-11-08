@@ -96,24 +96,29 @@ pub(crate) enum Output {
     Made(String),
 }
 
-/// Builds the site in `root` with `options` into `out`, relative to `root`. The files go to `out`
-/// with `.tmp` added first, which then takes the place of `out`; a folder in the way is deleted
-/// only if an earlier build made it.
+/// Builds the site in `root` with `options` into `out`, relative to `root`.
 pub(crate) fn site(root: &Path, out: &Path, options: &Options) -> Result<Built, Error> {
     let site = plan(root, options)?;
+    save(root, out, &site)?;
+    let pages = site.pages;
+    let files = site.files.len() - pages;
+    Ok(Built { pages, files })
+}
+
+/// Writes `site`, built from the files of `root`, into `out`, relative to `root`. The files go to
+/// `out` with `.tmp` added first, which then takes the place of `out`; a folder in the way is
+/// deleted only if an earlier build made it.
+fn save(root: &Path, out: &Path, site: &Site) -> Result<(), Error> {
     let tmp = out.with_extension("tmp");
     clear(root, &tmp)?;
-    let written = write(root, &tmp, &site);
+    let written = write(root, &tmp, site);
     if written.is_err() {
         // A folder with the marker is deleted by the next build anyway.
         let _ = fs::remove_dir_all(root.join(&tmp));
     }
     written?;
     clear(root, out)?;
-    fs::rename(root.join(&tmp), root.join(out)).map_err(output_error(out))?;
-    let pages = site.pages;
-    let files = site.files.len() - pages;
-    Ok(Built { pages, files })
+    fs::rename(root.join(&tmp), root.join(out)).map_err(output_error(out))
 }
 
 /// The site in `root`, built with `options` in memory, as `edu build` writes it and `edu serve`
@@ -297,7 +302,6 @@ mod tests {
         let built = site(&test_site("valid"), &out, &LIVE).unwrap();
         assert_eq!((built.pages, built.files), (4, 7));
         let expected = [
-            ".edu-output",
             "2027/index.html",
             "404.html",
             "chat/index.html",
@@ -311,6 +315,7 @@ mod tests {
             "style.css",
         ];
         assert_eq!(files(&out), expected);
+        assert!(out.join(MARKER).is_file());
         let home = fs::read_to_string(out.join("index.html")).unwrap();
         assert!(home.starts_with("<title>Home - Test</title>\n"), "{home}");
         let style = test_site("valid").join("static/style.css");
@@ -456,32 +461,21 @@ mod tests {
         fs::remove_file(file).unwrap();
     }
 
-    #[cfg(unix)]
     #[test]
     fn a_file_that_cannot_be_copied_is_an_error_and_leaves_no_output() {
-        let site = out("site");
-        let files = [
-            ("site.yaml", "base_url: https://example.org\n"),
-            ("layouts/layout.html", "{{ content | safe }}"),
-            ("layouts/home.html", "{{ page.title }}"),
-            ("content/_index.md", "---\ntitle: Home\n---\n"),
-        ];
-        for (path, text) in files {
-            let path = site.join(path);
-            fs::create_dir_all(path.parent().unwrap()).unwrap();
-            fs::write(path, text).unwrap();
-        }
-        fs::create_dir(site.join("static")).unwrap();
-        std::os::unix::fs::symlink("nowhere", site.join("static/gone.css")).unwrap();
+        // The plan of a site whose file `static/gone.css` went away before the copy.
+        let mut files = BTreeMap::new();
+        let (home, gone) = ("<p>Home</p>\n".to_owned(), PathBuf::from("static/gone.css"));
+        files.insert(PathBuf::from("index.html"), Output::Made(home));
+        files.insert(PathBuf::from("gone.css"), Output::Copy(gone));
         let out = out("gone");
-        let result = super::site(&site, &out, &LIVE);
+        let result = save(&test_site("valid"), &out, &Site { files, pages: 0 });
         let is_gone = |path: &Path| path.ends_with("gone.css");
         assert!(
             matches!(&result, Err(Error::Output { path, .. }) if is_gone(path)),
             "{result:?}"
         );
         assert!(!out.exists() && !out.with_extension("tmp").exists());
-        fs::remove_dir_all(site).unwrap();
     }
 
     #[test]

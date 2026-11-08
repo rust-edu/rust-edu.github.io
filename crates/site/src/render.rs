@@ -10,7 +10,7 @@ use edu_yaml::{Entry, Node};
 
 use crate::Error;
 use crate::build::BaseUrl;
-use crate::check::{ContentError, PageError, ValueError, read};
+use crate::check::{ContentError, PageError, ValueError, read, refuse_symlink};
 use crate::page::{Kind, Order, Page, TOP};
 
 /// The layout that wraps every page's own layout, at `{{ content | safe }}`.
@@ -87,6 +87,7 @@ impl Layouts {
             path: dir.to_owned(),
             source,
         };
+        refuse_symlink(root, dir)?;
         let mut names = Vec::new();
         for entry in fs::read_dir(root.join(dir)).map_err(read_error)? {
             let name = entry.map_err(read_error)?.file_name();

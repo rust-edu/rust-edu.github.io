@@ -77,6 +77,9 @@ pub enum UsageError {
 pub enum Error {
     /// A file or directory of the site cannot be read, or a page is not UTF-8.
     Read { path: PathBuf, source: io::Error },
+    /// A symbolic link among the files of the site, relative to the root, which could bring a file
+    /// from outside the site into it.
+    Symlink(PathBuf),
     /// Files of the site with errors: pages in path order, then `site.yaml` and the layouts, and
     /// then the pages that cannot render, in path order.
     Content(Vec<ContentError>),
@@ -257,6 +260,12 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Read { path, .. } => write!(f, "cannot read {}", path.display()),
+            Self::Symlink(path) => write!(
+                f,
+                "{} is a symbolic link, which could bring a file from outside the site into it; \
+                 put the file or folder itself there",
+                path.display()
+            ),
             Self::Content(errors) => write!(f, "{} in the site", count(errors.len(), "error")),
             Self::Write(_) => f.write_str("cannot write the output"),
             Self::Output { path, .. } => write!(f, "cannot write {}", path.display()),
@@ -292,9 +301,11 @@ impl std::error::Error for Error {
             | Self::Write(source)
             | Self::Output { source, .. }
             | Self::Listen { source, .. } => Some(source),
-            Self::Content(_) | Self::Foreign(_) | Self::Clash { .. } | Self::Reserved { .. } => {
-                None
-            }
+            Self::Symlink(_)
+            | Self::Content(_)
+            | Self::Foreign(_)
+            | Self::Clash { .. }
+            | Self::Reserved { .. } => None,
         }
     }
 }
