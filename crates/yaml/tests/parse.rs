@@ -143,6 +143,22 @@ fn a_page_header_lies_between_two_dashed_lines() {
 }
 
 #[test]
+fn a_byte_order_mark_at_the_start_is_left_out() {
+    // Some editors on Windows start a UTF-8 file with U+FEFF, which shows as nothing.
+    let (header, body) = parse_front_matter("\u{feff}---\ntitle: A\n---\nText\n").unwrap();
+    assert_eq!(
+        (map_shape(&header).as_str(), body),
+        (r#"{title: "A"}"#, "Text\n")
+    );
+    assert_eq!(shape("\u{feff}a: b\n"), r#"{a: "b"}"#);
+    let error = parse_front_matter("\u{feff}title: A\n").unwrap_err();
+    assert_eq!(
+        (error.pos.line, error.pos.col, error.kind),
+        (1, 1, MissingHeader)
+    );
+}
+
+#[test]
 fn header_errors_count_lines_from_the_top_of_the_page() {
     let error = parse_front_matter("---\ntitle: A\ndraft: no: yes\n---\n").unwrap_err();
     assert_eq!(
