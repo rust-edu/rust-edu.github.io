@@ -3,7 +3,7 @@
 
 use edu_markdown::ErrorKind::{
     BareUrl, EmphasisNextTo, EmphasisRun, Entity, Footnote, LinkDestination, NestedLink,
-    NoHeadingId, NonAsciiInHeading, RawHtml, ReferenceLink, Strikethrough, UnmatchedEmphasis,
+    NoHeadingId, RawHtml, ReferenceLink, Strikethrough, UnmatchedEmphasis,
 };
 use edu_markdown::{ErrorKind, to_html};
 
@@ -148,7 +148,8 @@ fn a_heading_s_id_is_made_from_its_text_without_markup_or_images() {
         "<a href=\"/l\"><img src=\"/i.png\" alt=\"x\" /> Rust</a></h2>\n",
     );
     assert_eq!(html(text), expected);
-    assert_eq!(error("## a `é`\n"), Some((1, 7, NonAsciiInHeading('é'))));
+    let expected = "<h2 id=\"a-é\">a <code>é</code></h2>\n";
+    assert_eq!(html("## a `é`\n"), expected);
     assert_eq!(error("## `--`\n"), Some((1, 1, NoHeadingId)));
     assert_eq!(error("## ![Rust](/i.png)\n"), Some((1, 1, NoHeadingId)));
 }

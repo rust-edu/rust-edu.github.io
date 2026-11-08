@@ -29,6 +29,7 @@ on the fork kenesparta/rust-edu.github.io) · **Research:**
 | Names | Binary `edu`; crates `edu-yaml`, `edu-markdown`, `edu-template` and `edu-site` in `crates/{yaml,markdown,template,site}`; templates in `layouts/` (decision 5, 2026-11-01) |
 | Code license | CC0 1.0 like the rest of the repository, `license = "CC0-1.0"` (decision 6, 2026-11-01) |
 | Smart quotes | None: quotes and apostrophes render as typed, in Zola too (decision 4, 2026-11-03) |
+| Heading ids | Letters and digits of any script, in lowercase, as GitHub keeps them; for ASCII, the ids Zola made (2026-11-07) |
 | External links | `rel="external"` on every link to an `http:` or `https:` URL, as Zola writes it (2026-11-05) |
 | Character references | Only `&amp;`, `&lt;`, `&gt;` and `&quot;`; any other fails the build with a hint to type the character itself (2026-11-05) |
 | Symbolic links | None in the site, which they could bring outside files into; names starting with `.` are left out (2026-11-07) |

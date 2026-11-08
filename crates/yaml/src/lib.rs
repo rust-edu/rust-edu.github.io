@@ -78,13 +78,13 @@ const TOP: Pos = Pos { line: 1, col: 1 };
 
 /// Parses a text whose top level is a map, such as a settings file.
 pub fn parse(text: &str) -> Result<Vec<Entry>, Error> {
-    parse_lines(text.lines().zip(1..))
+    parse_lines(without_bom(text).lines().zip(1..))
 }
 
 /// Splits a Markdown page into its header and the text after it. The header is the map between
 /// a first line `---` and the next line `---`; its positions count lines from the top of the page.
 pub fn parse_front_matter(text: &str) -> Result<(Vec<Entry>, &str), Error> {
-    let (first, mut rest) = split_line(text);
+    let (first, mut rest) = split_line(without_bom(text));
     if first != "---" {
         let kind = ErrorKind::MissingHeader;
         return Err(Error { pos: TOP, kind });
@@ -101,6 +101,12 @@ pub fn parse_front_matter(text: &str) -> Result<(Vec<Entry>, &str), Error> {
     }
     let kind = ErrorKind::UnclosedHeader;
     Err(Error { pos: TOP, kind })
+}
+
+/// `text` without the byte order mark, U+FEFF, that some editors write at the start of a UTF-8
+/// file, and that would hide its first `---` or key.
+fn without_bom(text: &str) -> &str {
+    text.strip_prefix('\u{feff}').unwrap_or(text)
 }
 
 /// The first line of `text` without its `\n` or `\r\n`, and the text after that line.

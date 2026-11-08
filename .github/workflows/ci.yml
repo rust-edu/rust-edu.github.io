@@ -38,7 +38,16 @@ jobs:
             exit 1
           fi
       - name: Format, lint, test and build in Docker, then check the pages
-        run: docker build --progress=plain --target check .
+        # Each error of `edu check`, `file:line:col: error: …` after the step and time of the build,
+        # is also written as an annotation, which GitHub shows on that line of the pull request.
+        run: |
+          set -o pipefail
+          docker build --progress=plain --target check . 2>&1 | sed -E '
+            p
+            s/^#[0-9]+ [0-9.]+ //
+            /^[^: ]+:[0-9]+:[0-9]+: error: /!d
+            s/%/%25/g
+            s/^([^:]+):([0-9]+):([0-9]+): error: (.*)$/::error file=\1,line=\2,col=\3::\4/'
       # A preview for the reviewers of a pull request: the site with its drafts, as a download.
       - name: Build the site with its drafts
         if: github.event_name == 'pull_request'

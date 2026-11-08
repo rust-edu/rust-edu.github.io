@@ -80,7 +80,7 @@ flowchart LR
 - **Four crates under `crates/`:**
   - `crates/yaml` (`edu-yaml`) — block-style YAML maps, lists, lists of maps and `---` page headers; every scalar stays
     a string so `no` never becomes `false`.
-  - `crates/markdown` (`edu-markdown`) — a two-pass CommonMark subset (paragraphs, `#` headings with Zola's ASCII ids,
+  - `crates/markdown` (`edu-markdown`) — a two-pass CommonMark subset (paragraphs, `#` headings with ids in any script,
     fenced code, `>` quotes, nested lists, code spans, links, images, autolinks, emphasis and escapes), tested byte for
     byte against Zola 0.22.1's HTML on every page of the site.
   - `crates/template` (`edu-template`) — layout templates rendered with a `Value` tree (`Str`, `Bool`, `List` and

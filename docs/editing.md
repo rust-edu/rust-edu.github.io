@@ -81,7 +81,8 @@ underlined with `===`, indented code, and web or email addresses not written as 
 - **Another page or file on this site:** a root-relative URL ending in `/` for pages: `/news/campus-tour/`,
   `/workshop/proceedings.pdf`. Relative links such as `proceedings.pdf` or `../news/` break on some pages.
 - **A heading:** `/workshop/cfp-2022/#schedule`, or `#schedule` on the same page. A heading's id is its text in
-  lowercase with each run of other characters replaced by `-` (`What’s Next?` → `what-s-next`).
+  lowercase, letters of any language included, with each run of other characters replaced by `-`
+  (`What’s Next?` → `what-s-next`, `Taller en Perú` → `taller-en-perú`).
 - **Another site:** the full `https://` address.
 - **Email:** `[contact@rust-edu.org](mailto:contact@rust-edu.org)`.
 
@@ -109,7 +110,9 @@ It does not check links to other sites.
 3. Choose *Commit changes… → Propose changes → Create pull request*.
 
 An automatic check builds the site for every pull request and names the file, line and column of any mistake in a
-page's header or text; a maintainer reviews and merges it.
+page's header or text, which the pull request's *Files changed* tab also shows on that line; a maintainer reviews
+and merges it. On the first pull request of someone new to the repository, the check waits until a maintainer
+lets it run.
 
 ## Previewing locally (optional)
 

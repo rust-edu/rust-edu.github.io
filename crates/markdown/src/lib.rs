@@ -49,9 +49,7 @@ pub enum ErrorKind {
     UnderlinedHeading,
     /// A line of three or more `-`, `*` or `_`: a horizontal rule.
     Rule,
-    /// A letter or digit outside ASCII in a heading, which Zola spells out in the heading's id.
-    NonAsciiInHeading(char),
-    /// A heading without an ASCII letter or digit to make its id from.
+    /// A heading without a letter or digit to make its id from.
     NoHeadingId,
     /// A list or quote inside 8 others.
     TooDeep,
@@ -571,13 +569,8 @@ impl Html {
         if let Some(brace) = shown.strip_suffix('}').and_then(|text| text.rfind('{')) {
             return Err(error(brace, ErrorKind::HeadingAttributes));
         }
-        // Zola makes the id from the heading's text without markup and images.
-        let words = inline::plain(&inlines);
-        if let Some(c) = words.chars().find(|c| c.is_alphanumeric() && !c.is_ascii()) {
-            let at = text.find(c).unwrap_or_default();
-            return Err(error(at, ErrorKind::NonAsciiInHeading(c)));
-        }
-        let base = slug(&words);
+        // The id comes from the heading's text without markup and images.
+        let base = slug(&inline::plain(&inlines));
         if base.is_empty() {
             return Err(line.error(ErrorKind::NoHeadingId));
         }
@@ -637,14 +630,14 @@ fn without_closing_marks(text: &str) -> &str {
     }
 }
 
-/// The id Zola gives a heading whose letters and digits are ASCII: the runs of them, in lowercase,
-/// joined by `-`. Zola spells out emoji and some symbols (`🦀` as `crab`), which here only
-/// separate the runs.
+/// The id of a heading: the runs of its letters and digits, in any script, in lowercase and joined
+/// by `-`, as GitHub keeps them. For letters and digits of ASCII, that is the id that Zola gave;
+/// emoji and other symbols, which Zola spelled out (`🦀` as `crab`), only separate the runs.
 fn slug(text: &str) -> String {
     let words: Vec<String> = text
-        .split(|c: char| !c.is_ascii_alphanumeric())
+        .split(|c: char| !c.is_alphanumeric())
         .filter(|word| !word.is_empty())
-        .map(str::to_ascii_lowercase)
+        .map(str::to_lowercase)
         .collect();
     words.join("-")
 }
@@ -688,12 +681,6 @@ impl std::error::Error for Error {}
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = match self {
-            Self::NonAsciiInHeading(c) => {
-                return write!(
-                    f,
-                    "`{c}` in a heading; an id is made of ASCII letters and digits"
-                );
-            }
             Self::ControlCharacter('\t') => "tab character; indent with spaces",
             Self::ControlCharacter(_) => "control character",
             Self::IndentedCode => "indented code is not supported; indent less, or use a ``` fence",
@@ -705,7 +692,7 @@ impl fmt::Display for ErrorKind {
             Self::UnclosedFence => "the code block has no closing fence",
             Self::UnderlinedHeading => "start a heading with `#` instead of underlining it",
             Self::Rule => "horizontal rules are not supported",
-            Self::NoHeadingId => "a heading needs an ASCII letter or digit, for its id",
+            Self::NoHeadingId => "a heading needs a letter or digit, for its id",
             Self::TooDeep => {
                 return write!(f, "lists and quotes nest at most {MAX_DEPTH} deep");
             }
@@ -738,12 +725,14 @@ impl fmt::Display for ErrorKind {
                      tables; put a space between them, or write `\\*` or `\\_`"
                 );
             }
-            Self::Strikethrough => "`~` may start strikethrough on GitHub and in Zola; write `\\~`",
+            Self::Strikethrough => {
+                "GitHub may read `~` as strikethrough and the site would not; write `\\~`"
+            }
             Self::Footnote => "footnotes are not supported; write `\\[^` for the text itself",
             Self::Table => "tables are not supported; use a list instead",
             Self::TaskListItem => "task lists are not supported; write the item without `[ ]`",
             Self::HeadingAttributes => {
-                "Zola reads `{…}` at the end of a heading as its id or classes; leave it out"
+                "`{…}` at the end of a heading is not supported; leave it out"
             }
             Self::BareUrl => {
                 "GitHub links a bare URL or email address and the site would not; write it as \

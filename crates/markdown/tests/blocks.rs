@@ -1,8 +1,8 @@
 //! The blocks of the subset through the public API: the HTML of each, and where each error points.
 
 use edu_markdown::ErrorKind::{
-    ControlCharacter, EmptyListItem, HeadingAttributes, IndentedCode, LazyLine, NoHeadingId,
-    NonAsciiInHeading, Rule, Table, TaskListItem, TooDeep, UnclosedFence, UnderlinedHeading,
+    ControlCharacter, EmptyListItem, HeadingAttributes, IndentedCode, LazyLine, NoHeadingId, Rule,
+    Table, TaskListItem, TooDeep, UnclosedFence, UnderlinedHeading,
 };
 use edu_markdown::{ErrorKind, to_html};
 
@@ -53,10 +53,27 @@ fn a_heading_ends_a_paragraph_but_needs_a_space_after_1_to_6_marks() {
 }
 
 #[test]
-fn a_heading_needs_an_id_of_ascii_letters_and_digits() {
+fn a_heading_s_id_keeps_its_letters_and_digits_in_any_script_in_lowercase() {
     let cases = [
-        ("## Rust 🦀 Café ##\n", 1, 14, NonAsciiInHeading('é')),
-        ("## Step ²\n", 1, 9, NonAsciiInHeading('²')),
+        (
+            "## Rust 🦀 Café ##\n",
+            "<h2 id=\"rust-café\">Rust 🦀 Café</h2>\n",
+        ),
+        (
+            "## Taller en PERÚ: ¿qué sigue?\n",
+            "<h2 id=\"taller-en-perú-qué-sigue\">",
+        ),
+        ("### 中文 标题 2027\n", "<h3 id=\"中文-标题-2027\">"),
+        ("## Step ²\n", "<h2 id=\"step-²\">"),
+    ];
+    for (text, start) in cases {
+        assert!(html(text).starts_with(start), "{text:?}: {}", html(text));
+    }
+}
+
+#[test]
+fn a_heading_needs_a_letter_or_digit_for_its_id() {
+    let cases = [
         ("\n### ¿?\n", 2, 1, NoHeadingId),
         ("#\n", 1, 1, NoHeadingId),
     ];
