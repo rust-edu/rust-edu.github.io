@@ -102,7 +102,9 @@ It does not check links to other sites.
 3. Choose *Commit changes… → Propose changes → Create pull request*.
 
 An automatic check builds the site for every pull request and names the file, line and column of any mistake in a
-page's header or text; a maintainer reviews and merges it.
+page's header or text, which the pull request's *Files changed* tab also shows on that line; a maintainer reviews
+and merges it. On the first pull request of someone new to the repository, the check waits until a maintainer
+lets it run.
 
 ## Previewing locally (optional)
 
