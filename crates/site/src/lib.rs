@@ -4,6 +4,7 @@
 
 mod build;
 mod check;
+mod file;
 mod links;
 mod page;
 mod render;
@@ -19,6 +20,7 @@ use std::path::{Path, PathBuf};
 
 pub use build::{BaseUrl, Drafts, Options};
 pub use check::{ContentError, PageError, ValueError};
+pub use file::FileError;
 pub use links::LinkError;
 
 /// The folder that `edu build` writes, in the root of the site.
@@ -80,8 +82,9 @@ pub enum Error {
     /// A symbolic link among the files of the site, relative to the root, which could bring a file
     /// from outside the site into it.
     Symlink(PathBuf),
-    /// Files of the site with errors: pages in path order, then `site.yaml` and the layouts, and
-    /// then the pages that cannot render, in path order.
+    /// Files of the site with errors: pages in path order, then the other files of `content/` and
+    /// `static/`, then `site.yaml` and the layouts, and then the pages that cannot render, in path
+    /// order.
     Content(Vec<ContentError>),
     /// The output cannot be written.
     Write(io::Error),

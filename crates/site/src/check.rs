@@ -1,7 +1,8 @@
 //! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset whose
 //! values the site can use, its text is in the Markdown subset, the layouts of `layouts/` render
-//! it with the settings of `site.yaml`, and its links go to pages and files of the site. `edu
-//! build` checks the same, and renders the pages that it writes.
+//! it with the settings of `site.yaml`, and its links go to pages and files of the site; and the
+//! other files of `content/` and `static/` are of a type that the site publishes. `edu build`
+//! checks the same, and renders the pages that it writes.
 
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
@@ -11,11 +12,13 @@ use std::path::{Path, PathBuf};
 
 use crate::Error;
 use crate::build::{self, BaseUrl, Drafts, Options};
+use crate::file::{self, FileError};
 use crate::links::{self, LinkError, Target};
 use crate::page::{Kind, Page};
 use crate::render::{self, Layouts};
 
-/// A file of the site with an error: a page, `site.yaml`, a layout or `urls.txt`.
+/// A file of the site with an error: a page, another file of `content/` or `static/`,
+/// `site.yaml`, a layout or `urls.txt`.
 #[derive(Debug)]
 pub struct ContentError {
     /// The file, relative to the site root.
@@ -40,6 +43,9 @@ pub enum PageError {
     },
     /// A link that would not work, and where it is written.
     Link(edu_yaml::Pos, LinkError),
+    /// A file of `content/` or `static/` that is not a page and that the site does not publish,
+    /// and where in it the reason is.
+    File(edu_yaml::Pos, FileError),
 }
 
 /// Why the site cannot use a page or `site.yaml`: a value of its header, its path, or a layout it
@@ -125,6 +131,9 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
                 errors.push(ContentError { path, error });
             }
         }
+    }
+    for path in files.iter().chain(&statics) {
+        file::check(path, &mut errors);
     }
     let site = render::site(root, options.base_url.as_ref(), &mut errors)?;
     let layouts = Layouts::read(root, &mut errors)?;
@@ -281,6 +290,7 @@ impl fmt::Display for ContentError {
             PageError::Text(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
             PageError::Layout(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
             PageError::Link(pos, kind) => write!(f, "{path}:{pos}: error: {kind}"),
+            PageError::File(pos, kind) => write!(f, "{path}:{pos}: error: {kind}"),
             PageError::Render { page, error } => {
                 let page = page.display();
                 write!(
@@ -460,6 +470,30 @@ mod tests {
             "content/draft.md:5:24: error: `/a/#none` goes to an id that its page does not have",
             "urls.txt:5:1: error: `/gone.pdf` is not a page or file of the site",
             "urls.txt:6:1: error: a link to a page ends with `/`: `/a/`",
+        ];
+        assert_eq!(errors, expected);
+    }
+
+    #[test]
+    fn a_file_that_is_not_a_page_is_published_only_if_a_browser_does_not_run_it() {
+        // `files` holds files of types that the site publishes (`report.PDF` and `CNAME` at the top
+        // of `static/`), three that it does not, and `.hidden.html`, which is not part of the site.
+        let (root, options) = site("files");
+        let Err(Error::Content(errors)) = pages(&root, &options) else {
+            panic!("expected content errors");
+        };
+        let errors: Vec<String> = errors.iter().map(ToString::to_string).collect();
+        let types = "besides its pages, it publishes `.avif`, `.bib`, `.cls`, `.css`, `.gif`, \
+                     `.ico`, `.jpeg`, `.jpg`, `.pdf`, `.png`, `.svg`, `.tex`, `.txt` and `.webp` \
+                     files";
+        let none = "the site publishes no files without an extension";
+        let expected = [
+            format!("content/notes:1:1: error: {none}; {types}"),
+            "content/page.HTML:1:1: error: the site publishes no HTML files; write the page in \
+             Markdown, as a `.md` file"
+                .to_owned(),
+            format!("static/app.js:1:1: error: the site publishes no `.js` files; {types}"),
+            format!("static/sub/CNAME:1:1: error: {none}; {types}"),
         ];
         assert_eq!(errors, expected);
     }

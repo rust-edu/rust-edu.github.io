@@ -484,10 +484,10 @@ mod tests {
         let result = site(&test_site("broken"), &out, &LIVE);
         assert!(matches!(result, Err(Error::Content(_))), "{result:?}");
         let error = site(&test_site("clash"), &out, &LIVE).unwrap_err();
-        let expected = "content/_index.md and static/index.html would both be /index.html";
+        let expected = "content/notes.txt and static/notes.txt would both be /notes.txt";
         assert_eq!(error.to_string(), expected);
         let error = site(&test_site("reserved"), &out, &LIVE).unwrap_err();
-        let expected = "static/sitemap.xml would be /sitemap.xml, which `edu build` writes itself";
+        let expected = "static/robots.txt would be /robots.txt, which `edu build` writes itself";
         assert_eq!(error.to_string(), expected);
         assert!(!out.exists() && !out.with_extension("tmp").exists());
     }
