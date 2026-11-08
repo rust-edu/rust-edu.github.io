@@ -725,12 +725,14 @@ impl fmt::Display for ErrorKind {
                      tables; put a space between them, or write `\\*` or `\\_`"
                 );
             }
-            Self::Strikethrough => "`~` may start strikethrough on GitHub and in Zola; write `\\~`",
+            Self::Strikethrough => {
+                "GitHub may read `~` as strikethrough and the site would not; write `\\~`"
+            }
             Self::Footnote => "footnotes are not supported; write `\\[^` for the text itself",
             Self::Table => "tables are not supported; use a list instead",
             Self::TaskListItem => "task lists are not supported; write the item without `[ ]`",
             Self::HeadingAttributes => {
-                "Zola reads `{…}` at the end of a heading as its id or classes; leave it out"
+                "`{…}` at the end of a heading is not supported; leave it out"
             }
             Self::BareUrl => {
                 "GitHub links a bare URL or email address and the site would not; write it as \
