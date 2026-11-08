@@ -429,6 +429,8 @@ mod tests {
              out",
             "content/a.md:7:8: error: `/wip/notes.txt` goes to a draft, which the live site leaves \
              out",
+            "content/a.md:11:72: error: `#café` goes to an id that its page does not have",
+            "content/a.md:11:93: error: `/news/café/` is not a page or file of the site",
             "content/draft.md:5:24: error: `/a/#none` goes to an id that its page does not have",
             "urls.txt:5:1: error: `/gone.pdf` is not a page or file of the site",
             "urls.txt:6:1: error: a link to a page ends with `/`: `/a/`",

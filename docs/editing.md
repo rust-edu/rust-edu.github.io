@@ -73,7 +73,8 @@ underlined with `===`, indented code, and web or email addresses not written as 
 - **Another page or file on this site:** a root-relative URL ending in `/` for pages: `/news/campus-tour/`,
   `/workshop/proceedings.pdf`. Relative links such as `proceedings.pdf` or `../news/` break on some pages.
 - **A heading:** `/workshop/cfp-2022/#schedule`, or `#schedule` on the same page. A heading's id is its text in
-  lowercase with each run of other characters replaced by `-` (`What’s Next?` → `what-s-next`).
+  lowercase, letters of any language included, with each run of other characters replaced by `-`
+  (`What’s Next?` → `what-s-next`, `Taller en Perú` → `taller-en-perú`).
 - **Another site:** the full `https://` address.
 - **Email:** `[contact@rust-edu.org](mailto:contact@rust-edu.org)`.
 

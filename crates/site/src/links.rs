@@ -120,33 +120,43 @@ fn resolve(
     let file = if path.is_empty() && id.is_some() {
         page.to_owned()
     } else if let Some(rest) = from_top {
-        let rest = decode(rest).ok_or_else(|| LinkError::NoTarget(link.to_owned()))?;
+        let rest = decode(rest).ok_or_else(|| LinkError::NoTarget(written(link)))?;
         if rest.is_empty() || rest.ends_with('/') {
             format!("{rest}index.html")
         } else {
             rest
         }
     } else {
-        return Err(LinkError::BadLink(link.to_owned()));
+        return Err(LinkError::BadLink(written(link)));
     };
     let Some(target) = targets.get(&file) else {
         if targets.contains_key(&format!("{file}/index.html")) {
             let id = id.map(|id| format!("#{id}")).unwrap_or_default();
-            return Err(LinkError::NoSlash(format!("{path}/{id}")));
+            return Err(LinkError::NoSlash(written(&format!("{path}/{id}"))));
         }
-        return Err(LinkError::NoTarget(link.to_owned()));
+        return Err(LinkError::NoTarget(written(link)));
     };
     if live && !target.live {
-        return Err(LinkError::ToDraft(link.to_owned()));
+        return Err(LinkError::ToDraft(written(link)));
     }
+    // An id keeps the letters of its heading, which the link writes outside ASCII as `%` escapes.
+    let has_id = |ids: &Vec<&str>, id| decode(id).is_some_and(|id| ids.contains(&id.as_str()));
     match (id, &target.ids) {
-        (Some(id), Some(ids)) if !ids.contains(&id) => Err(LinkError::NoAnchor(link.to_owned())),
+        (Some(id), Some(ids)) if !has_id(ids, id) => Err(LinkError::NoAnchor(written(link))),
         _ => Ok(()),
     }
 }
 
-/// Where `link` is written first: in the text of `page`, as `[text](link)` or `<link>`; or else in
-/// `site.yaml` or a layout; or else at the top of `page`.
+/// `link` as a page writes it: the HTML of the site escapes each character outside ASCII as `%`
+/// and two hex digits, which this turns back, unless that makes a control character.
+fn written(link: &str) -> String {
+    let decoded = decode(link).filter(|text| !text.contains(char::is_control));
+    decoded.unwrap_or_else(|| link.to_owned())
+}
+
+/// Where `link` is written first, with its characters outside ASCII or as their `%` escapes: in
+/// the text of `page`, as `[text](link)` or `<link>`; or else in `site.yaml` or a layout; or
+/// else at the top of `page`.
 fn locate(
     root: &Path,
     page: &Path,
@@ -154,17 +164,19 @@ fn locate(
     link: &str,
 ) -> Result<(PathBuf, Pos), Error> {
     let text = read(root, page)?;
-    let written = [(format!("]({link})"), 2), (format!("<{link}>"), 1)];
-    let found = written
-        .iter()
-        .find_map(|(written, skip)| text.find(written).map(|at| at + skip));
+    let forms = [written(link), link.to_owned()];
+    let found = forms.iter().find_map(|form| {
+        let ways = [(format!("]({form})"), 2), (format!("<{form}>"), 1)];
+        ways.iter()
+            .find_map(|(way, skip)| text.find(way.as_str()).map(|at| at + skip))
+    });
     if let Some(at) = found {
         return Ok((page.to_owned(), pos(&text, at)));
     }
     let layouts = layouts.names().map(|name| Path::new("layouts").join(name));
     for file in std::iter::once(PathBuf::from("site.yaml")).chain(layouts) {
         let text = read(root, &file)?;
-        if let Some(at) = text.find(link) {
+        if let Some(at) = forms.iter().find_map(|form| text.find(form.as_str())) {
             return Ok((file, pos(&text, at)));
         }
     }
@@ -289,7 +301,10 @@ mod tests {
         let target = |live, ids: Option<Vec<&'static str>>| Target { live, ids };
         let targets = BTreeMap::from([
             ("index.html".to_owned(), target(true, Some(vec!["main"]))),
-            ("a/index.html".to_owned(), target(true, Some(vec!["part"]))),
+            (
+                "a/index.html".to_owned(),
+                target(true, Some(vec!["part", "café"])),
+            ),
             (
                 "draft/index.html".to_owned(),
                 target(false, Some(Vec::new())),
@@ -298,13 +313,16 @@ mod tests {
         ]);
         let resolve = |link: &str| resolve(link, "index.html", true, &targets);
         let ok = "https://a.org/ http://a.org mailto:a@a.org #main / /a/ /a/#part /a%20b.txt \
-                  /a%20b.txt#x";
+                  /a%20b.txt#x /a/#caf%C3%A9";
         for link in ok.split(' ') {
             assert_eq!(resolve(link), Ok(()), "{link}");
         }
         let errors = [
             ("#part", LinkError::NoAnchor("#part".into())),
             ("/a/#x", LinkError::NoAnchor("/a/#x".into())),
+            // An error shows a link with its characters outside ASCII, as the page writes it.
+            ("/a/#caf%C3%A9s", LinkError::NoAnchor("/a/#cafés".into())),
+            ("/caf%C3%A9/", LinkError::NoTarget("/café/".into())),
             ("/a", LinkError::NoSlash("/a/".into())),
             ("/a#part", LinkError::NoSlash("/a/#part".into())),
             ("/b/", LinkError::NoTarget("/b/".into())),
@@ -322,6 +340,8 @@ mod tests {
             "//a.org/",
             "email:a@a.org",
             "javascript:a",
+            // Not shown with the line break that `%0A` stands for.
+            "java%0Ascript:a",
         ];
         for link in bad {
             let error = LinkError::BadLink(link.to_owned());
