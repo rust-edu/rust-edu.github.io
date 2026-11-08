@@ -23,11 +23,19 @@ const ELEMENTS: [&str; 7] = [
 /// XML's own references, the only ones an image may have.
 const REFERENCES: [&str; 5] = ["&amp;", "&lt;", "&gt;", "&quot;", "&apos;"];
 
+/// XML's white space: spaces, tabs and line ends.
+const SPACE: [char; 4] = [' ', '\t', '\r', '\n'];
+
 /// Why the site does not publish an SVG image.
 #[derive(Debug, PartialEq, Eq)]
 pub enum SvgError {
-    /// Not UTF-8 text, or text with a NUL character.
+    /// Not UTF-8 text, or text with a control character other than a tab or a line end, which XML
+    /// does not allow either.
     NotText,
+    /// An XML declaration that names another encoding than UTF-8, the one the scan reads: a
+    /// browser would read the image in that encoding, where the same bytes can be other
+    /// characters.
+    Encoding(String),
     /// Markup that the scan cannot follow, such as a tag without its `>`; a browser would not show
     /// the image either.
     Malformed,
@@ -53,7 +61,8 @@ pub enum SvgError {
 /// with where it starts.
 pub(crate) fn scan(text: &str) -> Result<(), (Pos, SvgError)> {
     let at = |offset| pos(text, offset);
-    if let Some(offset) = text.find('\0') {
+    let control = |c: char| c < ' ' && !SPACE.contains(&c);
+    if let Some(offset) = text.find(control) {
         return Err((at(offset), SvgError::NotText));
     }
     let mut scanner = Scanner { text, offset: 0 };
@@ -150,16 +159,20 @@ impl<'a> Scanner<'a> {
         Err((start, SvgError::Malformed))
     }
 
-    /// Moves past the XML declaration, `<?xml …?>`, the only processing instruction.
+    /// Moves past the XML declaration, `<?xml …?>`, the only processing instruction, after
+    /// checking that it names UTF-8 or no encoding.
     fn instruction(&mut self) -> Scan {
+        let start = self.offset;
         let target = self.rest().get(2..).unwrap_or_default();
         let end = target
             .find(|c: char| c.is_whitespace() || c == '?')
             .unwrap_or(target.len());
         if target.get(..end) != Some("xml") {
-            return Err((self.offset, SvgError::Instruction));
+            return Err((start, SvgError::Instruction));
         }
-        self.past(2, "?>")
+        self.past(2, "?>")?;
+        let declaration = self.text.get(start..self.offset).unwrap_or_default();
+        utf8(declaration).map_err(|(at, error)| (start + at, error))
     }
 
     /// Moves past a start tag, `<name attribute="value" …>` or `<… />`, after checking its name
@@ -249,12 +262,36 @@ impl<'a> Scanner<'a> {
         name
     }
 
-    /// Moves past XML's white space: spaces, tabs and line ends.
+    /// Moves past XML's white space.
     fn skip_whitespace(&mut self) {
         let rest = self.rest();
-        let kept = rest.trim_start_matches([' ', '\t', '\r', '\n']);
+        let kept = rest.trim_start_matches(SPACE);
         self.offset += rest.len() - kept.len();
     }
+}
+
+/// Checks that `declaration`, from `<?xml` to `?>`, names UTF-8 or no encoding, in any letter
+/// case, and gives the byte offset in it of an `encoding` that does not.
+fn utf8(declaration: &str) -> Scan {
+    // `lowercase` has the same byte offsets as `declaration`.
+    let lowercase = declaration.to_ascii_lowercase();
+    for (at, name) in lowercase.match_indices("encoding") {
+        let value = declaration
+            .get(at + name.len()..)
+            .and_then(|rest| rest.trim_start_matches(SPACE).strip_prefix('='))
+            .map(|rest| rest.trim_start_matches(SPACE))
+            .and_then(|rest| {
+                let quote = rest.chars().next().filter(|c| matches!(c, '"' | '\''))?;
+                let (value, _) = rest.get(1..)?.split_once(quote)?;
+                Some(value)
+            });
+        match value {
+            Some(value) if value.eq_ignore_ascii_case("UTF-8") => {}
+            Some(value) => return Err((at, SvgError::Encoding(value.to_owned()))),
+            None => return Err((at, SvgError::Malformed)),
+        }
+    }
+    Ok(())
 }
 
 /// The name without its prefix: `script` in `svg:script`.
@@ -281,9 +318,15 @@ fn pos(text: &str, offset: usize) -> Pos {
 impl fmt::Display for SvgError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NotText => {
-                f.write_str("an SVG image is UTF-8 text without NUL characters; save it as UTF-8")
-            }
+            Self::NotText => f.write_str(
+                "an SVG image is UTF-8 text, whose only control characters are tabs and line \
+                 ends; save it as UTF-8",
+            ),
+            Self::Encoding(name) => write!(
+                f,
+                "the check reads an SVG image as UTF-8, and a browser would read this one as \
+                 `{name}`; save it as UTF-8, with `encoding=\"UTF-8\"`"
+            ),
             Self::Malformed => f.write_str(
                 "the check cannot read this markup; an SVG image is XML whose tags and comments \
                  close, with each attribute's value in quotes",
@@ -392,13 +435,29 @@ mod tests {
             (hidden, 1, 15, SvgError::Declarations),
             ("<?xml-stylesheet href='a'?>", 1, 1, SvgError::Instruction),
             ("<svg/>\n<?php echo 1 ?>", 2, 1, SvgError::Instruction),
-            ("<svg>\0</svg>", 1, 6, SvgError::NotText),
         ];
         for (svg, line, col, expected) in cases {
             assert_eq!(error(svg), Some((line, col, expected)), "{svg}");
         }
         let quoted = "<!DOCTYPE svg PUBLIC \"a [b]\" 'c>'><svg/>";
         assert_eq!(error(quoted), None);
+    }
+
+    #[test]
+    fn an_image_passes_only_as_the_utf_8_text_that_the_scan_reads() {
+        let latin = "<?xml version='1.0' encoding='ISO-8859-1'?>\n<svg/>";
+        let encoding = SvgError::Encoding("ISO-8859-1".to_owned());
+        let cases = [
+            (latin, 1, 21, encoding),
+            ("<?xml version='1.0' encoding?>", 1, 21, SvgError::Malformed),
+            ("<svg>\0</svg>", 1, 6, SvgError::NotText),
+            ("<svg>\n\u{7}</svg>", 2, 1, SvgError::NotText),
+        ];
+        for (svg, line, col, expected) in cases {
+            assert_eq!(error(svg), Some((line, col, expected)), "{svg}");
+        }
+        let utf8 = "<?xml version = '1.0' encoding = \"utf-8\" ?>\r\n<svg>\t</svg>";
+        assert_eq!(error(utf8), None);
     }
 
     #[test]

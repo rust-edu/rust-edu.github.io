@@ -22,7 +22,7 @@ Besides its pages, the site publishes images (`.png`, `.jpg`, `.jpeg`, `.gif`, `
 `.svg`), `.pdf` and `.txt` files, LaTeX files (`.tex`, `.cls` and `.bib`), stylesheets (`.css`) and
 `static/CNAME`. The automatic check stops at any other file, such as `.html` or `.js`, since a browser would run
 the scripts in it as part of the site. It also stops at an SVG image with a script, an attribute such as
-`onload`, a `javascript:` address or HTML in it.
+`onload`, a `javascript:` address or HTML in it, and at one not saved as UTF-8.
 
 The automatic check stops at a symbolic link, which could bring a file from outside the site into it. Files and
 folders whose names start with `.`, such as `.DS_Store`, are not part of the site.
