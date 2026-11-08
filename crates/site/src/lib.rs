@@ -9,6 +9,7 @@ mod links;
 mod page;
 mod render;
 mod serve;
+mod svg;
 
 use std::error::Error as _;
 use std::ffi::{OsStr, OsString};
@@ -22,6 +23,7 @@ pub use build::{BaseUrl, Drafts, Options};
 pub use check::{ContentError, PageError, ValueError};
 pub use file::FileError;
 pub use links::LinkError;
+pub use svg::SvgError;
 
 /// The folder that `edu build` writes, in the root of the site.
 const OUT: &str = "public";

@@ -133,7 +133,7 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
         }
     }
     for path in files.iter().chain(&statics) {
-        file::check(path, &mut errors);
+        file::check(root, path, &mut errors)?;
     }
     let site = render::site(root, options.base_url.as_ref(), &mut errors)?;
     let layouts = Layouts::read(root, &mut errors)?;
@@ -477,9 +477,10 @@ mod tests {
     }
 
     #[test]
-    fn a_file_that_is_not_a_page_is_published_only_if_a_browser_does_not_run_it() {
-        // `files` holds files of types that the site publishes (`report.PDF` and `CNAME` at the top
-        // of `static/`), three that it does not, and `.hidden.html`, which is not part of the site.
+    fn a_file_that_is_not_a_page_is_published_only_if_it_cannot_run_a_script() {
+        // `files` holds files of types that the site publishes (`report.PDF`, `CNAME` at the top of
+        // `static/` and `plain.svg`), three that it does not, an SVG image with a script, and
+        // `.hidden.html`, which is not part of the site.
         let (root, options) = site("files");
         let Err(Error::Content(errors)) = pages(&root, &options) else {
             panic!("expected content errors");
@@ -495,6 +496,9 @@ mod tests {
              Markdown, as a `.md` file"
                 .to_owned(),
             format!("static/app.js:1:1: error: the site publishes no `.js` files; {types}"),
+            "static/images/script.svg:2:3: error: `<script>` can run a script or show a web page \
+             in the image; remove it"
+                .to_owned(),
             format!("static/sub/CNAME:1:1: error: {none}; {types}"),
         ];
         assert_eq!(errors, expected);
