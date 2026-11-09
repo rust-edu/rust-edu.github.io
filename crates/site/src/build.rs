@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use crate::Error;
 use crate::check::{self, Rendered};
-use crate::links;
+use crate::links::{self, Link};
 
 /// The file that marks a folder as made by `edu build`, which may then delete it.
 const MARKER: &str = ".edu-output";
@@ -181,17 +181,10 @@ fn sitemap(base_url: &BaseUrl, pages: &[Rendered]) -> String {
 /// `html` with `path`, the path of the base URL, before each link that starts with one `/`, so
 /// that the links between the pages and files of the site work under that path too.
 fn rebase(html: &str, path: &str) -> String {
-    let mut rebased = String::with_capacity(html.len());
-    let mut last = 0;
-    for (at, link) in links::links(html) {
-        if link.starts_with('/') && !link.starts_with("//") {
-            rebased.push_str(html.get(last..at).unwrap_or_default());
-            rebased.push_str(path);
-            last = at;
-        }
-    }
-    rebased.push_str(html.get(last..).unwrap_or_default());
-    rebased
+    links::prefix(html, |link| match Link::of(link) {
+        Link::Top => Some(path),
+        Link::Away | Link::Here | Link::Other => None,
+    })
 }
 
 /// Adds `output`, from the file `source` of the site, as the file `path` of the built site, unless
