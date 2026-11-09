@@ -430,15 +430,6 @@ main p + p:has(> strong:only-child):has(+ p > img) {
     }
 }
 
-/* List markers hang outside the column. */
-
-@media (min-width: 46rem) {
-    main > ul,
-    main > ol {
-        padding-left: 0;
-    }
-}
-
 /* Top rule, footer band and crab. */
 
 body {
