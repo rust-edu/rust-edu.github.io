@@ -21,7 +21,7 @@ Each stop on the tour includes a carefully curated mix of interactive workshops,
 - Real-world applications of Rust (web, embedded systems, blockchain, etc.)  
 - Open source contribution and Rust community involvement  
 
-**Where We've Been**
+## Where We've Been
 
 **THE BUIDL**
 
