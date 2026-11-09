@@ -10,28 +10,29 @@
 :root {
     color-scheme: light dark;
 
-    --color-bg: #ffffff;
-    --color-surface: #f3f5f6;
+    --color-bg: #fbf8f3;
+    --color-surface: #f4eee4;
     --color-text: #2a3439;
-    --color-muted: #58636a;
+    --color-muted: #5f5b53;
     --color-link: #0b7261;
     --color-link-hover: #07594b;
-    --color-rule: #d3d9dc;
+    --color-rule: #e5ddd0;
     --color-focus: #a72145;
+    --color-accent: #f74c00;
 
-    --radius: 4px;
+    --radius: 8px;
 }
 
 /* Screen only: paper stays dark on light. */
 @media screen and (prefers-color-scheme: dark) {
     :root {
-        --color-bg: #161c1f;
-        --color-surface: #20292d;
-        --color-text: #e4e9eb;
-        --color-muted: #a7b2b8;
+        --color-bg: #1b1815;
+        --color-surface: #26221e;
+        --color-text: #ece7df;
+        --color-muted: #b5aea3;
         --color-link: #4fc9ad;
         --color-link-hover: #86dcc8;
-        --color-rule: #3a474d;
+        --color-rule: #3b352e;
         --color-focus: #ffc832;
     }
 
@@ -362,6 +363,48 @@ main p:has(> strong:only-child):has(+ p > img) {
     main > ol {
         padding-left: 0;
     }
+}
+
+/* Warm only: these rules and the tokens. */
+
+body {
+    max-width: none;
+    padding: 0;
+    border-top: 3px solid var(--color-accent);
+}
+
+.site-header,
+main,
+.site-footer p,
+.site-footer nav {
+    width: calc(100% - 2rem);
+    max-width: 40rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.skip-link {
+    margin: 0 1rem;
+    margin: 0 max(1rem, 50% - 20rem);
+}
+
+.site-footer {
+    background: var(--color-surface);
+}
+
+.site-hero {
+    position: relative;
+}
+
+.site-hero h1 {
+    max-width: 84%;
+}
+
+.site-hero img {
+    position: absolute;
+    top: 0.5rem;
+    right: 0;
+    width: 14%;
 }
 
 /* Paper drops the button's fill. */
