@@ -4,16 +4,16 @@ base_url: https://rust-edu.org
 title: Rust Edu
 description: Rust education in academia (and beyond)
 menu:
-  - name: Home
-    url: /
   - name: News
     url: /news/
-  - name: Zulip
-    url: /zulip/
   - name: Resources
     url: /resources/
+  - name: Zulip chat
+    url: /zulip/
 footer:
   - name: Rust Language Website
     url: https://rust-lang.org
   - name: Official Rust Book
     url: https://doc.rust-lang.org/book/
+  - name: 2022 Workshop
+    url: /workshop/
