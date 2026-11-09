@@ -2,8 +2,8 @@
 <ul class="news-list">
     {% for post in page.pages %}
     <li>
-        <a href="{{ post.url }}">{{ post.title }}</a>
         <time datetime="{{ post.date }}">{{ post.date_display }}</time>
+        <a href="{{ post.url }}">{{ post.title }}</a>
     </li>
     {% endfor %}
 </ul>

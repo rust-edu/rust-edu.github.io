@@ -10,6 +10,12 @@ menu:
     url: /resources/
   - name: Zulip chat
     url: /zulip/
+# The next steps under the statement on the home page: the first is a button, the rest are plain links.
+hero:
+  - name: Join us on Zulip
+    url: /zulip/
+  - name: Find resources
+    url: /resources/
 footer:
   - name: Rust Language Website
     url: https://rust-lang.org
