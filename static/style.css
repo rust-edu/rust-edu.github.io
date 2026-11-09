@@ -20,12 +20,19 @@
     --color-focus: #a72145;
     --color-accent: #f74c00;
 
+    /* Headings: the crab's orange, then blue, the split complement that the teal
+       of links does not take, then blue's neighbor, violet. */
+    --color-title: #b23d0c;
+    --color-heading: #24528f;
+    --color-subheading: #6b3fa0;
+
     --radius: 8px;
 }
 
-/* Screen only: paper stays dark on light. */
+/* Screen only: paper stays dark on light. The theme button's choice, in
+   data-theme, wins over the system's. */
 @media screen and (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
         --color-bg: #1b1815;
         --color-surface: #26221e;
         --color-text: #ece7df;
@@ -34,11 +41,41 @@
         --color-link-hover: #86dcc8;
         --color-rule: #3b352e;
         --color-focus: #ffc832;
+        --color-title: #ff8f5e;
+        --color-heading: #93b5f2;
+        --color-subheading: #c3a6ee;
     }
 
     /* Black lettering: invert it, and turn the hues back. The color is for the alt
        text of a failed logo, which inverts too. */
-    .site-logo img {
+    :root:not([data-theme="light"]) .site-logo img {
+        color: var(--color-bg);
+        filter: invert(1) hue-rotate(180deg);
+    }
+}
+
+@media screen {
+    :root[data-theme="light"] {
+        color-scheme: light;
+    }
+
+    :root[data-theme="dark"] {
+        color-scheme: dark;
+
+        --color-bg: #1b1815;
+        --color-surface: #26221e;
+        --color-text: #ece7df;
+        --color-muted: #b5aea3;
+        --color-link: #4fc9ad;
+        --color-link-hover: #86dcc8;
+        --color-rule: #3b352e;
+        --color-focus: #ffc832;
+        --color-title: #ff8f5e;
+        --color-heading: #93b5f2;
+        --color-subheading: #c3a6ee;
+    }
+
+    :root[data-theme="dark"] .site-logo img {
         color: var(--color-bg);
         filter: invert(1) hue-rotate(180deg);
     }
@@ -144,10 +181,34 @@ strong {
     margin-right: 0;
 }
 
+.site-nav {
+    display: flex;
+    align-items: center;
+}
+
 .site-nav a {
     padding: 0.25rem 0;
     color: var(--color-text);
     font-size: 1rem;
+}
+
+.theme-toggle {
+    margin-left: 1.25rem;
+    padding: 0.3125rem;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    background: none;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.theme-toggle:hover {
+    border-color: currentColor;
+    color: var(--color-link);
+}
+
+.theme-toggle svg {
+    display: block;
 }
 
 .site-nav a,
@@ -183,17 +244,24 @@ h3 {
 h1 {
     max-width: 12.1em;
     margin: 0 0 1.25rem;
+    color: var(--color-title);
     font-size: 2rem;
 }
 
 h2 {
     margin: 3rem 0 0.75rem;
+    color: var(--color-heading);
     font-size: 1.375rem;
 }
 
 h3 {
     margin: 2rem 0 0.5rem;
+    color: var(--color-subheading);
     font-size: 1.125rem;
+}
+
+h2 + h3 {
+    margin-top: 0;
 }
 
 main p,
@@ -258,15 +326,21 @@ main img {
     border-radius: var(--radius);
 }
 
-/* A bold line right above a photo is its label. */
+/* A bold line right above a photo is its label, colored as a sub-heading. */
 main p:has(> strong:only-child):has(+ p > img) {
-    margin: 2rem 0 0.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-subheading);
 }
 
-/* Home */
+main p + p:has(> strong:only-child):has(+ p > img) {
+    margin-top: 2rem;
+}
+
+/* Home: the statement keeps the text color beside the crab. */
 
 .site-hero h1 {
     margin: 0 0 1.25rem -0.025em;
+    color: var(--color-text);
     font-size: 2.5rem;
     letter-spacing: -0.02em;
     line-height: 1.1;
@@ -356,15 +430,6 @@ main p:has(> strong:only-child):has(+ p > img) {
     }
 }
 
-/* List markers hang outside the column. */
-
-@media (min-width: 46rem) {
-    main > ul,
-    main > ol {
-        padding-left: 0;
-    }
-}
-
 /* Top rule, footer band and crab. */
 
 body {
@@ -413,5 +478,9 @@ main,
     .site-hero a:first-child {
         background: none;
         color: var(--color-text);
+    }
+
+    .theme-toggle {
+        display: none;
     }
 }

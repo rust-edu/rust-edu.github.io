@@ -33,8 +33,9 @@ After a change, reloading the page builds the site again; while the site has err
 With Rust installed, `cargo run -p edu-site -- serve --drafts` does the same.
 
 ## 🎨 Layout and Style
-- `layouts/`: the HTML layout of each kind of page
-- `static/style.css`: the whole stylesheet, plain CSS with its colors in two token blocks at the top, light and dark
+- `layouts/`: the HTML layout of each kind of page; `layout.html` also holds the short script of the theme button,
+  the site's only JavaScript (without it, the site follows the system's theme)
+- `static/style.css`: the whole stylesheet, plain CSS with its colors in token blocks at the top, light and dark
 - `site.yaml`: the site's address, title and description, and the menu, next-step (`hero`) and footer links
 
 ## 🦀 The Generator
