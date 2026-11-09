@@ -235,8 +235,10 @@ fn own_values(page: &Page) -> Vec<(String, Value)> {
     values.collect()
 }
 
-/// The pages in the directory of `section`, without sections: by URL, or with `sort_by: date`
-/// newest first and on the same day by URL from Z to A, as Zola lists them.
+/// The pages in the directory of `section`, without sections and drafts: by URL, or with
+/// `sort_by: date` newest first and on the same day by URL from Z to A, as Zola lists them; with
+/// `sort_by: date`, a draft needs a `date` too. A page of the live site thus lists the same pages
+/// in a build with drafts, and links to no draft.
 fn listing<'a>(section: &Page, pages: &'a [Page]) -> Result<Vec<&'a Page>, ContentError> {
     let dir = section.path.parent();
     let beside = |page: &&Page| page.kind == Kind::Page && page.path.parent() == dir;
@@ -250,6 +252,7 @@ fn listing<'a>(section: &Page, pages: &'a [Page]) -> Result<Vec<&'a Page>, Conte
             listed.sort_by(|a, b| (&b.date, &b.url).cmp(&(&a.date, &a.url)));
         }
     }
+    listed.retain(|page| !page.draft);
     Ok(listed)
 }
 
@@ -444,5 +447,27 @@ mod tests {
         assert_eq!(show(&pages, "_index.md", &layouts), "A B ");
         let expected = "/news/new/ /news/z/ /news/a/ /news/old/ ";
         assert_eq!(show(&pages, "news/_index.md", &layouts), expected);
+    }
+
+    #[test]
+    fn a_section_lists_no_draft_but_a_draft_needs_its_date() {
+        let urls = "{% for post in page.pages %}{{ post.url }} {% endfor %}";
+        let layouts = parse(&[("home.html", urls), ("section.html", urls)]);
+        let draft = "---\ntitle: Draft\ndate: 2027-01-01\ndraft: true\n---\n";
+        let mut texts = vec![
+            ("_index.md", "---\ntitle: Home\n---\n"),
+            ("a.md", "---\ntitle: A\n---\n"),
+            ("draft.md", draft),
+            ("news/_index.md", "---\ntitle: News\nsort_by: date\n---\n"),
+            ("news/draft.md", draft),
+            ("news/post.md", "---\ntitle: Post\ndate: 2022-07-11\n---\n"),
+        ];
+        assert_eq!(show(&pages(&texts), "_index.md", &layouts), "/a/ ");
+        let shown = show(&pages(&texts), "news/_index.md", &layouts);
+        assert_eq!(shown, "/news/post/ ");
+        texts.push(("news/undated.md", "---\ntitle: Undated\ndraft: true\n---\n"));
+        let expected = "error content/news/undated.md:1:1: error: a page in a section with \
+                        `sort_by: date` needs a `date`";
+        assert_eq!(show(&pages(&texts), "news/_index.md", &layouts), expected);
     }
 }

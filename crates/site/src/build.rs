@@ -300,13 +300,14 @@ mod tests {
     fn each_page_is_index_html_at_its_url_beside_the_files_of_static_and_content() {
         let out = out("valid");
         let built = site(&test_site("valid"), &out, &LIVE).unwrap();
-        assert_eq!((built.pages, built.files), (4, 7));
+        assert_eq!((built.pages, built.files), (5, 7));
         let expected = [
             "2027/index.html",
             "404.html",
             "chat/index.html",
             "images/logo.svg",
             "index.html",
+            "news/index.html",
             "news/notes.txt",
             "news/post/index.html",
             "news/sample.bib",
@@ -343,6 +344,7 @@ mod tests {
             ("/", ""),
             ("/2027/", ""),
             ("/chat/", ""),
+            ("/news/", ""),
             ("/news/post/", "2027-03-01"),
         ];
         for (url, date) in urls {
@@ -366,12 +368,16 @@ mod tests {
             base_url: BaseUrl::parse("https://example.github.io/edu/"),
         };
         let built = site(&test_site("valid"), &out, &options).unwrap();
-        assert_eq!((built.pages, built.files), (7, 8));
+        assert_eq!((built.pages, built.files), (8, 8));
         let files = files(&out);
         let drafts = ["news/draft/index.html", "wip/index.html", "wip/notes.txt"];
         let is_built = |path: &&str| files.iter().any(|file| file == path);
         assert!(drafts.iter().all(is_built), "{files:?}");
         let read = |path| fs::read_to_string(out.join(path)).unwrap();
+        // The news list leaves the draft out, as on the live site.
+        let news = read("news/index.html");
+        let list = "<ul><li><a href=\"/edu/news/post/\">Rust Week: 2027</a> Mar 1, 2027</li></ul>";
+        assert!(news.contains(list), "{news}");
         let home = read("index.html");
         assert!(
             home.contains("<li><a href=\"/edu/\">Home</a></li>"),
