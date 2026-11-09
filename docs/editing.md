@@ -59,11 +59,11 @@ reads only these.
 
 Use plain Markdown, never HTML:
 
-- headings `##` and `###` (the title is already the page's `#` heading);
+- headings `##` and `###` (the title, or on the home page the site's description, is already the `#` heading);
 - paragraphs, `**bold**`, `*italic*`, `` `code` ``, and `> quotes`;
 - lists with `-` or `*`, or numbered `1.`, one marker per list; an item's further lines and nested lists are
   indented to the item's text;
-- links `[text](url)`, images `![description of the image](/images/file.png)`, and a bare address as
+- links `[text](url)`, images `![description of the image](/images/file.webp)`, and a bare address as
   `<https://example.org>`;
 - code on lines of its own, between two lines of three backticks (```` ``` ````);
 - a line break inside a paragraph: two spaces or a `\` at the end of the line.
@@ -87,7 +87,7 @@ underlined with `===`, indented code, and web or email addresses not written as 
 - **Another site:** the full `https://` address.
 - **Email:** `[contact@rust-edu.org](mailto:contact@rust-edu.org)`.
 
-The automatic check follows every link to a page or file of the site, the menu's too, and stops at one that goes
+The automatic check follows every link to a page or file of the site, `site.yaml`'s too, and stops at one that goes
 nowhere: a page, file or id that the site does not have, a page's URL without its `/` at the end, a relative link,
 a link from a page to a draft, or an address that starts with something other than `https:`, `http:` or `mailto:`.
 It does not check links to other sites.
@@ -97,7 +97,7 @@ It does not check links to other sites.
 - **A news post:** add `content/news/<name>.md` with `title`, `date` and `authors`, as in the header example above.
 - **A photo:** save it in `static/images/`, 960 pixels wide, in the 16:9 shape, as WebP of at most 90 KB. It shows at
   the full width of the text, so a narrower image is stretched, and another shape moves the text below it when it
-  loads, a tall photo by most of a phone's screen.
+  loads, a portrait photo by a third of a phone's screen or more.
 - **A resource:** add one line under the right heading of `content/resources/_index.md`:
   `- [Title](https://example.org/) — Author. One or two sentences on what it is.` (leave out `Author.` when there is
   none).

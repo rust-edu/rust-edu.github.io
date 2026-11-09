@@ -35,7 +35,7 @@ With Rust installed, `cargo run -p edu-site -- serve --drafts` does the same.
 ## 🎨 Layout and Style
 - `layouts/`: the HTML layout of each kind of page
 - `static/style.css`: the whole stylesheet, plain CSS with its colors in two token blocks at the top, light and dark
-- `site.yaml`: the site's address, title and description, and the menu, next-step and footer links
+- `site.yaml`: the site's address, title and description, and the menu, next-step (`hero`) and footer links
 
 ## 🦀 The Generator
 [Plan 0002](docs/Plan-0002—Own-Markdown-Site-Generator.md) replaced Zola with a small generator in `crates/` that

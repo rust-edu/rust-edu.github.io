@@ -10,7 +10,7 @@ menu:
     url: /resources/
   - name: Zulip chat
     url: /zulip/
-# The next steps under the statement on the home page: the first is a button, the rest are plain links.
+# The next steps under the home page's heading: the first is a button, the rest are plain links.
 hero:
   - name: Join us on Zulip
     url: /zulip/

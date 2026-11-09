@@ -365,7 +365,7 @@ main p:has(> strong:only-child):has(+ p > img) {
     }
 }
 
-/* Warm only: these rules and the tokens. */
+/* Top rule, footer band and crab. */
 
 body {
     max-width: none;
