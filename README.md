@@ -94,10 +94,11 @@ flowchart LR
     `layouts/`, and the YAML header and Markdown text of every page in `content/`, renders every page with them,
     and follows every link between the pages and files of the site and each address of `urls.txt`, the addresses
     that other sites may link to. `edu build` checks the same, then writes the site into `public/`, with a page for
-    each `redirect_to`, `404.html`, `robots.txt` and `sitemap.xml`. It leaves out the drafts, unless `--drafts`, and
-    builds for the `base_url` of `site.yaml`, unless `--base-url` gives another, such as a fork's Pages site.
-    `edu serve` builds the site in memory and serves it at http://127.0.0.1:1111 as GitHub Pages would, building it
-    again on a request after a change, and showing the errors, if any, instead of the page.
+    each `redirect_to`, `404.html`, `robots.txt`, `sitemap.xml` and `atom.xml`, the Atom feed of the pages of a
+    section with `sort_by: date`. It leaves out the drafts, unless `--drafts`, and builds for the `base_url` of
+    `site.yaml`, unless `--base-url` gives another, such as a fork's Pages site; the ids of the feed's posts keep the
+    `base_url` of `site.yaml`. `edu serve` builds the site in memory and serves it at http://127.0.0.1:1111 as GitHub
+    Pages would, building it again on a request after a change, and showing the errors, if any, instead of the page.
 
 ```mermaid
 flowchart LR
@@ -109,15 +110,15 @@ flowchart LR
 ```
 
 ### Check locally
-CI runs the generator checks, `edu check`, and two builds that must be the same, inside the pinned Docker image; the
-same check runs locally with:
+CI runs the format and lint checks, `edu check`, then the tests and two builds that must be the same, inside the
+pinned Docker image; the same check runs locally with:
 ```bash
 docker build --target check .
 ```
 With [Rust](https://www.rust-lang.org/tools/install) installed, `rust-toolchain.toml` selects Rust 1.99.1:
 ```bash
-cargo test
 cargo run -p edu-site -- check
+cargo test
 ```
 `edu build` writes the site into `public/`, for the `base_url` of `site.yaml` or for the address of `--base-url`:
 ```bash
@@ -152,5 +153,6 @@ instructions for AI agents, and asks them to say in each pull request which tool
 ## 📬 Get Involved
 Interested in contributing or learning more?
 * 🌐 Visit: [https://rust-edu.org/](https://rust-edu.org/)
+* 📰 Follow the news in a feed reader: [https://rust-edu.org/atom.xml](https://rust-edu.org/atom.xml)
 * 📧 Email: [contact@rust-edu.org](mailto:contact@rust-edu.org)
 Let’s build the future of Rust education together!

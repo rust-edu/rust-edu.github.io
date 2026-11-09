@@ -12,15 +12,20 @@ use edu_yaml::{Entry, Node};
 use crate::Error;
 use crate::build::BaseUrl;
 use crate::check::{ContentError, PageError, ValueError, read, refuse_symlink};
-use crate::page::{Kind, Order, Page, TOP};
+use crate::page::{self, Kind, Order, Page, TOP};
 
 /// The layout that wraps every page's own layout, at `{{ content | safe }}`.
 const LAYOUT: &str = "layout.html";
 
-/// The settings of `site.yaml`: the value `site` of the layouts, and the site's address.
+/// The settings of `site.yaml`: the value `site` of the layouts, the site's address, the address
+/// that `site.yaml` itself gives, which names the feed and its posts at any address, and the
+/// site's `title` and `description`.
 pub(crate) struct Site {
     pub(crate) value: Value,
     pub(crate) base_url: BaseUrl,
+    pub(crate) id_base: BaseUrl,
+    pub(crate) title: Option<String>,
+    pub(crate) description: Option<String>,
 }
 
 /// The settings of `site.yaml` in `root`, with `base_url` in place of their own if given, or
@@ -53,27 +58,33 @@ fn settings(text: &str, base_url: Option<&BaseUrl>) -> Result<Site, PageError> {
         edu_yaml::Value::Str(text) => BaseUrl::parse(text),
         edu_yaml::Value::List(_) | edu_yaml::Value::Map(_) => None,
     };
-    let own = own.ok_or(PageError::Value(entry.value.pos, ValueError::BadBaseUrl))?;
-    let base_url = base_url.cloned().unwrap_or(own);
+    let id_base = own.ok_or(PageError::Value(entry.value.pos, ValueError::BadBaseUrl))?;
+    let base_url = base_url.cloned().unwrap_or_else(|| id_base.clone());
+    let (mut title, mut description) = (None, None);
     for entry in &entries {
-        let blank = match entry.key.as_str() {
-            "title" => ValueError::BlankSiteTitle,
-            "description" => ValueError::BlankSiteDescription,
+        let (setting, blank) = match entry.key.as_str() {
+            "title" => (&mut title, ValueError::BlankSiteTitle),
+            "description" => (&mut description, ValueError::BlankSiteDescription),
             _ => continue,
         };
-        match &entry.value.value {
-            edu_yaml::Value::Str(text) if text.trim().is_empty() => {
-                return Err(PageError::Value(entry.value.pos, blank));
-            }
-            edu_yaml::Value::Str(_) | edu_yaml::Value::List(_) | edu_yaml::Value::Map(_) => {}
+        let text = page::text(entry).map_err(|(pos, error)| PageError::Value(pos, error))?;
+        if text.trim().is_empty() {
+            return Err(PageError::Value(entry.value.pos, blank));
         }
+        *setting = Some(text.to_owned());
     }
     let values = entries.iter().map(|entry| match entry.key.as_str() {
         "base_url" => (entry.key.clone(), Value::Str(base_url.to_string())),
         _ => (entry.key.clone(), value(&entry.value)),
     });
     let value = Value::Map(values.collect());
-    Ok(Site { value, base_url })
+    Ok(Site {
+        value,
+        base_url,
+        id_base,
+        title,
+        description,
+    })
 }
 
 fn map(entries: &[Entry]) -> Value {
@@ -420,11 +431,13 @@ mod tests {
             "the `description` is empty or only spaces; write a sentence about the site, which \
              the home page shows as its heading",
         );
+        let not_text = "this value must be text";
         let cases = [
             ("title: \"\"\n", "2:8", title),
             ("title: T\ndescription: \" \"\n", "3:14", description),
             // The first in the file.
             ("description: \"\\t\"\ntitle: ''\n", "2:14", description),
+            ("title:\n  - a\ndescription: \" \"\n", "3:3", not_text),
         ];
         for (rest, pos, message) in cases {
             let text = format!("base_url: https://a.org\n{rest}");

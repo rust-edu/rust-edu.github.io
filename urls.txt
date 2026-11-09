@@ -5,6 +5,8 @@
 # has `redirect_to`. An address of a page may end with `#` and an id of the page.
 /
 /404.html
+# The feed of the news, which feed readers follow; Zola never deployed it.
+/atom.xml
 /images/RAACampusTour1.png
 /images/RAACampusTour2.png
 /images/RAACampusTour3.png

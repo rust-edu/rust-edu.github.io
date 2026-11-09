@@ -35,7 +35,7 @@ jobs:
             echo "::error file=Dockerfile::the FROM tag names Rust ${image:-?} and rust-toolchain.toml names ${channel:-?}; bump both together"
             exit 1
           fi
-      - name: Format, lint, test and build in Docker, then check the pages
+      - name: Format, lint and build in Docker, check the pages, then test
         # Each error of `edu check`, `file:line:col: error: …` after the step and time of the build,
         # is also written as an annotation, which GitHub shows on that line of the pull request.
         run: |

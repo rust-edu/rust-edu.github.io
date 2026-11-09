@@ -94,10 +94,10 @@ fn build_writes_the_site_into_public_and_says_how_much() {
         String::from_utf8(output.stdout).unwrap()
     };
 
-    assert_eq!(build(&[]), "wrote 5 pages and 7 files to public/\n");
+    assert_eq!(build(&[]), "wrote 5 pages and 8 files to public/\n");
     assert!(dir.join("public/news/post/index.html").is_file());
     let preview = build(&["--drafts", "--base-url", "https://example.github.io/edu"]);
-    assert_eq!(preview, "wrote 8 pages and 8 files to public/\n");
+    assert_eq!(preview, "wrote 8 pages and 9 files to public/\n");
     let robots = fs::read_to_string(dir.join("public/robots.txt")).unwrap();
     assert!(robots.ends_with(" https://example.github.io/edu/sitemap.xml\n"));
 }

@@ -2,11 +2,12 @@
 # `make` alone runs `check`, since `serve` runs until it is stopped.
 .PHONY: check ci serve
 
-check: ## Check format and lint, run the tests, and check every page and link
+# The pages are checked before the tests, one of which builds this site, as in the Dockerfile.
+check: ## Check format and lint, check every page and link, then run the tests
 	cargo fmt --all --check
 	cargo clippy --workspace --all-targets --locked -- -D warnings
-	cargo test --workspace --locked
 	cargo run --locked -p edu-site -- check
+	cargo test --workspace --locked
 
 ci: ## Run the full check of CI in its pinned Docker image
 	docker build --target check .

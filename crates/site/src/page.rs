@@ -225,7 +225,7 @@ fn is_slug(name: &str) -> bool {
 }
 
 /// The text of `entry`'s value, or an error at the value.
-fn text(entry: &Entry) -> Result<&str, (Pos, ValueError)> {
+pub(crate) fn text(entry: &Entry) -> Result<&str, (Pos, ValueError)> {
     match &entry.value.value {
         edu_yaml::Value::Str(text) => Ok(text),
         edu_yaml::Value::List(_) | edu_yaml::Value::Map(_) => {
