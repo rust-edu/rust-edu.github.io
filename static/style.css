@@ -29,9 +29,10 @@
     --radius: 8px;
 }
 
-/* Screen only: paper stays dark on light. */
+/* Screen only: paper stays dark on light. The theme button's choice, in
+   data-theme, wins over the system's. */
 @media screen and (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
         --color-bg: #1b1815;
         --color-surface: #26221e;
         --color-text: #ece7df;
@@ -47,7 +48,34 @@
 
     /* Black lettering: invert it, and turn the hues back. The color is for the alt
        text of a failed logo, which inverts too. */
-    .site-logo img {
+    :root:not([data-theme="light"]) .site-logo img {
+        color: var(--color-bg);
+        filter: invert(1) hue-rotate(180deg);
+    }
+}
+
+@media screen {
+    :root[data-theme="light"] {
+        color-scheme: light;
+    }
+
+    :root[data-theme="dark"] {
+        color-scheme: dark;
+
+        --color-bg: #1b1815;
+        --color-surface: #26221e;
+        --color-text: #ece7df;
+        --color-muted: #b5aea3;
+        --color-link: #4fc9ad;
+        --color-link-hover: #86dcc8;
+        --color-rule: #3b352e;
+        --color-focus: #ffc832;
+        --color-title: #ff8f5e;
+        --color-heading: #93b5f2;
+        --color-subheading: #c3a6ee;
+    }
+
+    :root[data-theme="dark"] .site-logo img {
         color: var(--color-bg);
         filter: invert(1) hue-rotate(180deg);
     }
@@ -153,10 +181,34 @@ strong {
     margin-right: 0;
 }
 
+.site-nav {
+    display: flex;
+    align-items: center;
+}
+
 .site-nav a {
     padding: 0.25rem 0;
     color: var(--color-text);
     font-size: 1rem;
+}
+
+.theme-toggle {
+    margin-left: 1.25rem;
+    padding: 0.3125rem;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    background: none;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.theme-toggle:hover {
+    border-color: currentColor;
+    color: var(--color-link);
+}
+
+.theme-toggle svg {
+    display: block;
 }
 
 .site-nav a,
@@ -435,5 +487,9 @@ main,
     .site-hero a:first-child {
         background: none;
         color: var(--color-text);
+    }
+
+    .theme-toggle {
+        display: none;
     }
 }
