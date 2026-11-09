@@ -43,7 +43,7 @@ The text of the page starts here.
 
 | Key | Used in | Meaning |
 |---|---|---|
-| `title` | every file but a redirect | The page title, shown as its only top-level heading. Quote it when it contains `: `, as in `title: "Campus Tour: Rust Africa"`. |
+| `title` | every file but a redirect | The page title, shown as its only top-level heading; the home page shows the `description` of `site.yaml` instead. Quote it when it contains `: `, as in `title: "Campus Tour: Rust Africa"`. |
 | `date` | news posts | `YYYY-MM-DD`, a day of the calendar; the news list is sorted by it, newest first, so every news post needs one. |
 | `authors` | news posts | One name per line; shown in the byline as "A and B on Mar 1, 2027". |
 | `draft` | every file but the home page | `draft: true` keeps the page off the live site, and in an `_index.md` everything in its folder too; pull request builds still include it. |
@@ -59,11 +59,11 @@ reads only these.
 
 Use plain Markdown, never HTML:
 
-- headings `##` and `###` (the title is already the page's `#` heading);
+- headings `##` and `###` (the title, or on the home page the site's description, is already the `#` heading);
 - paragraphs, `**bold**`, `*italic*`, `` `code` ``, and `> quotes`;
 - lists with `-` or `*`, or numbered `1.`, one marker per list; an item's further lines and nested lists are
   indented to the item's text;
-- links `[text](url)`, images `![description of the image](/images/file.png)`, and a bare address as
+- links `[text](url)`, images `![description of the image](/images/file.webp)`, and a bare address as
   `<https://example.org>`;
 - code on lines of its own, between two lines of three backticks (```` ``` ````);
 - a line break inside a paragraph: two spaces or a `\` at the end of the line.
@@ -87,7 +87,7 @@ underlined with `===`, indented code, and web or email addresses not written as 
 - **Another site:** the full `https://` address.
 - **Email:** `[contact@rust-edu.org](mailto:contact@rust-edu.org)`.
 
-The automatic check follows every link to a page or file of the site, the menu's too, and stops at one that goes
+The automatic check follows every link to a page or file of the site, `site.yaml`'s too, and stops at one that goes
 nowhere: a page, file or id that the site does not have, a page's URL without its `/` at the end, a relative link,
 a link from a page to a draft, or an address that starts with something other than `https:`, `http:` or `mailto:`.
 It does not check links to other sites.
@@ -95,10 +95,14 @@ It does not check links to other sites.
 ## Common changes
 
 - **A news post:** add `content/news/<name>.md` with `title`, `date` and `authors`, as in the header example above.
+- **A photo:** save it in `static/images/`, 960 pixels wide, in the 16:9 shape, as WebP of at most 90 KB. It shows at
+  the full width of the text, so a narrower image is stretched, and another shape moves the text below it when it
+  loads, a portrait photo by a third of a phone's screen or more.
 - **A resource:** add one line under the right heading of `content/resources/_index.md`:
   `- [Title](https://example.org/) — Author. One or two sentences on what it is.` (leave out `Author.` when there is
   none).
-- **Menu and footer links:** the `menu` and `footer` lists of `site.yaml`.
+- **Menu, next steps and footer links:** the `menu`, `hero` and `footer` lists of `site.yaml`; the first link of
+  `hero` is the button on the home page.
 - **Moving or removing a page or file:** other sites may link to it, so its address is in `urls.txt`, and the check
   stops while that address goes nowhere. Delete its line there on purpose, or keep the old address of a page with an
   `_index.md` at it that has `redirect_to`.

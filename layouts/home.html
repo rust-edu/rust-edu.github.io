@@ -1,5 +1,10 @@
 <div class="site-hero">
-    <h1>{{ page.title }}</h1>
-    <p>{{ site.description }}</p>
+    <img src="/crab.svg" alt="" width="124" height="66">
+    <h1>{{ site.description }}</h1>
+    <p>
+        {% for item in site.hero %}
+        <a href="{{ item.url }}">{{ item.name }}</a>
+        {% endfor %}
+    </p>
 </div>
 {{ page.content | safe }}
