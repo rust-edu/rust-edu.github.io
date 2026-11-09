@@ -2,8 +2,8 @@
 
 use edu_yaml::ErrorKind::{
     BadIndent, ColonInValue, ControlCharacter, DuplicateKey, ExpectedKey, ExpectedListItem,
-    Indicator, InvalidEscape, MissingHeader, MissingValue, TextAfterQuote, UnclosedHeader,
-    UnclosedQuote,
+    Indicator, InvalidEscape, MissingHeader, MissingValue, Noncharacter, TextAfterQuote,
+    UnclosedHeader, UnclosedQuote,
 };
 use edu_yaml::{Entry, ErrorKind, Node, Pos, Value, parse, parse_front_matter};
 
@@ -186,6 +186,23 @@ fn tabs_and_other_control_characters_are_errors() {
     assert_eq!(error("a:\n\tb: x\n"), Some((2, 1, ControlCharacter('\t'))));
     assert_eq!(error("a: \"b\tc\"\n"), Some((1, 6, ControlCharacter('\t'))));
     assert_eq!(error("a: b\rc\n"), Some((1, 5, ControlCharacter('\r'))));
+}
+
+#[test]
+fn noncharacters_are_errors() {
+    let c = '\u{fffe}';
+    assert_eq!(
+        error(&format!("a: \"b{c}\"\n")),
+        Some((1, 6, Noncharacter(c)))
+    );
+    let c = '\u{fdd0}';
+    assert_eq!(
+        error(&format!("a:\n  - b{c}\n")),
+        Some((2, 6, Noncharacter(c)))
+    );
+    let header = parse_front_matter("---\ntitle: \u{10ffff}\n---\n").unwrap_err();
+    let found = (header.pos.line, header.pos.col, header.kind);
+    assert_eq!(found, (2, 8, Noncharacter('\u{10ffff}')));
 }
 
 #[test]

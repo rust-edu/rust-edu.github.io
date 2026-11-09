@@ -1,8 +1,8 @@
 //! The blocks of the subset through the public API: the HTML of each, and where each error points.
 
 use edu_markdown::ErrorKind::{
-    ControlCharacter, EmptyListItem, HeadingAttributes, IndentedCode, LazyLine, NoHeadingId, Rule,
-    Table, TaskListItem, TooDeep, UnclosedFence, UnderlinedHeading,
+    ControlCharacter, EmptyListItem, HeadingAttributes, IndentedCode, LazyLine, NoHeadingId,
+    Noncharacter, Rule, Table, TaskListItem, TooDeep, UnclosedFence, UnderlinedHeading,
 };
 use edu_markdown::{ErrorKind, to_html};
 
@@ -132,6 +132,33 @@ fn tables_task_lists_and_heading_attributes_are_errors() {
 fn tabs_and_other_control_characters_are_errors() {
     assert_eq!(error("a\n#\tb\n"), Some((2, 2, ControlCharacter('\t'))));
     assert_eq!(error("é\u{7}\n"), Some((1, 2, ControlCharacter('\u{7}'))));
+}
+
+#[test]
+fn noncharacters_are_errors_in_code_too() {
+    for c in [
+        '\u{fdd0}',
+        '\u{fdef}',
+        '\u{fffe}',
+        '\u{ffff}',
+        '\u{1fffe}',
+        '\u{10ffff}',
+    ] {
+        assert_eq!(
+            error(&format!("a{c}\n")),
+            Some((1, 2, Noncharacter(c))),
+            "{c:?}"
+        );
+    }
+    assert_eq!(
+        error("`a\u{ffff}`\n"),
+        Some((1, 3, Noncharacter('\u{ffff}')))
+    );
+    let message = "1:1: U+FFFE is a Unicode noncharacter, not text; delete it";
+    assert_eq!(to_html("\u{fffe}").unwrap_err().to_string(), message);
+    // The code points next to them are characters.
+    let text = "\u{fdcf}\u{fdf0}\u{fffd}";
+    assert_eq!(html(&format!("{text}\n")), format!("<p>{text}</p>\n"));
 }
 
 #[test]

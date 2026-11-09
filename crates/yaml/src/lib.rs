@@ -52,6 +52,8 @@ pub enum ErrorKind {
     MissingHeader,
     UnclosedHeader,
     ControlCharacter(char),
+    /// One of Unicode's 66 noncharacters, which HTML reports; XML refuses U+FFFE and U+FFFF.
+    Noncharacter(char),
     /// A line indented deeper than its block but not under a `key:`, such as a value's second line.
     BadIndent,
     ExpectedKey,
@@ -121,8 +123,12 @@ fn parse_lines<'a>(
 ) -> Result<Vec<Entry>, Error> {
     let mut lines = Vec::new();
     for (raw, number) in numbered {
-        if let Some((index, c)) = raw.chars().enumerate().find(|(_, c)| c.is_control()) {
-            let (line, col, kind) = (number, index + 1, ErrorKind::ControlCharacter(c));
+        let found = raw
+            .chars()
+            .enumerate()
+            .find_map(|(index, c)| Some((index, refused(c)?)));
+        if let Some((index, kind)) = found {
+            let (line, col) = (number, index + 1);
             let pos = Pos { line, col };
             return Err(Error { pos, kind });
         }
@@ -138,6 +144,19 @@ fn parse_lines<'a>(
         }
     }
     Parser { lines, next: 0 }.map(0)
+}
+
+/// The error for `c` if a line cannot hold it: a control character, or a noncharacter, which is
+/// U+FDD0 to U+FDEF or one whose last 16 bits are FFFE or FFFF.
+fn refused(c: char) -> Option<ErrorKind> {
+    let code = u32::from(c);
+    if c.is_control() {
+        Some(ErrorKind::ControlCharacter(c))
+    } else if (0xFDD0..=0xFDEF).contains(&code) || code & 0xFFFE == 0xFFFE {
+        Some(ErrorKind::Noncharacter(c))
+    } else {
+        None
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -374,6 +393,13 @@ impl fmt::Display for ErrorKind {
             Self::UnclosedHeader => "the header has no closing line `---`",
             Self::ControlCharacter('\t') => "tab character; indent with spaces",
             Self::ControlCharacter(_) => "control character",
+            Self::Noncharacter(c) => {
+                let code = u32::from(*c);
+                return write!(
+                    f,
+                    "U+{code:04X} is a Unicode noncharacter, not text; delete it"
+                );
+            }
             Self::BadIndent => "unexpected indentation; a value fits on one line",
             Self::ExpectedKey => "expected `key: value`, a key of letters, digits, `-` or `_`",
             Self::ExpectedListItem => "expected a list item: `- ` and a value",

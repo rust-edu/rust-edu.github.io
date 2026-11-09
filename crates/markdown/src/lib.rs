@@ -36,6 +36,8 @@ pub struct Error {
 #[derive(Debug, PartialEq, Eq)]
 pub enum ErrorKind {
     ControlCharacter(char),
+    /// One of Unicode's 66 noncharacters, which HTML reports; XML refuses U+FFFE and U+FFFF.
+    Noncharacter(char),
     /// A line indented 4 spaces or more past its block, which CommonMark reads as code.
     IndentedCode,
     /// A line right under a list item or quote, without the item's indentation or the quote's
@@ -94,8 +96,12 @@ pub enum ErrorKind {
 pub fn to_html(text: &str) -> Result<String, Error> {
     let mut lines = Vec::new();
     for (full, number) in text.lines().zip(1..) {
-        if let Some((index, c)) = full.chars().enumerate().find(|(_, c)| c.is_control()) {
-            let (line, col, kind) = (number, index + 1, ErrorKind::ControlCharacter(c));
+        let found = full
+            .chars()
+            .enumerate()
+            .find_map(|(index, c)| Some((index, refused(c)?)));
+        if let Some((index, kind)) = found {
+            let (line, col) = (number, index + 1);
             let pos = Pos { line, col };
             return Err(Error { pos, kind });
         }
@@ -109,6 +115,19 @@ pub fn to_html(text: &str) -> Result<String, Error> {
     let mut html = Html::default();
     html.blocks(&blocks, false)?;
     Ok(html.text)
+}
+
+/// The error for `c` if a page cannot hold it: a control character, or a noncharacter, which is
+/// U+FDD0 to U+FDEF or one whose last 16 bits are FFFE or FFFF.
+fn refused(c: char) -> Option<ErrorKind> {
+    let code = u32::from(c);
+    if c.is_control() {
+        Some(ErrorKind::ControlCharacter(c))
+    } else if (0xFDD0..=0xFDEF).contains(&code) || code & 0xFFFE == 0xFFFE {
+        Some(ErrorKind::Noncharacter(c))
+    } else {
+        None
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -683,6 +702,13 @@ impl fmt::Display for ErrorKind {
         let message = match self {
             Self::ControlCharacter('\t') => "tab character; indent with spaces",
             Self::ControlCharacter(_) => "control character",
+            Self::Noncharacter(c) => {
+                let code = u32::from(*c);
+                return write!(
+                    f,
+                    "U+{code:04X} is a Unicode noncharacter, not text; delete it"
+                );
+            }
             Self::IndentedCode => "indented code is not supported; indent less, or use a ``` fence",
             Self::LazyLine => {
                 "indent the line to continue the list item, or start it with `>` to continue the \
