@@ -486,7 +486,7 @@ mod tests {
         // One of the errors of `unrenderable` is in a draft.
         let site = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/sites/unrenderable");
         let error = run(&Command::Check, &site, &mut Vec::new()).unwrap_err();
-        assert_eq!(error.to_string(), "21 errors in the site");
+        assert_eq!(error.to_string(), "22 errors in the site");
     }
 
     #[test]

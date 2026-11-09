@@ -17,6 +17,8 @@
 /news/campus-tour/
 /resources/
 /robots.txt
+# The RSS feed of the news, beside /atom.xml; Zola never deployed it either.
+/rss.xml
 /rust-edu-banner.svg
 /sitemap.xml
 /style.css

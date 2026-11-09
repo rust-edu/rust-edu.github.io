@@ -1,8 +1,8 @@
 //! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset whose
 //! values the site can use, its text is in the Markdown subset, the layouts of `layouts/` render
 //! it with the settings of `site.yaml`, and its links go to pages and files of the site, in the
-//! feed's posts too; and the other files of `content/` and `static/` are of a type that the site
-//! publishes. `edu build` checks the same, and renders the pages and the feed that it writes.
+//! feeds' posts too; and the other files of `content/` and `static/` are of a type that the site
+//! publishes. `edu build` checks the same, and renders the pages and the feeds that it writes.
 
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 
 use crate::Error;
 use crate::build::{self, BaseUrl, Drafts, Options};
-use crate::feed::{self, Feed};
+use crate::feed::{self, Feed, Format};
 use crate::file::{self, FileError};
 use crate::links::{self, LinkError, Target};
 use crate::page::{Kind, Page};
@@ -71,6 +71,8 @@ pub enum ValueError {
     DraftHome,
     /// A `date` that is not a day of the calendar written as `2027-03-01`.
     BadDate,
+    /// A `date` before 1900, which the RSS feed cannot write: RFC 5322 has no earlier year.
+    EarlyDate,
     /// `authors` that is not a list of names.
     NotNames,
     /// A name of `authors` that is empty or only white space.
@@ -93,8 +95,10 @@ pub enum ValueError {
     /// A `description` of `site.yaml`, which the home page shows as its heading, that is empty or
     /// only white space.
     BlankSiteDescription,
-    /// A `site.yaml` without `title`, the name of the feed, in a site with posts for one.
+    /// A `site.yaml` without `title`, the name of the feeds, in a site with posts for them.
     NoSiteTitle,
+    /// A `site.yaml` without `description`, which an RSS feed needs, in a site with posts for one.
+    NoSiteDescription,
 }
 
 /// What `edu check` checked: how many pages and layouts; and for the build, the pages it rendered,
@@ -215,10 +219,12 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             errors.push(error);
             Vec::new()
         });
-        // The site has the feed if it has a post for it, which the live site has too.
+        // The site has the feeds if it has a post for them, which the live site has too.
         if !posts.is_empty() {
-            let (live, ids) = (true, None);
-            targets.insert(feed::FEED.to_owned(), Target { live, ids });
+            for format in Format::ALL {
+                let (live, ids) = (true, None);
+                targets.insert(format.file().to_owned(), Target { live, ids });
+            }
         }
         links::check(root, &rendered, &posts, &targets, &layouts, &mut errors)?;
         match feed::feed(&site, posts) {
@@ -358,6 +364,9 @@ impl fmt::Display for ValueError {
             Self::BadDraft => f.write_str("`draft` is `true` or `false`"),
             Self::DraftHome => f.write_str("the home page cannot be a draft"),
             Self::BadDate => f.write_str("a date is a day written as `2027-03-01`"),
+            Self::EarlyDate => f.write_str(
+                "a date is a day from 1900 on, since the dates of the RSS feed have no earlier year",
+            ),
             Self::NotNames => f.write_str("`authors` is a list of names, one `- name` per line"),
             Self::BlankAuthor => f.write_str(
                 "an author's name is empty or only spaces; write the name, or delete its line, \
@@ -383,8 +392,12 @@ impl fmt::Display for ValueError {
                  which the home page shows as its heading",
             ),
             Self::NoSiteTitle => f.write_str(
-                "the settings need `title`, the name of the feed of the pages of a section with \
+                "the settings need `title`, the name of the feeds of the pages of a section with \
                  `sort_by: date`",
+            ),
+            Self::NoSiteDescription => f.write_str(
+                "the settings need `description`, a sentence about the site for the feeds of the \
+                 pages of a section with `sort_by: date`",
             ),
         }
     }
@@ -468,6 +481,8 @@ mod tests {
              the name, or delete its line, and `authors:` too if it was the only one",
             "content/blank-title.md:2:8: error: the `title` is empty or only spaces; write the \
              page's title",
+            "content/early-date.md:3:7: error: a date is a day from 1900 on, since the dates of \
+             the RSS feed have no earlier year",
             "content/list-title.md:3:3: error: this value must be text",
             "content/no-title.md:1:1: error: a page needs a `title`",
             "content/one-author.md:3:10: error: `authors` is a list of names, one `- name` per line",
@@ -636,7 +651,7 @@ mod tests {
     }
 
     #[test]
-    fn a_feed_needs_a_title_a_link_to_it_a_live_post_and_its_posts_links_that_work() {
+    fn the_feeds_need_a_title_a_description_a_live_post_and_links_that_work() {
         const OPTIONS: Options = Options {
             drafts: Drafts::Include,
             base_url: None,
@@ -655,11 +670,13 @@ mod tests {
         let write = |path: &str, text: &str| fs::write(root.join(path), text).unwrap();
         write(
             "layouts/layout.html",
-            "<link href=\"/atom.xml\">{{ content | safe }}",
+            "<link href=\"/atom.xml\"><link href=\"/rss.xml\">{{ content | safe }}",
         );
-        // A site without posts has no feed, nor does a site with drafts alone.
-        let to = "layouts/layout.html:1:13: error: `/atom.xml`";
-        let no_feed = [format!("{to} is not a page or file of the site")];
+        // A site without posts has no feeds, nor does a site with drafts alone.
+        let no_feed = [
+            "layouts/layout.html:1:13: error: `/atom.xml` is not a page or file of the site",
+            "layouts/layout.html:1:36: error: `/rss.xml` is not a page or file of the site",
+        ];
         assert_eq!(errors(&root), no_feed);
         fs::create_dir(root.join("content/news")).unwrap();
         let news = "---\ntitle: News\nsort_by: date\ntemplate: home.html\n---\n";
@@ -674,13 +691,20 @@ mod tests {
                    `/news/`, and other links with `#`, `https://`, `http://` or `mailto:`";
         let expected = [
             format!("content/news/post.md:6:5: error: `a/` {bad}"),
-            "site.yaml:1:1: error: the settings need `title`, the name of the feed of the pages \
+            "site.yaml:1:1: error: the settings need `title`, the name of the feeds of the pages \
              of a section with `sort_by: date`"
                 .to_owned(),
         ];
         assert_eq!(errors(&root), expected);
         write("site.yaml", "base_url: https://example.org\ntitle: T\n");
         post("---\n[a](/news/)\n");
+        let no_description = [
+            "site.yaml:1:1: error: the settings need `description`, a sentence about the site for \
+             the feeds of the pages of a section with `sort_by: date`",
+        ];
+        assert_eq!(errors(&root), no_description);
+        let settings = "base_url: https://example.org\ntitle: T\ndescription: D\n";
+        write("site.yaml", settings);
         assert_eq!(errors(&root), Vec::<String>::new());
         fs::remove_dir_all(root).unwrap();
     }
