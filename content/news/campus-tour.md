@@ -25,7 +25,7 @@ Each stop on the tour includes a carefully curated mix of interactive workshops,
 
 **THE BUIDL**
 
-![The Buidl Hub - Kaduna, Nigeria](/images/RAACampusTour2.png)
+![The Buidl Hub - Kaduna, Nigeria](/images/RAACampusTour2.webp)
 
 The BUIDL is a technical hub at the forefront of accelerating Rust education in Northern Nigeria, particularly in Kaduna. With a strong focus on open-source contributions and embedded systems, they have embraced Rust as a foundational skill for building safe and high-performance applications in resource-constrained environments.
 
@@ -34,7 +34,7 @@ Rust Africa, through its close collaboration with Rust Nigeria, has played a piv
 
 **University of Benin (UNIBEN)**
 
-![University of Benin – Edo State, Nigeria](/images/RAACampusTour3.png)
+![University of Benin – Edo State, Nigeria](/images/RAACampusTour3.webp)
 
 Our partnership with the department of Computer Engineering at the University of Benin has enabled us to birth a strong Rust developer community within the school.
 
@@ -45,7 +45,7 @@ A major milestone in this collaboration was the introduction of Rust Nigeria int
 
 **Jacky Felly Nafack Hightech University Institute (JFN HUI)**
 
-![Jacky Felly Nafack Hightech University Institute- Cameroon](/images/RAACampusTour4.png)
+![Jacky Felly Nafack Hightech University Institute- Cameroon](/images/RAACampusTour4.webp)
 
 Through Rust Cameroon's  lead efforts, we were able to sponsor and facilitate a 48 hour hackfest in Douala, Cameroon. The team introduced Rust  to a diverse audience of students, developers, and tech enthusiasts at Jacky Felly Nafack Hightech University Institute. As part of the Rust Africa Tour, this event marked a significant moment in expanding Rust’s presence in Central Africa.
 The reception was overwhelmingly positive and participants were excited to learn about Rust for the first time, especially its focus on safety, performance, and reliability. Many attendees had never used a low-level language before, but were captivated by how Rust offers safety without sacrificing speed. Other workshops and presentations showcased how to build and set up secure digital solutions for small and medium-sized businesses in Cameroon.
@@ -53,7 +53,7 @@ The event highlighted the growing appetite for Rust across Africa and showcased 
 
 **PROMOTIC**
 
-![PROMOTIC - Togo](/images/RAACampusTour1.png)
+![PROMOTIC - Togo](/images/RAACampusTour1.webp)
 
 PROMOTIC, an educational institution focused on producing industry-ready developers, is boldly championing Rust education in **Francophone Africa**. Backed by our partnership, they launched the [**PROMOTIC | Rust Developer Group**](https://promotic-edu.org/2025/02/07/promotic-integre-la-rust-foundation-un-pas-decisif-vers-lexcellence-technologique-en-afrique-de-louest/); an initiative aimed at bringing together developers passionate about Rust, not only in **Togo**, but across Africa.This group serves as a platform for Sharing knowledge, Organizing workshops, Collaborating on open-source projects. Since becoming an [associate member of the Rust Foundation](https://rustfoundation.org/media/rust-foundation-member-announcement-codeday-opensource-scienceos-sci-promotic/), PROMOTIC has made relentless efforts to integrate Rust into their curriculum. They describe this partnership as a natural extension of a strategy focused on technological excellence.
 

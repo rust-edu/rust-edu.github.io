@@ -123,6 +123,12 @@ img {
     height: auto;
 }
 
+/* A photo holds a 16:9 space while it loads, then takes its own shape. */
+main img {
+    width: 100%;
+    aspect-ratio: auto 16 / 9;
+}
+
 /* Skip link: off screen until it receives keyboard focus */
 
 .skip-link {
