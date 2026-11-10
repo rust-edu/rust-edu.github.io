@@ -43,9 +43,9 @@ The text of the page starts here.
 
 | Key | Used in | Meaning |
 |---|---|---|
-| `title` | every file but a redirect | The page title, shown as its only top-level heading; the home page shows the `description` of `site.yaml` instead. Quote it when it contains `: `, as in `title: "Campus Tour: Rust Africa"`. |
+| `title` | every file but a redirect | The page title, shown as its only top-level heading; the home page shows the `description` of `site.yaml` instead. Quote it when it contains `: `, as in `title: "Campus Tour: Rust Africa"`. It cannot be empty or only spaces. |
 | `date` | news posts | `YYYY-MM-DD`, a day of the calendar; the news list is sorted by it, newest first, so every news post needs one. |
-| `authors` | news posts | One name per line; shown in the byline as "A and B on Mar 1, 2027". |
+| `authors` | news posts | One name per line, none of them empty or only spaces; shown in the byline as "A and B on Mar 1, 2027". |
 | `draft` | every file but the home page | `draft: true` keeps the page off the live site, and in an `_index.md` everything in its folder too; pull request builds still include it at its address, but the news list leaves it out. |
 | `template` | `content/news/_index.md` | The layout of the news list, a file of `layouts/`. |
 | `sort_by` | `content/news/_index.md` | `date`, the only value. |

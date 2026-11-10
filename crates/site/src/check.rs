@@ -56,6 +56,8 @@ pub enum ValueError {
     BadName(String),
     /// A page without a `title` that does not redirect.
     NoTitle,
+    /// A `title` that is empty or only white space.
+    BlankTitle,
     /// A key that the header of a page of its own does not have.
     NotPageKey(String),
     /// A key that the header of an `_index.md` does not have.
@@ -70,6 +72,8 @@ pub enum ValueError {
     BadDate,
     /// `authors` that is not a list of names.
     NotNames,
+    /// A name of `authors` that is empty or only white space.
+    BlankAuthor,
     /// A `sort_by` other than `date`.
     BadSortBy,
     /// A `redirect_to` that is not a URL starting with `https://` or `http://`.
@@ -82,6 +86,12 @@ pub enum ValueError {
     NoBaseUrl,
     /// A `base_url` that is not an address such as `https://rust-edu.org`.
     BadBaseUrl,
+    /// A `title` of `site.yaml`, which the pages show in their title, that is empty or only white
+    /// space.
+    BlankSiteTitle,
+    /// A `description` of `site.yaml`, which the home page shows as its heading, that is empty or
+    /// only white space.
+    BlankSiteDescription,
 }
 
 /// What `edu check` checked: how many pages and layouts; and for the build, the pages it rendered,
@@ -312,6 +322,9 @@ impl fmt::Display for ValueError {
                  digits joined by `-`, such as `rust-week-2027`"
             ),
             Self::NoTitle => f.write_str("a page needs a `title`"),
+            Self::BlankTitle => {
+                f.write_str("the `title` is empty or only spaces; write the page's title")
+            }
             Self::NotPageKey(key) => write!(
                 f,
                 "a page's header has `title`, `date`, `authors`, `template` and `draft`, not `{key}`"
@@ -326,6 +339,10 @@ impl fmt::Display for ValueError {
             Self::DraftHome => f.write_str("the home page cannot be a draft"),
             Self::BadDate => f.write_str("a date is a day written as `2027-03-01`"),
             Self::NotNames => f.write_str("`authors` is a list of names, one `- name` per line"),
+            Self::BlankAuthor => f.write_str(
+                "an author's name is empty or only spaces; write the name, or delete its line, \
+                 and `authors:` too if it was the only one",
+            ),
             Self::BadSortBy => f.write_str("the only `sort_by` is `date`"),
             Self::BadRedirect => f.write_str(
                 "`redirect_to` is a full address, starting with `https://` or `http://`",
@@ -336,6 +353,14 @@ impl fmt::Display for ValueError {
             Self::BadBaseUrl => f.write_str(
                 "`base_url` is an address such as `https://rust-edu.org` or \
                  `https://example.github.io/rust-edu`",
+            ),
+            Self::BlankSiteTitle => f.write_str(
+                "the `title` is empty or only spaces; write the site's name, which the pages show \
+                 in their title",
+            ),
+            Self::BlankSiteDescription => f.write_str(
+                "the `description` is empty or only spaces; write a sentence about the site, \
+                 which the home page shows as its heading",
             ),
         }
     }
@@ -415,6 +440,10 @@ mod tests {
             "content/bad-draft.md:3:8: error: `draft` is `true` or `false`",
             "content/bad-redirect/_index.md:2:14: error: `redirect_to` is a full address, \
              starting with `https://` or `http://`",
+            "content/blank-author.md:5:5: error: an author's name is empty or only spaces; write \
+             the name, or delete its line, and `authors:` too if it was the only one",
+            "content/blank-title.md:2:8: error: the `title` is empty or only spaces; write the \
+             page's title",
             "content/list-title.md:3:3: error: this value must be text",
             "content/no-title.md:1:1: error: a page needs a `title`",
             "content/one-author.md:3:10: error: `authors` is a list of names, one `- name` per line",
