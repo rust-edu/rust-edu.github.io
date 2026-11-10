@@ -1,7 +1,7 @@
 # The site's settings for the generator in crates/.
 # The site's address, for sitemap.xml and robots.txt; `edu build --base-url` builds for another.
-# It also starts every id of the feed, under any `--base-url`, and a feed reader knows a post by
-# its id: so it must not change, or the readers show every post again as new.
+# It also starts every id and guid of the feeds, under any `--base-url`, and a feed reader knows a
+# post by its id: so it must not change, or the readers show every post again as new.
 base_url: https://rust-edu.org
 title: Rust Edu
 description: Rust education in academia (and beyond)

@@ -1,25 +1,62 @@
-//! The site's Atom feed, `atom.xml`, as RFC 4287 describes it: the pages that each section with
-//! `sort_by: date` lists, newest first, each with its whole text, for feed readers.
+//! The site's feeds, `atom.xml` in Atom 1.0 as RFC 4287 describes it and `rss.xml` in RSS 2.0:
+//! the pages that each section with `sort_by: date` lists, newest first, each with its whole text,
+//! for feed readers.
 
 use std::path::{Path, PathBuf};
 
 use crate::build::BaseUrl;
 use crate::check::{ContentError, PageError, ValueError};
 use crate::links::{self, Link};
-use crate::page::{Order, Page, TOP};
+use crate::page::{Date, Order, Page, TOP};
 use crate::render::{self, Site};
 
-/// The feed's file, at the top of the built site.
-pub(crate) const FEED: &str = "atom.xml";
+/// The language of the feeds, English, as the pages are.
+const LANGUAGE: &str = "en";
 
-/// A page that a section with `sort_by: date` lists: its file and URL, its `title`, its `date` as
-/// written and its `authors`, and its text as HTML.
+/// The format of a feed, each with the same posts in a file at the top of the built site.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Format {
+    Atom,
+    Rss,
+}
+
+impl Format {
+    /// Every format, Atom first, as each page names them.
+    pub(crate) const ALL: [Self; 2] = [Self::Atom, Self::Rss];
+
+    /// The feed's file, at the top of the built site.
+    pub(crate) fn file(self) -> &'static str {
+        match self {
+            Self::Atom => "atom.xml",
+            Self::Rss => "rss.xml",
+        }
+    }
+
+    /// The time of a post of the day `date`: the day's start in UTC.
+    fn time(self, date: &Date) -> String {
+        match self {
+            Self::Atom => format!("{}T00:00:00Z", date.text),
+            Self::Rss => format!("{} 00:00:00 +0000", date.rfc822),
+        }
+    }
+
+    /// The feed in this format, with its links at `base_url`.
+    pub(crate) fn write(self, feed: &Feed, base_url: &BaseUrl) -> String {
+        match self {
+            Self::Atom => atom(feed, base_url),
+            Self::Rss => rss(feed, base_url),
+        }
+    }
+}
+
+/// A page that a section with `sort_by: date` lists: its file and URL, its `title`, its `date` and
+/// its `authors`, and its text as HTML.
 #[derive(Debug)]
 pub(crate) struct Post {
     pub(crate) path: PathBuf,
     pub(crate) url: String,
     title: String,
-    date: String,
+    date: Date,
     authors: Vec<String>,
     pub(crate) body: String,
 }
@@ -29,9 +66,9 @@ pub(crate) struct Post {
 #[derive(Debug)]
 pub(crate) struct Feed {
     title: String,
-    subtitle: Option<String>,
+    description: String,
     id_base: BaseUrl,
-    updated: String,
+    updated: Date,
     posts: Vec<Post>,
 }
 
@@ -66,7 +103,7 @@ pub(crate) fn posts(
             path: page.path.clone(),
             url: page.url.clone(),
             title,
-            date: date.text.clone(),
+            date: date.clone(),
             authors: page.authors.clone(),
             body: page.html.clone(),
         });
@@ -75,20 +112,23 @@ pub(crate) fn posts(
 }
 
 /// The feed of `posts` with the settings of `site`, or `None` without posts. A site with posts
-/// needs a `title`, the name of its feed.
+/// needs a `title`, the name of its feeds, and a `description`, which RSS requires.
 pub(crate) fn feed(site: &Site, posts: Vec<Post>) -> Result<Option<Feed>, ContentError> {
     let Some(updated) = posts.iter().map(|post| post.date.clone()).max() else {
         return Ok(None);
     };
-    let Some(title) = site.title.clone() else {
-        let path = PathBuf::from("site.yaml");
-        let error = PageError::Value(TOP, ValueError::NoSiteTitle);
-        return Err(ContentError { path, error });
+    let missing = |error| {
+        let (path, error) = (PathBuf::from("site.yaml"), PageError::Value(TOP, error));
+        ContentError { path, error }
     };
-    let (subtitle, id_base) = (site.description.clone(), site.id_base.clone());
+    let title = site.title.clone();
+    let title = title.ok_or_else(|| missing(ValueError::NoSiteTitle))?;
+    let description = site.description.clone();
+    let description = description.ok_or_else(|| missing(ValueError::NoSiteDescription))?;
+    let id_base = site.id_base.clone();
     Ok(Some(Feed {
         title,
-        subtitle,
+        description,
         id_base,
         updated,
         posts,
@@ -97,34 +137,34 @@ pub(crate) fn feed(site: &Site, posts: Vec<Post>) -> Result<Option<Feed>, Conten
 
 /// The feed as Atom XML, with its links at `base_url` and its ids at the address of `site.yaml`,
 /// which stay the same wherever the site is built for. A post's day is its time at midnight UTC.
-pub(crate) fn atom(feed: &Feed, base_url: &BaseUrl) -> String {
-    let (title, id_base, updated) = (&feed.title, &feed.id_base, &feed.updated);
-    // In English, as the pages are.
-    let mut xml = String::from(
+fn atom(feed: &Feed, base_url: &BaseUrl) -> String {
+    let format = Format::Atom;
+    let (title, id_base, updated) = (&feed.title, &feed.id_base, format.time(&feed.updated));
+    let mut xml = format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
-         <feed xmlns=\"http://www.w3.org/2005/Atom\" xml:lang=\"en\">\n",
+         <feed xmlns=\"http://www.w3.org/2005/Atom\" xml:lang=\"{LANGUAGE}\">\n"
     );
     xml.push_str(&format!("    <title>{}</title>\n", escaped(title)));
-    if let Some(subtitle) = &feed.subtitle {
-        xml.push_str(&format!("    <subtitle>{}</subtitle>\n", escaped(subtitle)));
-    }
-    // Neither an address nor a day has a character that XML escapes.
+    let subtitle = escaped(&feed.description);
+    xml.push_str(&format!("    <subtitle>{subtitle}</subtitle>\n"));
+    // Neither an address nor a time has a character that XML escapes.
     let (atom, html) = ("type=\"application/atom+xml\"", "type=\"text/html\"");
+    let file = format.file();
     xml.push_str(&format!(
-        "    <link rel=\"self\" {atom} href=\"{base_url}/{FEED}\"/>\n"
+        "    <link rel=\"self\" {atom} href=\"{base_url}/{file}\"/>\n"
     ));
     xml.push_str(&format!(
         "    <link rel=\"alternate\" {html} href=\"{base_url}/\"/>\n"
     ));
-    xml.push_str(&format!("    <id>{id_base}/{FEED}</id>\n"));
-    xml.push_str(&format!("    <updated>{updated}T00:00:00Z</updated>\n"));
+    xml.push_str(&format!("    <id>{id_base}/{file}</id>\n"));
+    xml.push_str(&format!("    <updated>{updated}</updated>\n"));
     // The author of each post without `authors`.
     xml.push_str(&format!(
         "    <author><name>{}</name></author>\n",
         escaped(title)
     ));
     for post in &feed.posts {
-        let (url, date) = (&post.url, &post.date);
+        let (url, time) = (&post.url, format.time(&post.date));
         xml.push_str("    <entry>\n");
         xml.push_str(&format!(
             "        <title>{}</title>\n",
@@ -134,10 +174,8 @@ pub(crate) fn atom(feed: &Feed, base_url: &BaseUrl) -> String {
             "        <link rel=\"alternate\" {html} href=\"{base_url}{url}\"/>\n"
         ));
         xml.push_str(&format!("        <id>{id_base}{url}</id>\n"));
-        xml.push_str(&format!(
-            "        <published>{date}T00:00:00Z</published>\n"
-        ));
-        xml.push_str(&format!("        <updated>{date}T00:00:00Z</updated>\n"));
+        xml.push_str(&format!("        <published>{time}</published>\n"));
+        xml.push_str(&format!("        <updated>{time}</updated>\n"));
         for author in &post.authors {
             xml.push_str(&format!(
                 "        <author><name>{}</name></author>\n",
@@ -151,6 +189,53 @@ pub(crate) fn atom(feed: &Feed, base_url: &BaseUrl) -> String {
         xml.push_str("    </entry>\n");
     }
     xml.push_str("</feed>\n");
+    xml
+}
+
+/// The feed as RSS XML, with the posts, links and ids of the Atom feed. A post's `guid` is its id,
+/// marked as not its address, since a build for another address links the post there; its text is
+/// its `description`; and its authors are `dc:creator`s, since the `author` of RSS is an email
+/// address. The channel's `lastBuildDate` is the day of the newest post.
+fn rss(feed: &Feed, base_url: &BaseUrl) -> String {
+    let format = Format::Rss;
+    let (id_base, file) = (&feed.id_base, format.file());
+    let mut xml = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+         <rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\" \
+         xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n    <channel>\n",
+    );
+    let title = escaped(&feed.title);
+    xml.push_str(&format!("        <title>{title}</title>\n"));
+    xml.push_str(&format!("        <link>{base_url}/</link>\n"));
+    let text = escaped(&feed.description);
+    xml.push_str(&format!("        <description>{text}</description>\n"));
+    xml.push_str(&format!("        <language>{LANGUAGE}</language>\n"));
+    // The feed's own address, which RSS has no element for.
+    xml.push_str(&format!(
+        "        <atom:link rel=\"self\" type=\"application/rss+xml\" \
+         href=\"{base_url}/{file}\"/>\n"
+    ));
+    let time = format.time(&feed.updated);
+    xml.push_str(&format!("        <lastBuildDate>{time}</lastBuildDate>\n"));
+    for post in &feed.posts {
+        let (url, time) = (&post.url, format.time(&post.date));
+        xml.push_str("        <item>\n");
+        let title = escaped(&post.title);
+        xml.push_str(&format!("            <title>{title}</title>\n"));
+        xml.push_str(&format!("            <link>{base_url}{url}</link>\n"));
+        xml.push_str(&format!(
+            "            <guid isPermaLink=\"false\">{id_base}{url}</guid>\n"
+        ));
+        xml.push_str(&format!("            <pubDate>{time}</pubDate>\n"));
+        for author in &post.authors {
+            let author = escaped(author);
+            xml.push_str(&format!("            <dc:creator>{author}</dc:creator>\n"));
+        }
+        let text = escaped(&absolute(&post.body, base_url, url));
+        xml.push_str(&format!("            <description>{text}</description>\n"));
+        xml.push_str("        </item>\n");
+    }
+    xml.push_str("    </channel>\n</rss>\n");
     xml
 }
 

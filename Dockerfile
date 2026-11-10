@@ -25,7 +25,7 @@ COPY layouts/ layouts/
 COPY static/ static/
 COPY content/ content/
 RUN --network=none target/release/edu check
-# The tests run once the pages pass: one of them builds this site, for the ids of its feed.
+# The tests run once the pages pass: one of them builds this site, for the ids of its feeds.
 RUN --network=none cargo test --workspace --locked --offline
 RUN --network=none target/release/edu build && mv public /tmp/first \
     && target/release/edu build && diff -r /tmp/first public

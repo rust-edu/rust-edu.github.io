@@ -47,11 +47,13 @@ pub(crate) enum Order {
     Date,
 }
 
-/// A day of the calendar: as written, `2027-03-01`, and as the pages show it, `Mar 1, 2027`.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// A day of the calendar: as written, `2027-03-01`, as the pages show it, `Mar 1, 2027`, and as
+/// RFC 822 writes it, with its day of the week, `Mon, 01 Mar 2027`.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Date {
     pub(crate) text: String,
     pub(crate) shown: String,
+    pub(crate) rfc822: String,
 }
 
 /// The months as the pages show them.
@@ -59,32 +61,63 @@ const MONTHS: [&str; 12] = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+/// The days of the week as RFC 822 names them, from Sunday.
+const WEEKDAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/// The number that Tomohiko Sakamoto's method for the day of the week adds for each month.
+const OFFSETS: [usize; 12] = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
+
+/// The first year of a date: the RFC 822 dates of the RSS feed, as RFC 5322 now defines them, have
+/// no earlier one.
+const FIRST_YEAR: usize = 1900;
+
 impl Date {
-    /// `text` as a day, if it is `YYYY-MM-DD` and a day of the calendar.
-    fn parse(text: &str) -> Option<Self> {
-        let digits =
-            |part: &str, len| part.len() == len && part.bytes().all(|b| b.is_ascii_digit());
-        let mut parts = text.split('-');
-        let (year, month, day) = (parts.next()?, parts.next()?, parts.next()?);
-        if parts.next().is_some() || !digits(year, 4) || !digits(month, 2) || !digits(day, 2) {
-            return None;
+    /// `text` as a day, if it is `YYYY-MM-DD`, in `FIRST_YEAR` or later, and a day of the
+    /// calendar.
+    fn parse(text: &str) -> Result<Self, ValueError> {
+        let (year, month, day) = numbers(text).ok_or(ValueError::BadDate)?;
+        if year < FIRST_YEAR {
+            return Err(ValueError::EarlyDate);
         }
-        let (year, month, day): (u32, usize, u8) =
-            (year.parse().ok()?, month.parse().ok()?, day.parse().ok()?);
-        let name = MONTHS.get(month.checked_sub(1)?)?;
-        let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+        Self::from_parts(text, year, month, day).ok_or(ValueError::BadDate)
+    }
+
+    /// The day `text`, whose numbers are `year`, `month` and `day`, if the calendar has it; the
+    /// year is `FIRST_YEAR` or later.
+    fn from_parts(text: &str, year: usize, month: usize, day: u8) -> Option<Self> {
+        let index = month.checked_sub(1)?;
+        let (name, offset) = (MONTHS.get(index)?, OFFSETS.get(index)?);
+        let leap =
+            year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400));
         let last = match month {
             2 if leap => 29,
             2 => 28,
             4 | 6 | 9 | 11 => 30,
             _ => 31,
         };
+        // Sakamoto's method counts January and February in the year before, 1899 at the least.
+        let y = year - usize::from(month < 3);
+        let weekday = (y + y / 4 - y / 100 + y / 400 + offset + usize::from(day)) % 7;
+        let weekday = WEEKDAYS.get(weekday)?;
         let shown = format!("{name} {day}, {year}");
+        let rfc822 = format!("{weekday}, {day:02} {name} {year:04}");
         (1..=last).contains(&day).then(|| Self {
             text: text.to_owned(),
             shown,
+            rfc822,
         })
     }
+}
+
+/// The year, the month and the day of `text`, if it is written as `YYYY-MM-DD`.
+fn numbers(text: &str) -> Option<(usize, usize, u8)> {
+    let digits = |part: &str, len| part.len() == len && part.bytes().all(|b| b.is_ascii_digit());
+    let mut parts = text.split('-');
+    let (year, month, day) = (parts.next()?, parts.next()?, parts.next()?);
+    if parts.next().is_some() || !digits(year, 4) || !digits(month, 2) || !digits(day, 2) {
+        return None;
+    }
+    Some((year.parse().ok()?, month.parse().ok()?, day.parse().ok()?))
 }
 
 /// A page of `content/`: its path from the site root, the values of its header, and its text as
@@ -165,7 +198,7 @@ impl Page {
                 }
             }
             ("date", Kind::Page) => {
-                let date = Date::parse(text(entry)?).ok_or((pos, ValueError::BadDate))?;
+                let date = Date::parse(text(entry)?).map_err(|error| (pos, error))?;
                 self.date = Some(date);
             }
             ("authors", Kind::Page) => self.authors = names(entry)?,
@@ -353,21 +386,64 @@ mod tests {
     #[test]
     fn a_day_of_the_calendar_is_a_date() {
         let days = [
-            ("2022-07-11", "Jul 11, 2022"),
-            ("2025-06-01", "Jun 1, 2025"),
-            ("2024-02-29", "Feb 29, 2024"),
-            ("2000-02-29", "Feb 29, 2000"),
-            ("1999-12-31", "Dec 31, 1999"),
-            ("2024-12-31", "Dec 31, 2024"),
+            ("2022-07-11", "Jul 11, 2022", "Mon, 11 Jul 2022"),
+            ("2025-06-01", "Jun 1, 2025", "Sun, 01 Jun 2025"),
+            ("2026-04-26", "Apr 26, 2026", "Sun, 26 Apr 2026"),
+            ("2024-02-29", "Feb 29, 2024", "Thu, 29 Feb 2024"),
+            ("2000-01-01", "Jan 1, 2000", "Sat, 01 Jan 2000"),
+            ("2000-02-29", "Feb 29, 2000", "Tue, 29 Feb 2000"),
+            ("1999-12-31", "Dec 31, 1999", "Fri, 31 Dec 1999"),
+            ("2024-12-31", "Dec 31, 2024", "Tue, 31 Dec 2024"),
+            ("2026-01-01", "Jan 1, 2026", "Thu, 01 Jan 2026"),
+            ("2026-12-31", "Dec 31, 2026", "Thu, 31 Dec 2026"),
         ];
-        for (text, shown) in days {
+        for (text, shown, rfc822) in days {
             let date = Date::parse(text).unwrap();
-            assert_eq!((date.text.as_str(), date.shown.as_str()), (text, shown));
+            assert_eq!([date.text, date.shown, date.rfc822], [text, shown, rfc822]);
         }
         let not_days = "2023-02-29 1900-02-29 2022-04-31 2022-13-01 2022-00-10 2022-01-00 \
                         2022-7-11 2022-07-1 22-07-11 2022-07-11-01 2022-07 +202-07-11";
         for text in not_days.split(' ') {
-            assert_eq!(Date::parse(text), None, "{text}");
+            assert_eq!(Date::parse(text), Err(ValueError::BadDate), "{text}");
+        }
+        // A year before 1900 is the error, whether or not the calendar has the day.
+        for text in ["0000-01-01", "1000-06-15", "1899-02-30"] {
+            assert_eq!(Date::parse(text), Err(ValueError::EarlyDate), "{text}");
+        }
+    }
+
+    #[test]
+    fn the_day_of_the_week_follows_the_calendar_from_1900_to_9999() {
+        let rfc822 = |text: &str| Date::parse(text).unwrap().rfc822;
+        // The day of the week of `text`, as its place in `WEEKDAYS`.
+        let weekday = |text: &str| {
+            let rfc822 = rfc822(text);
+            let day = WEEKDAYS.iter().position(|day| rfc822.starts_with(day));
+            day.unwrap()
+        };
+        assert_eq!(rfc822("1900-01-01"), "Mon, 01 Jan 1900");
+        assert_eq!(rfc822("9999-12-31"), "Fri, 31 Dec 9999");
+        assert_eq!(Date::parse("1899-12-31"), Err(ValueError::EarlyDate));
+        // From the first to the last day of a year are 52 weeks, and a day more in a leap year.
+        for year in 1900..=9999 {
+            let first = weekday(&format!("{year:04}-01-01"));
+            let last = weekday(&format!("{year:04}-12-31"));
+            let leap = Date::parse(&format!("{year:04}-02-29")).is_ok();
+            assert_eq!(last, (first + usize::from(leap)) % 7, "{year}");
+            if year < 9999 {
+                let next = weekday(&format!("{:04}-01-01", year + 1));
+                assert_eq!(next, (last + 1) % 7, "{year}");
+            }
+        }
+        for (year, days) in [(2024, 366), (2026, 365)] {
+            let texts = (1..=12)
+                .flat_map(|month| (1..=31).map(move |day| format!("{year}-{month:02}-{day:02}")));
+            let texts = texts.filter(|text| Date::parse(text).is_ok());
+            let weekdays: Vec<usize> = texts.map(|text| weekday(&text)).collect();
+            assert_eq!(weekdays.len(), days, "{year}");
+            for pair in weekdays.windows(2) {
+                assert_eq!(pair[1], (pair[0] + 1) % 7, "{year}");
+            }
         }
     }
 }
