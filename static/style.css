@@ -46,12 +46,15 @@
         --color-subheading: #c3a6ee;
     }
 
-    /* The logo with light lettering takes the place of the one with black. */
-    :root:not([data-theme="light"]) .site-logo img {
+    /* The logo with light lettering takes the place of the one with black, and
+       the theme button's moon that of its sun. */
+    :root:not([data-theme="light"]) .site-logo img,
+    :root:not([data-theme="light"]) .theme-toggle .sun {
         display: none;
     }
 
-    :root:not([data-theme="light"]) .site-logo [src$="#dark"] {
+    :root:not([data-theme="light"]) .site-logo [src$="#dark"],
+    :root:not([data-theme="light"]) .theme-toggle .moon {
         display: block;
     }
 }
@@ -77,11 +80,13 @@
         --color-subheading: #c3a6ee;
     }
 
-    :root[data-theme="dark"] .site-logo img {
+    :root[data-theme="dark"] .site-logo img,
+    :root[data-theme="dark"] .theme-toggle .sun {
         display: none;
     }
 
-    :root[data-theme="dark"] .site-logo [src$="#dark"] {
+    :root[data-theme="dark"] .site-logo [src$="#dark"],
+    :root[data-theme="dark"] .theme-toggle .moon {
         display: block;
     }
 }
@@ -220,6 +225,11 @@ strong {
 
 .theme-toggle svg {
     display: block;
+}
+
+/* The button shows a sun in the light theme. Its moon is for the dark theme. */
+.theme-toggle .moon {
+    display: none;
 }
 
 .site-nav a,

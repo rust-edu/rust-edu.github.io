@@ -37,10 +37,14 @@
                 <li><a href="{{ item.url }}">{{ item.name }}</a></li>
                 {% endfor %}
             </ul>
-            <button class="theme-toggle" type="button" aria-label="Dark theme" title="Dark theme" aria-pressed="false" hidden>
-                <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true">
-                    <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                    <path d="M8 1.5a6.5 6.5 0 0 0 0 13z" fill="currentColor"/>
+            {# A sun in the light theme and a moon in the dark one: style.css shows the one for the theme. #}
+            <button class="theme-toggle" type="button" aria-label="Switch to the dark theme" title="Switch to the dark theme" hidden>
+                <svg class="sun" width="18" height="18" viewBox="0 0 16 16" aria-hidden="true">
+                    <circle cx="8" cy="8" r="3.25" fill="currentColor"/>
+                    <path d="M8 1.25v1.5M8 13.25v1.5M1.25 8h1.5M13.25 8h1.5M3.23 3.23l1.06 1.06M11.71 11.71l1.06 1.06M12.77 3.23l-1.06 1.06M4.29 11.71l-1.06 1.06" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <svg class="moon" width="18" height="18" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M6.82 2.12A6 6 0 1 0 13.88 9.18 5 5 0 0 1 6.82 2.12z" fill="currentColor" stroke="currentColor" stroke-linejoin="round"/>
                 </svg>
             </button>
         </nav>
@@ -74,8 +78,11 @@
                 return theme ? theme === "dark" : system.matches;
             }
 
+            // The label and the tooltip say what a click does. The icon is style.css's part.
             function show() {
-                button.setAttribute("aria-pressed", String(dark()));
+                var label = "Switch to the " + (dark() ? "light" : "dark") + " theme";
+                button.setAttribute("aria-label", label);
+                button.setAttribute("title", label);
             }
 
             button.addEventListener("click", function () {
