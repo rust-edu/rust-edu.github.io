@@ -15,7 +15,7 @@ Read these before you change anything:
 
 | Command | What it does |
 |---|---|
-| `make check` | Checks format and lint, runs the tests, and checks every page and link. It must pass before a change is done. |
+| `make check` | Checks format and lint, checks every page and link, then runs the tests. It must pass before a change is done. |
 | `make ci` | Runs the same checks in CI's pinned Docker image, and builds the site twice to see that both builds are the same. It needs Docker. |
 | `make serve` | Serves the site with its drafts at <http://127.0.0.1:1111>, and builds it again on a reload after a change. It runs until stopped, so start it in the background. |
 

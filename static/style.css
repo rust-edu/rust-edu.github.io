@@ -379,13 +379,17 @@ main p + p:has(> strong:only-child):has(+ p > img) {
 /* News */
 
 .byline,
+.news-feeds,
 .news-list time,
 .site-footer {
     color: var(--color-muted);
     font-size: 0.9375rem;
 }
 
-.byline {
+/* A post's byline, and the line under the heading of /news/ that links to the
+   feeds, which looks like it. */
+.byline,
+.news-feeds {
     margin-top: -0.75rem;
 }
 

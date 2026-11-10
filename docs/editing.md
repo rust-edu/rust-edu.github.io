@@ -44,11 +44,11 @@ The text of the page starts here.
 | Key | Used in | Meaning |
 |---|---|---|
 | `title` | every file but a redirect | The page title, shown as its only top-level heading; the home page shows the `description` of `site.yaml` instead. Quote it when it contains `: `, as in `title: "Campus Tour: Rust Africa"`. It cannot be empty or only spaces. |
-| `date` | news posts | `YYYY-MM-DD`, a day of the calendar; the news list is sorted by it, newest first, so every news post needs one. |
+| `date` | news posts | `YYYY-MM-DD`, a day of the calendar; the news list and the feed are sorted by it, newest first, so every news post needs one. The feed gives it as the post's time, at midnight UTC. |
 | `authors` | news posts | One name per line, none of them empty or only spaces; shown in the byline as "A and B on Mar 1, 2027". |
 | `draft` | every file but the home page | `draft: true` keeps the page off the live site, and in an `_index.md` everything in its folder too; pull request builds still include it at its address, but the news list leaves it out. |
 | `template` | `content/news/_index.md` | The layout of the news list, a file of `layouts/`. |
-| `sort_by` | `content/news/_index.md` | `date`, the only value. |
+| `sort_by` | `content/news/_index.md` | `date`, the only value. The pages of a section with it that are not drafts are the posts of the feed, `/atom.xml`. |
 | `redirect_to` | `content/zulip/_index.md` | The full address, starting with `https://`, that `/zulip/` forwards to. |
 
 `title`, `template` and `draft` go in any file, `date` and `authors` only in pages, and `sort_by` and `redirect_to`
@@ -92,9 +92,18 @@ nowhere: a page, file or id that the site does not have, a page's URL without it
 a link from a page to a draft, or an address that starts with something other than `https:`, `http:` or `mailto:`.
 It does not check links to other sites.
 
+## The news feed
+
+`/atom.xml` is an Atom feed of the news posts, newest first, each with its title, date, authors and whole text, for
+feed readers. Its name is the `title` of `site.yaml`, which a site with news posts needs, and its subtitle the
+`description`. Every page with the site's layout names it for them, and `/news/` links to it. Links in a post need
+nothing special: the feed turns the links to the site and to ids into full addresses. A feed reader knows a post by
+its address, so keep the file name of a post once it is published.
+
 ## Common changes
 
-- **A news post:** add `content/news/<name>.md` with `title`, `date` and `authors`, as in the header example above.
+- **A news post:** add `content/news/<name>.md` with `title`, `date` and `authors`, as in the header example above;
+  it goes into the feed too.
 - **A photo:** save it in `static/images/`, 960 pixels wide, in the 16:9 shape, as WebP of at most 90 KB. It shows at
   the full width of the text, so a narrower image is stretched, and another shape moves the text below it when it
   loads, a portrait photo by a third of a phone's screen or more.

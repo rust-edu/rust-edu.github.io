@@ -2,7 +2,7 @@
 //! values the site can use, its text is in the Markdown subset, the layouts of `layouts/` render
 //! it with the settings of `site.yaml`, and its links go to pages and files of the site, in the
 //! feed's posts too; and the other files of `content/` and `static/` are of a type that the site
-//! publishes. `edu build` checks the same, and renders the pages that it writes.
+//! publishes. `edu build` checks the same, and renders the pages and the feed that it writes.
 
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 
 use crate::Error;
 use crate::build::{self, BaseUrl, Drafts, Options};
-use crate::feed;
+use crate::feed::{self, Feed};
 use crate::file::{self, FileError};
 use crate::links::{self, LinkError, Target};
 use crate::page::{Kind, Page};
@@ -93,10 +93,13 @@ pub enum ValueError {
     /// A `description` of `site.yaml`, which the home page shows as its heading, that is empty or
     /// only white space.
     BlankSiteDescription,
+    /// A `site.yaml` without `title`, the name of the feed, in a site with posts for one.
+    NoSiteTitle,
 }
 
 /// What `edu check` checked: how many pages and layouts; and for the build, the pages it rendered,
-/// the files of `content/` that are not pages, the files of `static/`, and the site's address.
+/// the files of `content/` that are not pages, the files of `static/`, the site's address, and the
+/// feed if a section with `sort_by: date` lists posts.
 #[derive(Debug)]
 pub(crate) struct Checked {
     pub(crate) pages: usize,
@@ -105,6 +108,7 @@ pub(crate) struct Checked {
     pub(crate) files: Vec<PathBuf>,
     pub(crate) statics: Vec<PathBuf>,
     pub(crate) base_url: BaseUrl,
+    pub(crate) feed: Option<Feed>,
 }
 
 /// A page as the build writes it: its path, its URL, its HTML, its `date`, and whether the live
@@ -189,6 +193,7 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
     }
     // The links are checked once every page renders, since a link to a page with an error would
     // go nowhere.
+    let mut feed = None;
     if errors.is_empty() {
         let mut targets = BTreeMap::new();
         for page in &rendered {
@@ -210,7 +215,16 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             errors.push(error);
             Vec::new()
         });
+        // The site has the feed if it has a post for it, which the live site has too.
+        if !posts.is_empty() {
+            let (live, ids) = (true, None);
+            targets.insert(feed::FEED.to_owned(), Target { live, ids });
+        }
         links::check(root, &rendered, &posts, &targets, &layouts, &mut errors)?;
+        match feed::feed(&site, posts) {
+            Ok(made) => feed = made,
+            Err(error) => errors.push(error),
+        }
     }
     if errors.is_empty() {
         let (pages, layouts, base_url) = (paths.len(), layouts.len(), site.base_url);
@@ -221,6 +235,7 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             files,
             statics,
             base_url,
+            feed,
         })
     } else {
         Err(Error::Content(errors))
@@ -366,6 +381,10 @@ impl fmt::Display for ValueError {
             Self::BlankSiteDescription => f.write_str(
                 "the `description` is empty or only spaces; write a sentence about the site, \
                  which the home page shows as its heading",
+            ),
+            Self::NoSiteTitle => f.write_str(
+                "the settings need `title`, the name of the feed of the pages of a section with \
+                 `sort_by: date`",
             ),
         }
     }
@@ -617,7 +636,7 @@ mod tests {
     }
 
     #[test]
-    fn the_links_of_a_live_posts_text_are_checked_even_when_its_layout_leaves_it_out() {
+    fn a_feed_needs_a_title_a_link_to_it_a_live_post_and_its_posts_links_that_work() {
         const OPTIONS: Options = Options {
             drafts: Drafts::Include,
             base_url: None,
@@ -634,17 +653,33 @@ mod tests {
 
         let root = temp_site("feed");
         let write = |path: &str, text: &str| fs::write(root.join(path), text).unwrap();
+        write(
+            "layouts/layout.html",
+            "<link href=\"/atom.xml\">{{ content | safe }}",
+        );
+        // A site without posts has no feed, nor does a site with drafts alone.
+        let to = "layouts/layout.html:1:13: error: `/atom.xml`";
+        let no_feed = [format!("{to} is not a page or file of the site")];
+        assert_eq!(errors(&root), no_feed);
         fs::create_dir(root.join("content/news")).unwrap();
         let news = "---\ntitle: News\nsort_by: date\ntemplate: home.html\n---\n";
         write("content/news/_index.md", news);
         let header = "---\ntitle: Post\ndate: 2027-03-01\ntemplate: home.html\n";
         let post = |rest: &str| write("content/news/post.md", &format!("{header}{rest}"));
+        post("draft: true\n---\n");
+        assert_eq!(errors(&root), no_feed);
         // The layout leaves out the text of the post, whose links are checked all the same.
         post("---\n[a](a/)\n");
         let bad = "cannot be checked: a link to a page or file of the site starts with `/`, as in \
                    `/news/`, and other links with `#`, `https://`, `http://` or `mailto:`";
-        let expected = [format!("content/news/post.md:6:5: error: `a/` {bad}")];
+        let expected = [
+            format!("content/news/post.md:6:5: error: `a/` {bad}"),
+            "site.yaml:1:1: error: the settings need `title`, the name of the feed of the pages \
+             of a section with `sort_by: date`"
+                .to_owned(),
+        ];
         assert_eq!(errors(&root), expected);
+        write("site.yaml", "base_url: https://example.org\ntitle: T\n");
         post("---\n[a](/news/)\n");
         assert_eq!(errors(&root), Vec::<String>::new());
         fs::remove_dir_all(root).unwrap();

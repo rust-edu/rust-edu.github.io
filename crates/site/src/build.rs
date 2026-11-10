@@ -1,7 +1,8 @@
 //! `edu build`: the site as files. Each page becomes `index.html` in the folder of its URL, the
 //! files of `static/` are copied to the top, and the other files of `content/` beside the pages of
-//! their folder; `404.html`, `robots.txt` and `sitemap.xml` go at the top. A preview has the
-//! drafts too, and works at another address.
+//! their folder; `404.html`, `robots.txt` and `sitemap.xml` go at the top, and `atom.xml` too when
+//! a section with `sort_by: date` and no `redirect_to` lists a live post. A preview has the drafts
+//! too, and works at another address.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -11,6 +12,7 @@ use std::path::{Path, PathBuf};
 
 use crate::Error;
 use crate::check::{self, Rendered};
+use crate::feed;
 use crate::links::{self, Link};
 
 /// The file that marks a folder as made by `edu build`, which may then delete it.
@@ -92,7 +94,7 @@ pub(crate) enum Output {
     Page(PathBuf, String),
     /// A copy of the file of `content/` or `static/` at the path.
     Copy(PathBuf),
-    /// A file that the build makes itself, one of `MADE`.
+    /// A file that the build makes itself: one of `MADE`, or the feed.
     Made(String),
 }
 
@@ -135,6 +137,10 @@ pub(crate) fn plan(root: &Path, options: &Options) -> Result<Site, Error> {
     let mut files = BTreeMap::new();
     for (name, text) in MADE.into_iter().zip(texts) {
         files.insert(PathBuf::from(name), Output::Made(text));
+    }
+    if let Some(feed) = &checked.feed {
+        let text = feed::atom(feed, base_url);
+        files.insert(PathBuf::from(feed::FEED), Output::Made(text));
     }
     let pages = checked.rendered.len();
     for page in &checked.rendered {
@@ -293,10 +299,11 @@ mod tests {
     fn each_page_is_index_html_at_its_url_beside_the_files_of_static_and_content() {
         let out = out("valid");
         let built = site(&test_site("valid"), &out, &LIVE).unwrap();
-        assert_eq!((built.pages, built.files), (5, 7));
+        assert_eq!((built.pages, built.files), (5, 8));
         let expected = [
             "2027/index.html",
             "404.html",
+            "atom.xml",
             "chat/index.html",
             "images/logo.svg",
             "index.html",
@@ -361,7 +368,7 @@ mod tests {
             base_url: BaseUrl::parse("https://example.github.io/edu/"),
         };
         let built = site(&test_site("valid"), &out, &options).unwrap();
-        assert_eq!((built.pages, built.files), (8, 8));
+        assert_eq!((built.pages, built.files), (8, 9));
         let files = files(&out);
         let drafts = ["news/draft/index.html", "wip/index.html", "wip/notes.txt"];
         let is_built = |path: &&str| files.iter().any(|file| file == path);
@@ -384,6 +391,138 @@ mod tests {
         let sitemap = read("sitemap.xml");
         let loc = "<loc>https://example.github.io/edu/wip/page/</loc>";
         assert!(sitemap.contains(loc), "{sitemap}");
+        fs::remove_dir_all(out).unwrap();
+    }
+
+    #[test]
+    fn the_feed_is_atom_xml_with_the_live_posts_newest_first_and_their_links_absolute() {
+        let out = out("feed");
+        let built = site(&test_site("feed"), &out, &LIVE).unwrap();
+        assert_eq!((built.pages, built.files), (5, 5));
+        let read = |path| fs::read_to_string(out.join(path)).unwrap();
+        let expected = concat!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n",
+            "<feed xmlns=\"http://www.w3.org/2005/Atom\" xml:lang=\"en\">\n",
+            "    <title>News &amp; notes</title>\n",
+            "    <subtitle>Jane&#39;s &quot;news&quot; &amp; &lt;notes&gt;</subtitle>\n",
+            "    <link rel=\"self\" type=\"application/atom+xml\" ",
+            "href=\"https://example.org/atom.xml\"/>\n",
+            "    <link rel=\"alternate\" type=\"text/html\" href=\"https://example.org/\"/>\n",
+            "    <id>https://example.org/atom.xml</id>\n",
+            "    <updated>2026-04-26T00:00:00Z</updated>\n",
+            "    <author><name>News &amp; notes</name></author>\n",
+            "    <entry>\n",
+            "        <title>Second &amp; &lt;last&gt;</title>\n",
+            "        <link rel=\"alternate\" type=\"text/html\" ",
+            "href=\"https://example.org/news/second/\"/>\n",
+            "        <id>https://example.org/news/second/</id>\n",
+            "        <published>2026-04-26T00:00:00Z</published>\n",
+            "        <updated>2026-04-26T00:00:00Z</updated>\n",
+            "        <content type=\"html\">&lt;h2 id=&quot;part&quot;&gt;Part&lt;/h2&gt;\n",
+            "&lt;p&gt;Read &lt;a href=&quot;https://example.org/news/second/#part&quot;&gt;",
+            "this part&lt;/a&gt;, see &lt;img src=&quot;https://example.org/images/logo.svg&quot; ",
+            "alt=&quot;the logo&quot; /&gt;, and go &lt;a rel=&quot;external&quot; ",
+            "href=&quot;https://example.org/a?b=1&amp;amp;c=2&quot;&gt;away&lt;/a&gt;.&lt;/p&gt;\n",
+            "</content>\n",
+            "    </entry>\n",
+            "    <entry>\n",
+            "        <title>First</title>\n",
+            "        <link rel=\"alternate\" type=\"text/html\" ",
+            "href=\"https://example.org/news/first/\"/>\n",
+            "        <id>https://example.org/news/first/</id>\n",
+            "        <published>2022-07-11T00:00:00Z</published>\n",
+            "        <updated>2022-07-11T00:00:00Z</updated>\n",
+            "        <author><name>Jane Doe</name></author>\n",
+            "        <author><name>O&#39;Brien &amp; &lt;Sons&gt;</name></author>\n",
+            "        <content type=\"html\">&lt;p&gt;Write to ",
+            "&lt;a href=&quot;mailto:a@example.org&quot;&gt;a@example.org&lt;/a&gt;, or read the ",
+            "&lt;a href=&quot;https://example.org/news/second/&quot;&gt;second post&lt;/a&gt;.",
+            "&lt;/p&gt;\n",
+            "</content>\n",
+            "    </entry>\n",
+            "</feed>\n",
+        );
+        assert_eq!(read("atom.xml"), expected);
+        let sitemap = read("sitemap.xml");
+        assert!(!sitemap.contains("atom.xml"), "{sitemap}");
+        fs::remove_dir_all(out).unwrap();
+    }
+
+    /// The text between `start` and `end` on each line of `feed` that has them, such as each id.
+    fn values<'a>(feed: &'a str, start: &str, end: &str) -> Vec<&'a str> {
+        let value = |line: &'a str| line.trim().strip_prefix(start)?.strip_suffix(end);
+        feed.lines().filter_map(value).collect()
+    }
+
+    #[test]
+    fn a_preview_feed_lists_the_live_posts_by_the_same_ids_with_its_links_at_its_address() {
+        let live = out("feed-live");
+        site(&test_site("feed"), &live, &LIVE).unwrap();
+        let out = out("feed-preview");
+        let options = Options {
+            drafts: Drafts::Include,
+            base_url: BaseUrl::parse("https://example.github.io/edu/"),
+        };
+        // The preview has a draft post, and a post in the folder of a draft `_index.md`.
+        let built = site(&test_site("feed"), &out, &options).unwrap();
+        assert_eq!(built.pages, 8);
+        let read = |dir: &Path, path| fs::read_to_string(dir.join(path)).unwrap();
+        let feed = read(&out, "atom.xml");
+        let listed = |feed: &str| -> Vec<String> {
+            let tags = ["<id>", "<title>", "<updated>"];
+            let lines = feed.lines().map(str::trim);
+            let lines = lines.filter(|line| tags.iter().any(|tag| line.starts_with(tag)));
+            lines.map(str::to_owned).collect()
+        };
+        assert_eq!(listed(&feed), listed(&read(&live, "atom.xml")));
+        let at_address = [
+            "    <link rel=\"self\" type=\"application/atom+xml\" \
+             href=\"https://example.github.io/edu/atom.xml\"/>\n",
+            "href=\"https://example.github.io/edu/news/second/\"/>",
+            "src=&quot;https://example.github.io/edu/images/logo.svg&quot;",
+            "href=&quot;https://example.github.io/edu/news/second/#part&quot;",
+        ];
+        for text in at_address {
+            assert!(feed.contains(text), "{text}\n{feed}");
+        }
+        let home = read(&out, "index.html");
+        assert!(home.contains(" href=\"/edu/atom.xml\">"), "{home}");
+        fs::remove_dir_all(live).unwrap();
+        fs::remove_dir_all(out).unwrap();
+    }
+
+    #[test]
+    fn the_feed_of_rust_edu_org_keeps_the_ids_of_its_posts_at_any_address() {
+        // The site of this repository, two folders above this crate.
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).ancestors().nth(2);
+        let out = out("rust-edu");
+        let options = Options {
+            drafts: Drafts::Include,
+            base_url: BaseUrl::parse("https://example.github.io/rust-edu/"),
+        };
+        let built = site(root.unwrap(), &out, &options);
+        // A mistake in a page fails this test too, which then names it as `edu check` does.
+        if let Err(Error::Content(errors)) = &built {
+            let errors: Vec<String> = errors.iter().map(ToString::to_string).collect();
+            let errors = errors.join("\n");
+            panic!("this site has errors, as `edu check` says:\n{errors}");
+        }
+        built.unwrap();
+        let feed = fs::read_to_string(out.join("atom.xml")).unwrap();
+        let ids = values(&feed, "<id>", "</id>");
+        let alternate = "<link rel=\"alternate\" type=\"text/html\" href=\"";
+        let links = values(&feed, alternate, "\"/>");
+        // A feed reader knows the feed and each post by its id, and shows a post with a new id
+        // again: the ids stay at the `base_url` of `site.yaml` under any other address.
+        assert_eq!(ids.first(), Some(&"https://rust-edu.org/atom.xml"));
+        // A post's link and its id name the same page: at this build's address, and at
+        // rust-edu.org.
+        assert_eq!(links.len(), ids.len(), "{feed}");
+        for (link, id) in links.iter().zip(&ids).skip(1) {
+            let address = link.strip_prefix("https://example.github.io/rust-edu");
+            assert!(address.is_some(), "{link}\n{feed}");
+            assert_eq!(id.strip_prefix("https://rust-edu.org"), address, "{feed}");
+        }
         fs::remove_dir_all(out).unwrap();
     }
 
