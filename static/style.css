@@ -12,6 +12,7 @@
 
     --color-bg: #fbf8f3;
     --color-glass: #fbf8f3c2;
+    --color-shadow: #2a343926;
     --color-surface: #f4eee4;
     --color-text: #2a3439;
     --color-muted: #5f5b53;
@@ -36,6 +37,7 @@
     :root:not([data-theme="light"]) {
         --color-bg: #1b1815;
         --color-glass: #1b1815c2;
+        --color-shadow: #00000080;
         --color-surface: #26221e;
         --color-text: #ece7df;
         --color-muted: #b5aea3;
@@ -71,6 +73,7 @@
 
         --color-bg: #1b1815;
         --color-glass: #1b1815c2;
+        --color-shadow: #00000080;
         --color-surface: #26221e;
         --color-text: #ece7df;
         --color-muted: #b5aea3;
@@ -158,9 +161,12 @@ strong {
     transform: translateY(-200%);
 }
 
-/* Header: a bar across the screen, with its logo and menu in the column */
+/* Header: a bar across the screen, with its logo and menu in the column. The
+   menu of the feeds hangs from it, over the page. */
 
 .site-header {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -173,7 +179,9 @@ strong {
 
 /* On a screen that is tall enough, the bar stays at the top, and a link to an
    id stops below it. Where the browser can blur what lies behind, the bar is
-   frosted glass, so the menu reads well over any text or photo. */
+   frosted glass, so the menu reads well over any text or photo. The glass is a
+   layer under the logo and the menu, not the bar itself: with a filter on the
+   bar, the cover that closes the feed menu could not reach beyond the bar. */
 @media screen and (min-height: 30rem) {
     html {
         scroll-padding-top: 5rem;
@@ -181,12 +189,22 @@ strong {
 
     .site-header {
         position: sticky;
-        z-index: 1;
         top: 0;
     }
 
     @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
         .site-header {
+            background: none;
+        }
+
+        .site-header::before {
+            content: "";
+            position: absolute;
+            z-index: -1;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
             background: var(--color-glass);
             -webkit-backdrop-filter: saturate(1.8) blur(20px);
             backdrop-filter: saturate(1.8) blur(20px);
@@ -198,8 +216,10 @@ strong {
 @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
     .site-header {
         background: var(--color-bg);
-        -webkit-backdrop-filter: none;
-        backdrop-filter: none;
+    }
+
+    .site-header::before {
+        content: none;
     }
 }
 
@@ -245,11 +265,10 @@ strong {
     font-size: 1rem;
 }
 
-/* Two small buttons end the menu: the link to the news feed, then the theme
-   button. */
-.site-nav .feed-link,
+/* Two small buttons end the menu: the feed's symbol, which opens the menu of
+   the feeds, then the theme button. */
+.feed-menu summary,
 .theme-toggle {
-    margin-left: 0.5rem;
     padding: 0.3125rem;
     border: 1px solid var(--color-rule);
     border-radius: var(--radius);
@@ -258,19 +277,67 @@ strong {
     cursor: pointer;
 }
 
-.site-nav .feed-link {
+.feed-menu {
     margin-left: 1.25rem;
 }
 
-.site-nav .feed-link:hover,
+.theme-toggle {
+    margin-left: 0.5rem;
+}
+
+.feed-menu summary:hover,
+.feed-menu[open] summary,
 .theme-toggle:hover {
     border-color: currentColor;
     color: var(--color-link);
 }
 
-.feed-link svg,
+.feed-menu svg,
 .theme-toggle svg {
     display: block;
+}
+
+/* The symbol alone, with no triangle beside it; the second rule is for Safari. */
+.feed-menu summary {
+    display: block;
+}
+
+.feed-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+/* While the menu is open, a cover that is part of its button lies over the
+   screen, unseen, so a click anywhere beside the menu closes it. */
+.feed-menu[open] summary::before {
+    content: "";
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    cursor: default;
+}
+
+/* The menu of the feeds hangs under the bar, at the column's right edge. */
+.feed-menu div {
+    position: absolute;
+    z-index: 2;
+    top: calc(100% + 0.5rem);
+    right: 1rem;
+    right: max(1rem, 50% - 20rem);
+    margin-left: 1rem;
+    padding: 0.75rem 1rem 0.5rem;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    background: var(--color-bg);
+    box-shadow: 0 0.5rem 1.5rem var(--color-shadow);
+}
+
+.feed-menu p {
+    margin: 0 0 0.25rem;
+    color: var(--color-muted);
+    font-size: 0.9375rem;
 }
 
 /* A narrow screen: the menu takes the row under the logo, its two buttons at the
@@ -285,7 +352,7 @@ strong {
         padding-top: 0.5rem;
     }
 
-    .site-nav .feed-link {
+    .feed-menu {
         margin-left: auto;
     }
 }
@@ -567,7 +634,7 @@ main,
         color: var(--color-text);
     }
 
-    .site-nav .feed-link,
+    .feed-menu,
     .theme-toggle {
         display: none;
     }
