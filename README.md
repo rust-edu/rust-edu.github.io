@@ -139,6 +139,16 @@ address. *Actions → Deploy to GitHub Pages → Run workflow* runs it again by 
 Dependabot proposes updates of the actions, which are pinned by commit, and of the Docker image together with
 `rust-toolchain.toml`, so that a Rust release bumps both in one pull request.
 
+## 🤖 AI Acknowledgement
+Most of the generator in `crates/`, its tests, the layouts, the stylesheet and the docs were written with Claude Code
+(Anthropic, model Claude Opus 5.5) from October 2026, at the direction of Ken Esparta, who read each change in its
+[pull request](https://github.com/kenesparta/rust-edu.github.io/pulls?q=is%3Apr+is%3Amerged) on the fork
+kenesparta/rust-edu.github.io. The changes to the logo that keep its colors in the dark theme, and the tab icon drawn
+from it, were made with Claude Code and the model Claude Fable 5.2. An earlier plan from August 2026, which Plan 0002
+replaced, was drafted with Claude Fable 5; the fork keeps it at the tag `archive/initial-project-plan`. Gemini CLI was
+used only for reviews and questions, and none of its output is in the repository. [AGENTS.md](AGENTS.md) holds the
+instructions for AI agents, and asks them to say in each pull request which tools helped and how.
+
 ## 📬 Get Involved
 Interested in contributing or learning more?
 * 🌐 Visit: [https://rust-edu.org/](https://rust-edu.org/)

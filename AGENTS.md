@@ -60,6 +60,7 @@ weaken a check or a test to make it pass.
 ## Build and deploy
 
 - A push to `main` publishes the site. Make each change on a branch and propose it in a pull request.
+- When an AI agent helps with a change, say in the description of its pull request which tools helped and how.
 - `FROM check AS live` in the `Dockerfile` is what stops a bad push from publishing. Keep it.
 - `rust-toolchain.toml` and the `FROM` tag of the `Dockerfile` name the same Rust. Change them together; CI fails
   when they differ.
