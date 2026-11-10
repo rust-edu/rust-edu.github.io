@@ -3,7 +3,7 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
-use edu_yaml::{Entry, Pos};
+use edu_yaml::{Entry, Node, Pos};
 
 use crate::check::{ContentError, PageError, ValueError};
 
@@ -141,11 +141,18 @@ impl Page {
     }
 
     /// Takes the value of `entry`: `title`, `template` and `draft` in every page, `date` and
-    /// `authors` in a page of its own, and `sort_by` and `redirect_to` in an `_index.md`.
+    /// `authors` in a page of its own, and `sort_by` and `redirect_to` in an `_index.md`. A title
+    /// and each name of `authors` show on the pages, so neither can be blank.
     fn set(&mut self, entry: &Entry) -> Result<(), (Pos, ValueError)> {
         let pos = entry.value.pos;
         match (entry.key.as_str(), self.kind) {
-            ("title", _) => self.title = Some(text(entry)?.to_owned()),
+            ("title", _) => {
+                let title = text(entry)?;
+                if title.trim().is_empty() {
+                    return Err((pos, ValueError::BlankTitle));
+                }
+                self.title = Some(title.to_owned());
+            }
             ("template", _) => self.template = Some((text(entry)?.to_owned(), pos)),
             ("draft", _) => {
                 self.draft = match text(entry)? {
@@ -161,9 +168,7 @@ impl Page {
                 let date = Date::parse(text(entry)?).ok_or((pos, ValueError::BadDate))?;
                 self.date = Some(date);
             }
-            ("authors", Kind::Page) => {
-                self.authors = names(entry).ok_or((pos, ValueError::NotNames))?;
-            }
+            ("authors", Kind::Page) => self.authors = names(entry)?,
             ("sort_by", Kind::Home | Kind::Section) => match text(entry)? {
                 "date" => self.order = Order::Date,
                 _ => return Err((pos, ValueError::BadSortBy)),
@@ -229,16 +234,21 @@ fn text(entry: &Entry) -> Result<&str, (Pos, ValueError)> {
     }
 }
 
-/// The names of `authors`, a list of texts.
-fn names(entry: &Entry) -> Option<Vec<String>> {
+/// The names of `authors`, a list of texts, or an error at the value, or at a name that is blank.
+fn names(entry: &Entry) -> Result<Vec<String>, (Pos, ValueError)> {
     let edu_yaml::Value::List(items) = &entry.value.value else {
-        return None;
+        return Err((entry.value.pos, ValueError::NotNames));
     };
-    let names = items.iter().map(|item| match &item.value {
-        edu_yaml::Value::Str(name) => Some(name.clone()),
-        edu_yaml::Value::List(_) | edu_yaml::Value::Map(_) => None,
-    });
-    names.collect()
+    let name = |item: &Node| match &item.value {
+        edu_yaml::Value::Str(name) if name.trim().is_empty() => {
+            Err((item.pos, ValueError::BlankAuthor))
+        }
+        edu_yaml::Value::Str(name) => Ok(name.clone()),
+        edu_yaml::Value::List(_) | edu_yaml::Value::Map(_) => {
+            Err((entry.value.pos, ValueError::NotNames))
+        }
+    };
+    items.iter().map(name).collect()
 }
 
 #[cfg(test)]
@@ -311,6 +321,32 @@ mod tests {
         assert_eq!(
             (home.order, home.redirect_to.as_deref()),
             (Order::Date, Some("http://a.org/"))
+        );
+    }
+
+    #[test]
+    fn a_title_or_a_name_of_authors_that_is_blank_is_an_error_at_it() {
+        // The line, column and kind of the error in the header `header` of a news post.
+        let error = |header: &str| {
+            let text = format!("---\n{header}---\n");
+            match Page::read(Path::new("content/news/a.md"), &text) {
+                Err(PageError::Value(pos, error)) => Some((pos.line, pos.col, error)),
+                Err(_) | Ok(_) => None,
+            }
+        };
+        for title in ["\"\"", "''", "\" \"", "\" \\t \"", "\"\\n\"", "\u{a0}"] {
+            let found = error(&format!("title: {title}\n"));
+            assert_eq!(found, Some((2, 8, ValueError::BlankTitle)), "{title}");
+        }
+        let authors = "title: A\nauthors:\n  - Jane Doe\n  - \" \"\n  - \"\"\n";
+        assert_eq!(error(authors), Some((5, 5, ValueError::BlankAuthor)));
+        let authors = "title: A\nauthors:\n  - ''\n";
+        assert_eq!(error(authors), Some((4, 5, ValueError::BlankAuthor)));
+        // Spaces around a title or a name are not all of it.
+        let a = page("news/a.md", "title: \" A \"\nauthors:\n  - \" B\"\n");
+        assert_eq!(
+            (a.title.as_deref(), a.authors),
+            (Some(" A "), vec![" B".to_owned()])
         );
     }
 

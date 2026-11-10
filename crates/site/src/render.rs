@@ -40,7 +40,9 @@ pub(crate) fn site(
 }
 
 /// The settings in `text`, the YAML of `site.yaml`, which must have `base_url`; with `base_url`
-/// in its place if given, also as the value `site.base_url` of the layouts.
+/// in its place if given, also as the value `site.base_url` of the layouts. The pages show the
+/// `title` in their title and the home page the `description` as its heading, so neither can be
+/// blank.
 fn settings(text: &str, base_url: Option<&BaseUrl>) -> Result<Site, PageError> {
     let entries = edu_yaml::parse(text).map_err(PageError::Header)?;
     let Some(entry) = entries.iter().find(|entry| entry.key == "base_url") else {
@@ -52,6 +54,19 @@ fn settings(text: &str, base_url: Option<&BaseUrl>) -> Result<Site, PageError> {
     };
     let own = own.ok_or(PageError::Value(entry.value.pos, ValueError::BadBaseUrl))?;
     let base_url = base_url.cloned().unwrap_or(own);
+    for entry in &entries {
+        let blank = match entry.key.as_str() {
+            "title" => ValueError::BlankSiteTitle,
+            "description" => ValueError::BlankSiteDescription,
+            _ => continue,
+        };
+        match &entry.value.value {
+            edu_yaml::Value::Str(text) if text.trim().is_empty() => {
+                return Err(PageError::Value(entry.value.pos, blank));
+            }
+            edu_yaml::Value::Str(_) | edu_yaml::Value::List(_) | edu_yaml::Value::Map(_) => {}
+        }
+    }
     let values = entries.iter().map(|entry| match entry.key.as_str() {
         "base_url" => (entry.key.clone(), Value::Str(base_url.to_string())),
         _ => (entry.key.clone(), value(&entry.value)),
@@ -385,6 +400,35 @@ mod tests {
             let error = ContentError { path, error }.to_string();
             assert_eq!(error, format!("site.yaml:{expected}"), "{text}");
         }
+    }
+
+    #[test]
+    fn the_title_and_the_description_of_the_settings_are_not_blank() {
+        let (title, description) = (
+            "the `title` is empty or only spaces; write the site's name, which the pages show in \
+             their title",
+            "the `description` is empty or only spaces; write a sentence about the site, which \
+             the home page shows as its heading",
+        );
+        let cases = [
+            ("title: \"\"\n", "2:8", title),
+            ("title: T\ndescription: \" \"\n", "3:14", description),
+            // The first in the file.
+            ("description: \"\\t\"\ntitle: ''\n", "2:14", description),
+        ];
+        for (rest, pos, message) in cases {
+            let text = format!("base_url: https://a.org\n{rest}");
+            let error = settings(&text, None).err().unwrap();
+            let path = PathBuf::from("site.yaml");
+            let error = ContentError { path, error }.to_string();
+            assert_eq!(
+                error,
+                format!("site.yaml:{pos}: error: {message}"),
+                "{text}"
+            );
+        }
+        let text = "base_url: https://a.org\ntitle: \" T \"\ndescription: D\n";
+        assert!(settings(text, None).is_ok());
     }
 
     #[test]
