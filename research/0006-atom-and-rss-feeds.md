@@ -1,13 +1,13 @@
 # Research 0006 — Atom and RSS Feeds of the News
-**Date:** 2026-11-09, updated 2026-11-10 · **Status:** decided; in review as pull requests 38 to 47 of the fork
-kenesparta/rust-edu.github.io
+**Date:** 2026-11-09, updated 2026-11-10 · **Status:** decided; merged into `main` of the fork
+kenesparta/rust-edu.github.io as its pull requests 38 to 47, and so part of upstream PR #14
 
 rust-edu.org has never had a feed. Upstream issue #6 (2022) asks for "a way to follow progress", and on upstream PR #14
 the maintainer wrote that "the Atom feed is going to need to happen fairly quickly". This note checks what exists today,
 settles the shape of two feeds of the news, one in Atom and one in RSS, maps them onto the generator, and reports a
 prototype that was built, tested and shown in a draft pull request on the fork, kenesparta/rust-edu.github.io#36. On
 2026-11-10 its open points were decided (§5), and the prototype became ten pull requests on the fork, with three more
-fixes (§7.2).
+fixes, which merged into the fork's `main` the same day (§7.2).
 
 **The short version.** Two feeds of the same posts: Atom 1.0 at `/atom.xml` and RSS 2.0 at `/rss.xml`, written by
 `edu build` next to `sitemap.xml`. They list every live post of a section with `sort_by: date`, which today means the
@@ -20,9 +20,9 @@ Two gaps close with the feeds. Unicode noncharacters pass both parsers, and two 
 allowed in XML. And the links of a post's text go unchecked when its layout leaves the text out. A third bug, found on
 the way, stops any pull request that has a draft news post. The prototype is six commits on the fork's branch
 `prototype/feeds`, on top of the fork's `main`, and each passes `make check`. Both feeds are valid on the W3C Feed
-Validation Service, with 0 errors, and FreshRSS found them by itself from `/news/`. The work lands as ten stacked pull
-requests on the fork, of 7 to 512 changed lines, which join upstream PR #14 as they merge (§7.2). Deployed on the
-fork's Pages site, both feeds are valid by address too, with no warning (§7.3).
+Validation Service, with 0 errors, and FreshRSS found them by itself from `/news/`. The work landed as ten stacked
+pull requests on the fork, of 7 to 512 changed lines, which joined upstream PR #14 as they merged (§7.2). Deployed on
+the fork's Pages site, both feeds are valid by address too, with no warning (§7.3).
 
 ## 1. What Exists Today
 
@@ -210,7 +210,8 @@ Whether the generator stays at all is the maintainers' decision.
 ## 6. Gaps Found on the Way
 
 The first three were checked with a build of `main` at dede921; the code that they touch is the same at 38c1acc and at
-b7c131d. The last two are known limits of the prototype (§7.1), fixed in the pull requests of §7.2.
+b7c131d. They are described as they were then, before their fixes. The last two are known limits of the prototype
+(§7.1). All five are fixed in the pull requests of §7.2.
 
 1. **Noncharacters reach the HTML.** XML 1.0 allows neither U+FFFE nor U+FFFF. Both parsers refuse control characters
    (`crates/markdown/src/lib.rs:97`, `crates/yaml/src/lib.rs:124`), but noncharacters are not control characters. So
@@ -299,9 +300,9 @@ first stands alone: it fixes `main` as it is today.
 
 ### 7.2 The Pull Requests
 
-The work is ten pull requests on the fork, stacked: each is based on the one before and merges into the fork's `main`
-in order, and each joins upstream PR #14 as it merges. The numbers are those of kenesparta/rust-edu.github.io, and the
-changed lines are those of each pull request against the one below it.
+The work is ten pull requests on the fork, stacked: each was based on the one before. They merged into the fork's
+`main` in order on 2026-11-10, each with a merge commit, and joined upstream PR #14 as they merged. The numbers are
+those of kenesparta/rust-edu.github.io, and the changed lines are those of each pull request against the one below it.
 
 | Fork PR | Branch | Changed lines | What it does |
 |---|---|---|---|
@@ -319,7 +320,7 @@ changed lines are those of each pull request against the one below it.
 Together they change 1,436 lines (+1,292 −144) in 43 files, and the generator grows from 7,553 to 8,583 lines of
 Rust, tests included. The largest, 46, is under Plan 0002's limit of 600. Every new error has its own variant, and
 every match on the new enums names each case. The feeds have the same bytes as the prototype's, for rust-edu.org and
-for the fork's address.
+for the fork's address. Pull request 49, merged after them, added this note.
 
 ### 7.3 Checked on the Pull Requests
 
@@ -329,18 +330,21 @@ for the fork's address.
 | `make ci` on the top of the stack | Passes, with the two builds the same |
 | CI of 38 to 47 | Passes for each, with its preview attached |
 | The feeds of the top of the stack, built for rust-edu.org, for the fork's address and for `https://example.github.io/rust-edu`, against the prototype's | The same bytes (`cmp`) |
-| The fork's Pages site, deployed by hand from the top of the stack, until the next merge into the fork's `main` | Serves `/atom.xml` and `/rss.xml` as `application/xml`, with the bytes of a local build for the fork's address; the home page names both feeds, Atom first |
+| The fork's Pages site, deployed by hand from the top of the stack, before the merge | Served `/atom.xml` and `/rss.xml` as `application/xml`, with the bytes of a local build for the fork's address; the home page named both feeds, Atom first |
 | W3C Feed Validation Service, given the address of each feed on that site | "This is a valid Atom 1.0 feed." and "This is a valid RSS feed.": 0 errors, 0 warnings, and no recommendation. With an address, the validator can match each feed's `self` link to it, so the `SelfDoesntMatchLocation` of the direct input is gone |
+| The fork's `main` after each of the ten merges | Holds the files of the pull request just merged, so after the last one those of the top of the stack |
+| The fork's Pages site, deployed by `deploy.yml` from the fork's `main` after the merge | Serves the 35 files of a local build of `main` for the fork's address, byte for byte, `/atom.xml` and `/rss.xml` among them, both as `application/xml` |
 
 **Done when:**
 
 - The CI of each pull request passes, with its two builds the same (done for 38 to 47).
 - The W3C Feed Validation Service, given the addresses of the deployed feeds, says that both are valid, with no
   warnings (done on the fork's Pages site; to repeat on rust-edu.org).
-- A feed reader given only `https://rust-edu.org/`, after the merge, finds a feed, and shows the three posts with their
-  dates, authors, images and working links. FreshRSS did part of this, with the site built for the fork's address and
-  served locally: given `/news/`, not the home page, it found the feeds and took the Atom feed, and it showed the three
-  posts with their dates, and the campus tour post with its author and its photos. No link in a post was followed.
+- A feed reader given only `https://rust-edu.org/`, once PR #14 is merged and deployed, finds a feed, and shows the
+  three posts with their dates, authors, images and working links. FreshRSS did part of this, with the site built for
+  the fork's address and served locally: given `/news/`, not the home page, it found the feeds and took the Atom feed,
+  and it showed the three posts with their dates, and the campus tour post with its author and its photos. No link in
+  a post was followed.
 - `urls.txt` lists both feeds, and a test checks that the ids and guids stay at `https://rust-edu.org` under another
   address (done).
 
