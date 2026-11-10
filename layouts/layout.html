@@ -37,6 +37,13 @@
                 <li><a href="{{ item.url }}">{{ item.name }}</a></li>
                 {% endfor %}
             </ul>
+            {# The feed's symbol, a link to the Atom feed, which a feed reader follows. /news/ links to both feeds. #}
+            <a class="feed-link" href="/atom.xml" aria-label="News feed (Atom)" title="News feed (Atom)">
+                <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true">
+                    <circle cx="3.25" cy="12.75" r="1.5" fill="currentColor"/>
+                    <path d="M2 7.25a6.75 6.75 0 0 1 6.75 6.75M2 2.25A11.75 11.75 0 0 1 13.75 14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                </svg>
+            </a>
             {# A sun in the light theme and a moon in the dark one: style.css shows the one for the theme. #}
             <button class="theme-toggle" type="button" aria-label="Switch to the dark theme" title="Switch to the dark theme" hidden>
                 <svg class="sun" width="18" height="18" viewBox="0 0 16 16" aria-hidden="true">

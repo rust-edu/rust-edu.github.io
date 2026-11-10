@@ -208,8 +208,11 @@ strong {
     font-size: 1rem;
 }
 
+/* Two small buttons end the menu: the link to the news feed, then the theme
+   button. */
+.site-nav .feed-link,
 .theme-toggle {
-    margin-left: 1.25rem;
+    margin-left: 0.5rem;
     padding: 0.3125rem;
     border: 1px solid var(--color-rule);
     border-radius: var(--radius);
@@ -218,11 +221,17 @@ strong {
     cursor: pointer;
 }
 
+.site-nav .feed-link {
+    margin-left: 1.25rem;
+}
+
+.site-nav .feed-link:hover,
 .theme-toggle:hover {
     border-color: currentColor;
     color: var(--color-link);
 }
 
+.feed-link svg,
 .theme-toggle svg {
     display: block;
 }
@@ -505,6 +514,7 @@ main,
         color: var(--color-text);
     }
 
+    .site-nav .feed-link,
     .theme-toggle {
         display: none;
     }
