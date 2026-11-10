@@ -11,6 +11,7 @@
     color-scheme: light dark;
 
     --color-bg: #fbf8f3;
+    --color-glass: #fbf8f3c2;
     --color-surface: #f4eee4;
     --color-text: #2a3439;
     --color-muted: #5f5b53;
@@ -34,6 +35,7 @@
 @media screen and (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
         --color-bg: #1b1815;
+        --color-glass: #1b1815c2;
         --color-surface: #26221e;
         --color-text: #ece7df;
         --color-muted: #b5aea3;
@@ -68,6 +70,7 @@
         color-scheme: dark;
 
         --color-bg: #1b1815;
+        --color-glass: #1b1815c2;
         --color-surface: #26221e;
         --color-text: #ece7df;
         --color-muted: #b5aea3;
@@ -145,7 +148,7 @@ strong {
 
 .skip-link {
     position: absolute;
-    z-index: 1;
+    z-index: 2;
     top: 0.5rem;
     padding: 0.5rem 1rem;
     background: var(--color-bg);
@@ -155,15 +158,49 @@ strong {
     transform: translateY(-200%);
 }
 
-/* Header */
+/* Header: a bar across the screen, with its logo and menu in the column */
 
 .site-header {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    padding: 0.5rem 0;
+    padding: 0.5rem 1rem;
+    padding: 0.5rem max(1rem, 50% - 20rem);
     border-bottom: 1px solid var(--color-rule);
+    background: var(--color-bg);
+}
+
+/* On a screen that is tall enough, the bar stays at the top, and a link to an
+   id stops below it. Where the browser can blur what lies behind, the bar is
+   frosted glass, so the menu reads well over any text or photo. */
+@media screen and (min-height: 30rem) {
+    html {
+        scroll-padding-top: 5rem;
+    }
+
+    .site-header {
+        position: sticky;
+        z-index: 1;
+        top: 0;
+    }
+
+    @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+        .site-header {
+            background: var(--color-glass);
+            -webkit-backdrop-filter: saturate(1.8) blur(20px);
+            backdrop-filter: saturate(1.8) blur(20px);
+        }
+    }
+}
+
+/* Plain paper for a reader who asks for less transparency or their own colors. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+    .site-header {
+        background: var(--color-bg);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
 }
 
 /* The drawing's empty margin hangs out of the column, so the R stands on the
@@ -234,6 +271,23 @@ strong {
 .feed-link svg,
 .theme-toggle svg {
     display: block;
+}
+
+/* A narrow screen: the menu takes the row under the logo, its two buttons at the
+   right, and only that row stays at the top. The logo is 36px high. */
+@media screen and (max-width: 31rem) {
+    .site-header {
+        top: calc(-36px - 0.5rem);
+    }
+
+    .site-nav {
+        flex: 1 0 100%;
+        padding-top: 0.5rem;
+    }
+
+    .site-nav .feed-link {
+        margin-left: auto;
+    }
 }
 
 /* The button shows a sun in the light theme. Its moon is for the dark theme. */
@@ -472,7 +526,6 @@ body {
     border-top: 3px solid var(--color-accent);
 }
 
-.site-header,
 main,
 .site-footer p,
 .site-footer nav {
