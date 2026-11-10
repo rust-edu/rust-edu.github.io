@@ -31,6 +31,37 @@ pub enum LinkError {
     ToDraft(String),
 }
 
+/// What a link goes to, by how it starts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Link {
+    /// Another site or an email address: `https://`, `http://` or `mailto:`.
+    Away,
+    /// An id of the same page: `#`.
+    Here,
+    /// A page or file of the site: a single `/`.
+    Top,
+    /// Anything else, such as a relative link, which the check refuses.
+    Other,
+}
+
+impl Link {
+    /// What `link`, as written, goes to; another site's address may hold a `#` or a `/` of its own.
+    pub(crate) fn of(link: &str) -> Self {
+        if ["https://", "http://", "mailto:"]
+            .iter()
+            .any(|start| link.starts_with(start))
+        {
+            Self::Away
+        } else if link.starts_with('#') {
+            Self::Here
+        } else if link.starts_with('/') && !link.starts_with("//") {
+            Self::Top
+        } else {
+            Self::Other
+        }
+    }
+}
+
 /// A file of the built site, for the links to it: whether the live site has it, and for a page,
 /// the ids of its elements.
 pub(crate) struct Target<'a> {
@@ -106,28 +137,23 @@ fn resolve(
     live: bool,
     targets: &BTreeMap<String, Target<'_>>,
 ) -> Result<(), LinkError> {
-    if ["https://", "http://", "mailto:"]
-        .iter()
-        .any(|start| link.starts_with(start))
-    {
-        return Ok(());
-    }
     let (path, id) = match link.split_once('#') {
         Some((path, id)) => (path, Some(id)),
         None => (link, None),
     };
-    let from_top = path.strip_prefix('/').filter(|rest| !rest.starts_with('/'));
-    let file = if path.is_empty() && id.is_some() {
-        page.to_owned()
-    } else if let Some(rest) = from_top {
-        let rest = decode(rest).ok_or_else(|| LinkError::NoTarget(written(link)))?;
-        if rest.is_empty() || rest.ends_with('/') {
-            format!("{rest}index.html")
-        } else {
-            rest
+    let file = match Link::of(link) {
+        Link::Away => return Ok(()),
+        Link::Here => page.to_owned(),
+        Link::Top => {
+            let rest = path.get(1..).unwrap_or_default();
+            let rest = decode(rest).ok_or_else(|| LinkError::NoTarget(written(link)))?;
+            if rest.is_empty() || rest.ends_with('/') {
+                format!("{rest}index.html")
+            } else {
+                rest
+            }
         }
-    } else {
-        return Err(LinkError::BadLink(written(link)));
+        Link::Other => return Err(LinkError::BadLink(written(link))),
     };
     let Some(target) = targets.get(&file) else {
         if targets.contains_key(&format!("{file}/index.html")) {
@@ -202,6 +228,21 @@ pub(crate) fn links(html: &str) -> impl Iterator<Item = (usize, &str)> {
     let attributes = attributes(html).into_iter();
     let links = attributes.filter(|(name, ..)| matches!(*name, "href" | "src"));
     links.map(|(_, at, value)| (at, value))
+}
+
+/// `html` with the text that `prefix` gives for a link, if any, put before that link.
+pub(crate) fn prefix<'a>(html: &str, prefix: impl Fn(&str) -> Option<&'a str>) -> String {
+    let mut prefixed = String::with_capacity(html.len());
+    let mut last = 0;
+    for (at, link) in links(html) {
+        if let Some(before) = prefix(link) {
+            prefixed.push_str(html.get(last..at).unwrap_or_default());
+            prefixed.push_str(before);
+            last = at;
+        }
+    }
+    prefixed.push_str(html.get(last..).unwrap_or_default());
+    prefixed
 }
 
 /// The ids of the elements of `html`.
@@ -351,6 +392,26 @@ mod tests {
             super::resolve("/draft/", "a/index.html", false, &targets),
             Ok(())
         );
+    }
+
+    #[test]
+    fn a_link_goes_away_to_an_id_here_to_the_top_or_elsewhere_by_how_it_starts() {
+        let cases = [
+            ("https://a.org/#b", Link::Away),
+            ("http://a.org", Link::Away),
+            ("mailto:a@a.org", Link::Away),
+            ("#a", Link::Here),
+            ("#/a", Link::Here),
+            ("/", Link::Top),
+            ("/a/#b", Link::Top),
+            ("", Link::Other),
+            ("a/#b", Link::Other),
+            ("//a.org/", Link::Other),
+            ("https:a", Link::Other),
+        ];
+        for (link, kind) in cases {
+            assert_eq!(Link::of(link), kind, "{link}");
+        }
     }
 
     #[test]
