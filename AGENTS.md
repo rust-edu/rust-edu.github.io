@@ -60,6 +60,7 @@ weaken a check or a test to make it pass.
 ## Build and deploy
 
 - A push to `main` publishes the site. Make each change on a branch and propose it in a pull request.
+- `FROM check AS live` in the `Dockerfile` is what stops a bad push from publishing. Keep it.
 - `rust-toolchain.toml` and the `FROM` tag of the `Dockerfile` name the same Rust. Change them together; CI fails
   when they differ.
 - `.dockerignore` is an allowlist and the `Dockerfile` copies paths by name, so a new top-level file or folder that
