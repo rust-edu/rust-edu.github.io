@@ -366,20 +366,20 @@ mod tests {
 
     #[test]
     fn every_markdown_file_under_content_is_a_page_and_every_html_file_a_layout() {
-        // `valid` holds seven pages, one of them a redirect and three of them drafts or in the
-        // folder of one, three other files, one of them in that folder, and three layouts and
-        // `notes.txt`.
+        // `valid` holds eight pages, one of them a redirect, one a list of the news and three of
+        // them drafts or in the folder of one, three other files, one of them in that folder, and
+        // four layouts and `notes.txt`.
         let (root, mut options) = site("valid");
         let checked = pages(&root, &options).unwrap();
-        assert_eq!((checked.pages, checked.layouts), (7, 3));
+        assert_eq!((checked.pages, checked.layouts), (8, 4));
         let (urls, files) = built(&checked);
-        let all = "/2027/ / /chat/ /news/draft/ /news/post/ /wip/ /wip/page/";
+        let all = "/2027/ / /chat/ /news/ /news/draft/ /news/post/ /wip/ /wip/page/";
         assert_eq!((urls.join(" ").as_str(), files.len()), (all, 3));
         options.drafts = Drafts::Exclude;
         let checked = pages(&root, &options).unwrap();
-        assert_eq!(checked.pages, 7);
+        assert_eq!(checked.pages, 8);
         let (urls, files) = built(&checked);
-        assert_eq!(urls.join(" "), "/2027/ / /chat/ /news/post/");
+        assert_eq!(urls.join(" "), "/2027/ / /chat/ /news/ /news/post/");
         assert_eq!(files, ["content/news/notes.txt", "content/news/sample.bib"]);
     }
 

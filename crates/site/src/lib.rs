@@ -477,7 +477,7 @@ mod tests {
 
     #[test]
     fn check_writes_how_many_pages_it_checked() {
-        assert_eq!(output(&Command::Check), "checked 7 pages with 3 layouts\n");
+        assert_eq!(output(&Command::Check), "checked 8 pages with 4 layouts\n");
     }
 
     #[test]
