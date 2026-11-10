@@ -1,8 +1,8 @@
 //! `edu check`: every Markdown page under `content/` starts with a header in the YAML subset whose
 //! values the site can use, its text is in the Markdown subset, the layouts of `layouts/` render
-//! it with the settings of `site.yaml`, and its links go to pages and files of the site; and the
-//! other files of `content/` and `static/` are of a type that the site publishes. `edu build`
-//! checks the same, and renders the pages that it writes.
+//! it with the settings of `site.yaml`, and its links go to pages and files of the site, in the
+//! feed's posts too; and the other files of `content/` and `static/` are of a type that the site
+//! publishes. `edu build` checks the same, and renders the pages that it writes.
 
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 
 use crate::Error;
 use crate::build::{self, BaseUrl, Drafts, Options};
+use crate::feed;
 use crate::file::{self, FileError};
 use crate::links::{self, LinkError, Target};
 use crate::page::{Kind, Page};
@@ -205,7 +206,11 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             let (live, ids) = (true, None);
             targets.insert(name.to_owned(), Target { live, ids });
         }
-        links::check(root, &rendered, &targets, &layouts, &mut errors)?;
+        let posts = feed::posts(&pages, is_live).unwrap_or_else(|error| {
+            errors.push(error);
+            Vec::new()
+        });
+        links::check(root, &rendered, &posts, &targets, &layouts, &mut errors)?;
     }
     if errors.is_empty() {
         let (pages, layouts, base_url) = (paths.len(), layouts.len(), site.base_url);
@@ -608,6 +613,40 @@ mod tests {
         symlink("style.css", root.join("static/.linked.css")).unwrap();
         let checked = pages(&root, &OPTIONS).unwrap();
         assert_eq!(checked.statics, [Path::new("static/style.css")]);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn the_links_of_a_live_posts_text_are_checked_even_when_its_layout_leaves_it_out() {
+        const OPTIONS: Options = Options {
+            drafts: Drafts::Include,
+            base_url: None,
+        };
+
+        /// The errors of the site in `root`.
+        fn errors(root: &Path) -> Vec<String> {
+            match pages(root, &OPTIONS) {
+                Ok(_) => Vec::new(),
+                Err(Error::Content(errors)) => errors.iter().map(ToString::to_string).collect(),
+                Err(error) => panic!("{error}"),
+            }
+        }
+
+        let root = temp_site("feed");
+        let write = |path: &str, text: &str| fs::write(root.join(path), text).unwrap();
+        fs::create_dir(root.join("content/news")).unwrap();
+        let news = "---\ntitle: News\nsort_by: date\ntemplate: home.html\n---\n";
+        write("content/news/_index.md", news);
+        let header = "---\ntitle: Post\ndate: 2027-03-01\ntemplate: home.html\n";
+        let post = |rest: &str| write("content/news/post.md", &format!("{header}{rest}"));
+        // The layout leaves out the text of the post, whose links are checked all the same.
+        post("---\n[a](a/)\n");
+        let bad = "cannot be checked: a link to a page or file of the site starts with `/`, as in \
+                   `/news/`, and other links with `#`, `https://`, `http://` or `mailto:`";
+        let expected = [format!("content/news/post.md:6:5: error: `a/` {bad}")];
+        assert_eq!(errors(&root), expected);
+        post("---\n[a](/news/)\n");
+        assert_eq!(errors(&root), Vec::<String>::new());
         fs::remove_dir_all(root).unwrap();
     }
 

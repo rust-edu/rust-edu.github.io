@@ -1,5 +1,6 @@
-//! The links of the site: each `href` and `src` in the HTML of a page, and each address of
-//! `urls.txt`, must go to a page or file of the built site, and a `#` to an id of its page.
+//! The links of the site: each `href` and `src` in the HTML of a page and in the text of each post
+//! of the feed, and each address of `urls.txt`, must go to a page or file of the built site, and a
+//! `#` to an id of its page.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -9,6 +10,7 @@ use edu_yaml::Pos;
 
 use crate::Error;
 use crate::check::{ContentError, PageError, Rendered, read};
+use crate::feed::Post;
 use crate::page::TOP;
 use crate::render::Layouts;
 
@@ -69,24 +71,32 @@ pub(crate) struct Target<'a> {
     pub(crate) ids: Option<Vec<&'a str>>,
 }
 
-/// Checks each link of `pages`, and each address of `urls.txt` in `root` if there is one, against
+/// Checks each link of `pages` and of the text of `posts`, which the live site has and a layout may
+/// leave out of its page, and each address of `urls.txt` in `root` if there is one, against
 /// `targets`, the files of the built site by their path in it. An error goes to `errors` once, at
 /// the first place where its link is written: the page, `site.yaml` or one of `layouts`.
 pub(crate) fn check(
     root: &Path,
     pages: &[Rendered],
+    posts: &[Post],
     targets: &BTreeMap<String, Target<'_>>,
     layouts: &Layouts,
     errors: &mut Vec<ContentError>,
 ) -> Result<(), Error> {
-    for page in pages {
-        let file = key(&page.url);
-        for (_, link) in links(&page.html) {
+    let pages = pages
+        .iter()
+        .map(|page| (&page.path, &page.url, page.live, &page.html));
+    let posts = posts
+        .iter()
+        .map(|post| (&post.path, &post.url, true, &post.body));
+    for (page, url, live, html) in pages.chain(posts) {
+        let file = key(url);
+        for (_, link) in links(html) {
             let link = unescape(link);
-            let Err(kind) = resolve(&link, &file, page.live, targets) else {
+            let Err(kind) = resolve(&link, &file, live, targets) else {
                 continue;
             };
-            let (path, pos) = locate(root, &page.path, layouts, &link)?;
+            let (path, pos) = locate(root, page, layouts, &link)?;
             let error = ContentError {
                 path,
                 error: PageError::Link(pos, kind),

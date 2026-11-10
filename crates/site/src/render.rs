@@ -1,6 +1,7 @@
 //! Rendering pages: the settings of `site.yaml`, the layouts of `layouts/`, and the values that
 //! the layouts read for each page of `content/`; and the page of a redirect.
 
+use std::cmp::Ordering;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -254,7 +255,10 @@ fn own_values(page: &Page) -> Vec<(String, Value)> {
 /// `sort_by: date` newest first and on the same day by URL from Z to A, as Zola lists them; with
 /// `sort_by: date`, a draft needs a `date` too. A page of the live site thus lists the same pages
 /// in a build with drafts, and links to no draft.
-fn listing<'a>(section: &Page, pages: &'a [Page]) -> Result<Vec<&'a Page>, ContentError> {
+pub(crate) fn listing<'a>(
+    section: &Page,
+    pages: &'a [Page],
+) -> Result<Vec<&'a Page>, ContentError> {
     let dir = section.path.parent();
     let beside = |page: &&Page| page.kind == Kind::Page && page.path.parent() == dir;
     let mut listed: Vec<&Page> = pages.iter().filter(beside).collect();
@@ -264,11 +268,17 @@ fn listing<'a>(section: &Page, pages: &'a [Page]) -> Result<Vec<&'a Page>, Conte
             if let Some(page) = listed.iter().find(|page| page.date.is_none()) {
                 return Err(page.error(TOP, ValueError::NoDate));
             }
-            listed.sort_by(|a, b| (&b.date, &b.url).cmp(&(&a.date, &a.url)));
+            listed.sort_by(newest_first);
         }
     }
     listed.retain(|page| !page.draft);
     Ok(listed)
+}
+
+/// The order of the pages of a section with `sort_by: date`: newest first, and on the same day by
+/// URL from Z to A.
+pub(crate) fn newest_first(a: &&Page, b: &&Page) -> Ordering {
+    (&b.date, &b.url).cmp(&(&a.date, &a.url))
 }
 
 #[cfg(test)]

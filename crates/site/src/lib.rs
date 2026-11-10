@@ -4,6 +4,7 @@
 
 mod build;
 mod check;
+mod feed;
 mod file;
 mod links;
 mod page;
