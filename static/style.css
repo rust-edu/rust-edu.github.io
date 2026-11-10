@@ -46,11 +46,13 @@
         --color-subheading: #c3a6ee;
     }
 
-    /* Black lettering: invert it, and turn the hues back. The color is for the alt
-       text of a failed logo, which inverts too. */
+    /* The logo with light lettering takes the place of the one with black. */
     :root:not([data-theme="light"]) .site-logo img {
-        color: var(--color-bg);
-        filter: invert(1) hue-rotate(180deg);
+        display: none;
+    }
+
+    :root:not([data-theme="light"]) .site-logo [src$="#dark"] {
+        display: block;
     }
 }
 
@@ -76,8 +78,11 @@
     }
 
     :root[data-theme="dark"] .site-logo img {
-        color: var(--color-bg);
-        filter: invert(1) hue-rotate(180deg);
+        display: none;
+    }
+
+    :root[data-theme="dark"] .site-logo [src$="#dark"] {
+        display: block;
     }
 }
 
@@ -160,6 +165,12 @@ strong {
    text's edge, and stays in the link, clear of the focus ring. */
 .site-logo {
     margin-left: -11px;
+}
+
+/* The logo for the dark theme, whose lettering is light. In both logos the line
+   around the black cap has the light paper's color, so it shows only on dark. */
+.site-logo [src$="#dark"] {
+    display: none;
 }
 
 .site-header ul,
