@@ -25,7 +25,7 @@ on the fork kenesparta/rust-edu.github.io) · **Research:**
 | Resources page | A Markdown list (decision 1 below); the 3 empty subcategories go |
 | Zulip | The menu and the home page link to `/zulip/`, which redirects to `https://rust-edu.zulip.cs.pdx.edu` |
 | Link color | Brand green `#0b7261` (decision 2) |
-| JavaScript | None; the menu wraps on small screens (decision 3) |
+| JavaScript | Only the theme button's two short inline scripts in `layouts/layout.html`; without JavaScript the button stays hidden and the site follows the system's theme; the menu wraps on small screens (decision 3, changed 2026-11-09) |
 | Names | Binary `edu`; crates `edu-yaml`, `edu-markdown`, `edu-template` and `edu-site` in `crates/{yaml,markdown,template,site}`; templates in `layouts/` (decision 5, 2026-11-01) |
 | Code license | CC0 1.0 like the rest of the repository, `license = "CC0-1.0"` (decision 6, 2026-11-01) |
 | Smart quotes | None: quotes and apostrophes render as typed, in Zola too (decision 4, 2026-11-03) |
@@ -149,6 +149,9 @@ twenty-two PRs; research 0002 §9 sizes a broader subset at ~4,650.
 2. *Decided 2026-10-28: brand green.* Link color: **brand green `#0b7261`** (today's `$green`; 5.84:1 on white), or
    darker blue `#276f94` (5.54:1).
 3. *Decided 2026-10-28: none.* JavaScript: **none** (the menu wraps on small screens), or a small disclosure menu.
+   *Changed 2026-11-09 (fork PR #35): JavaScript for the theme button only.* Two short inline scripts in
+   `layouts/layout.html` run the button that switches between the light and the dark theme; without JavaScript the
+   button stays hidden and the site follows the system's theme. The menu still wraps on small screens.
 4. *Decided 2026-11-03: dropped.* Smart quotes: **dropped** (about 12 lines render as typed once resources are
    Markdown), or implemented (~60 lines).
 5. *Decided 2026-11-01: as proposed.* Names: **binary `edu`; crates `edu-yaml`, `edu-markdown`, `edu-template`,
