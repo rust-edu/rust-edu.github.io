@@ -42,7 +42,7 @@ jobs:
         # is also written as an annotation, which GitHub shows on that line of the pull request.
         run: |
           set -o pipefail
-          docker build --progress=plain --target check . 2>&1 | sed -E '
+          docker build --progress=plain --target check --output type=cacheonly . 2>&1 | sed -uE '
             p
             s/^#[0-9]+ [0-9.]+ //
             /^[^: ]+:[0-9]+:[0-9]+: error: /!d
