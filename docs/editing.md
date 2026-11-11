@@ -43,7 +43,7 @@ The text of the page starts here.
 
 | Key | Used in | Meaning |
 |---|---|---|
-| `title` | every file but a redirect | The page title, shown as its only top-level heading; the home page shows the `description` of `site.yaml` instead. Quote it when it contains `: `, as in `title: "Campus Tour: Rust Africa"`. It cannot be empty or only spaces. |
+| `title` | every file but a redirect | The page title, shown as its only top-level heading; the home page's heading is the words of the `description` of `site.yaml`, styled in `layouts/home.html`, instead. Quote it when it contains `: `, as in `title: "Campus Tour: Rust Africa"`. It cannot be empty or only spaces. |
 | `date` | news posts | `YYYY-MM-DD`, a day of the calendar from 1900 on; the news list and the feeds are sorted by it, newest first, so every news post needs one. The feeds give it as the post's time, at midnight UTC. |
 | `authors` | news posts | One name per line, none of them empty or only spaces; shown in the byline as "A and B on Mar 1, 2027". |
 | `draft` | every file but the home page | `draft: true` keeps the page off the live site, and in an `_index.md` everything in its folder too; pull request builds still include it at its address, but the news list leaves it out. |
@@ -115,6 +115,8 @@ reader knows a post by its address, so keep the file name of a post once it is p
   none).
 - **Menu, next steps and footer links:** the `menu`, `hero` and `footer` lists of `site.yaml`; the first link of
   `hero` is the button on the home page.
+- **The site's description:** the `description` of `site.yaml`, which the home page's title, search engines and the
+  feeds show, and the same words in the heading of `layouts/home.html`, whose three parts `static/style.css` styles.
 - **Moving or removing a page or file:** other sites may link to it, so its address is in `urls.txt`, and the check
   stops while that address goes nowhere. Delete its line there on purpose, or keep the old address of a page with an
   `_index.md` at it that has `redirect_to`.

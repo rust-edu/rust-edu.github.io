@@ -4,6 +4,8 @@
 # post by its id: so it must not change, or the readers show every post again as new.
 base_url: https://rust-edu.org
 title: Rust Edu
+# In the home page's title, in every page's summary for search engines, and in the feeds.
+# The home page's heading says the same words, styled, in layouts/home.html: change both together.
 description: Rust education in academia (and beyond)
 menu:
   - name: News

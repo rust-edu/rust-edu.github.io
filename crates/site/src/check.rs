@@ -92,7 +92,7 @@ pub enum ValueError {
     /// A `title` of `site.yaml`, which the pages show in their title, that is empty or only white
     /// space.
     BlankSiteTitle,
-    /// A `description` of `site.yaml`, which the home page shows as its heading, that is empty or
+    /// A `description` of `site.yaml`, which the home page shows in its title, that is empty or
     /// only white space.
     BlankSiteDescription,
     /// A `site.yaml` without `title`, the name of the feeds, in a site with posts for them.
@@ -389,7 +389,7 @@ impl fmt::Display for ValueError {
             ),
             Self::BlankSiteDescription => f.write_str(
                 "the `description` is empty or only spaces; write a sentence about the site, \
-                 which the home page shows as its heading",
+                 which the home page shows in its title",
             ),
             Self::NoSiteTitle => f.write_str(
                 "the settings need `title`, the name of the feeds of the pages of a section with \

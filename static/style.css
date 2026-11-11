@@ -3,8 +3,9 @@
  *
  * Header, content and footer share one column, so they have one left edge.
  * Colors are only in the token blocks, as plain hex, which no browser can lose.
- * Text meets WCAG 2.1 AA (4.5:1) and focus outlines 3:1 in both themes. Links in
- * text stay underlined: color alone sets them off from the text by under 3:1.
+ * Text meets WCAG 2.1 AA (4.5:1, or 3:1 for large text) and focus outlines 3:1
+ * in both themes. Links in text stay underlined: color alone sets them off from
+ * the text by under 3:1.
  */
 
 :root {
@@ -568,13 +569,60 @@ main p + p:has(> strong:only-child):has(+ p > img) {
     mix-blend-mode: darken;
 }
 
-/* The statement keeps the text color beside him. */
+/* The statement in three lines: bold in the site's sans; "academia" in a book's
+   italic, shaded from Ferris's orange to rust; and a small italic aside, whose
+   parenthesis hangs out of the column. Iowan Old Style comes with Apple's
+   systems, Palatino Linotype with Windows, URW Palladio L or P052 with Linux. */
 .site-hero h1 {
     margin: 0 0 1.25rem -0.025em;
     color: var(--color-text);
     font-size: 2.5rem;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.04;
+}
+
+.site-hero h1 span,
+.site-hero h1 small {
+    display: block;
+}
+
+.site-hero h1 em,
+.site-hero h1 small {
+    font-family: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", P052, serif;
+    font-style: italic;
+    font-weight: 400;
+}
+
+/* Room at the right keeps the italic's last stroke in the shading. The orange
+   end is 3:1 on the light band, enough for a word this large. */
+.site-hero h1 em {
+    padding-right: 0.08em;
+    color: var(--color-title);
+    font-size: 1.18em;
+    letter-spacing: -0.01em;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    .site-hero h1 em {
+        background: linear-gradient(100deg, var(--color-accent), var(--color-title) 85%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    /* Under the highlight of a selection, the shaded word fades: selected, it
+       has a color of its own instead, and no highlight. */
+    .site-hero h1 em::selection {
+        color: var(--color-title);
+    }
+}
+
+.site-hero h1 small {
+    margin: 0.16em 0 0 -0.3em;
+    color: var(--color-muted);
+    font-size: 0.6em;
+    letter-spacing: 0;
 }
 
 .site-hero p {
@@ -678,7 +726,7 @@ main p + p:has(> strong:only-child):has(+ p > img) {
         grid-row: 1;
         align-self: end;
         margin-right: 1.5rem;
-        font-size: 3rem;
+        font-size: 3.5rem;
     }
 
     .site-hero p {
@@ -720,12 +768,18 @@ main,
     background: var(--color-surface);
 }
 
-/* Paper drops the button's fill. */
+/* Paper drops the button's fill, and the shading that colors the italic word,
+   which takes a plain color. */
 
 @media print {
     .site-hero a:first-child {
         background: none;
         color: var(--color-text);
+    }
+
+    .site-hero h1 em {
+        background: none;
+        color: var(--color-title);
     }
 
     .feed-menu,
