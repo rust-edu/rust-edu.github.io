@@ -1,10 +1,9 @@
-+++
-title = "Announcement: Rust-Edu"
-date = 2022-07-11
-
-[extra]
-author = "Bart Massey"
-+++
+---
+title: "Announcement: Rust-Edu"
+date: 2022-07-11
+authors:
+  - Bart Massey
+---
 
 Today we proudly and excitedly announce the formation of
 Rust-Edu, an organization dedicated to Rust education.
@@ -33,7 +32,7 @@ take on:
     easier. We believe that the notorious difficult learning curve of
     the language can be overcome with better tooling for education.
 
--   **Make Rust More Developer Friendly** — We want to provide feedback
+*   **Make Rust More Developer Friendly** — We want to provide feedback
     to the Rust Project itself, helping to make Rust a more learnable
     language for developers. We would like to identify places where we
     can help with syntax, tooling, documentation, exercises,
@@ -52,4 +51,4 @@ involved in Rust and academia, or would like to be, we would
 love to have your help. Please visit us at
 [https://rust-edu.org](https://rust-edu.org/) or reach out
 by email at
-&lt;[contact@rust-edu.org](email:contact@rust-edu.org)&gt;.
+[contact@rust-edu.org](mailto:contact@rust-edu.org).

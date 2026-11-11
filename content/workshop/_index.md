@@ -1,13 +1,13 @@
-+++
-title = "Rust Education Workshop 2022"
-+++
+---
+title: Rust Education Workshop 2022
+---
 
-The [Rust-Edu](http://rust-edu.org) Org 2022 Rust Education
+The [Rust-Edu](/) Org 2022 Rust Education
 Workshop, a one-day virtual meeting to discuss the future of
 Rust education, was held 20 August 2022.
 
-* Workshop [Proceedings](proceedings.pdf)
-* Archived [Call For Participation](cfp-2022.html)
+* Workshop [Proceedings](/workshop/proceedings.pdf)
+* Archived [Call For Participation](/workshop/cfp-2022/)
 
 Topics discussed included
 

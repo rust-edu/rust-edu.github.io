@@ -1,0 +1,73 @@
+name: ci
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generator:
+    # The checks run inside the pinned Docker image, so the runner only has to provide Docker.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Cargo.lock lists only crates of this repository
+        run: |
+          test -f Cargo.lock
+          if grep -n '^source = ' Cargo.lock; then
+            echo "::error file=Cargo.lock::Cargo.lock lists a crate from a registry or git; the generator uses the Rust standard library only"
+            exit 1
+          fi
+          # A crate copied into crates/ has no source line, so the names are checked too. A new crate
+          # of our own is added to this list on purpose.
+          crates=$(sed -n 's/^name = "\(.*\)"$/\1/p' Cargo.lock | sort | tr '\n' ' ')
+          packages=$(grep -c '^\[\[package\]\]$' Cargo.lock)
+          echo "Cargo.lock: ${crates}"
+          if [ "$crates" != "edu-markdown edu-site edu-template edu-yaml " ] || [ "$packages" != 4 ]; then
+            echo "::error file=Cargo.lock::Cargo.lock lists a crate other than edu-markdown, edu-site, edu-template and edu-yaml; the generator uses the Rust standard library only"
+            exit 1
+          fi
+      - name: The live site is built on the checks
+        run: |
+          if ! grep -qx 'FROM check AS live' Dockerfile; then
+            echo "::error file=Dockerfile::the live stage is not FROM check; that stage is what stops a bad push to main from publishing (see AGENTS.md)"
+            exit 1
+          fi
+      - name: The Dockerfile and rust-toolchain.toml name the same Rust
+        run: |
+          image=$(sed -n 's/^FROM rust:\([0-9.]*\)-.*/\1/p' Dockerfile)
+          channel=$(sed -n 's/^channel = "\([0-9.]*\)"$/\1/p' rust-toolchain.toml)
+          echo "Dockerfile: rust:${image}; rust-toolchain.toml: ${channel}"
+          if [ -z "$image" ] || [ "$image" != "$channel" ]; then
+            echo "::error file=Dockerfile::the FROM tag names Rust ${image:-?} and rust-toolchain.toml names ${channel:-?}; bump both together"
+            exit 1
+          fi
+      - name: Format, lint and build in Docker, check the pages, then test
+        # Each error of `edu check`, `file:line:col: error: …` after the step and time of the build,
+        # is also written as an annotation, which GitHub shows on that line of the pull request.
+        run: |
+          set -o pipefail
+          docker build --progress=plain --target check --output type=cacheonly . 2>&1 | sed -uE '
+            p
+            s/^#[0-9]+ [0-9.]+ //
+            /^[^: ]+:[0-9]+:[0-9]+: error: /!d
+            s/%/%25/g
+            s/^([^:]+):([0-9]+):([0-9]+): error: (.*)$/::error file=\1,line=\2,col=\3::\4/'
+      # A preview for the reviewers of a pull request: the site with its drafts, as a download.
+      - name: Build the site with its drafts
+        run: docker build --progress=plain --target preview -o preview .
+      - name: Attach the site to the checks of the pull request
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site-preview
+          path: preview/
+          retention-days: 7
+          if-no-files-found: error

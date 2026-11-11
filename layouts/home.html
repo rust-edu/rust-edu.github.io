@@ -1,0 +1,12 @@
+<div class="site-hero">
+    {# Ferris with his cap is the tab's icon: one file for both, so the page asks for no other picture of him. #}
+    <img src="/favicon.svg" alt="" width="176" height="176">
+    {# The words of the description in site.yaml, in three parts that style.css sets apart: change both together. #}
+    <h1>Rust education <span>in <em>academia</em></span> <small>(and beyond)</small></h1>
+    <p>
+        {% for item in site.hero %}
+        <a href="{{ item.url }}">{{ item.name }}</a>
+        {% endfor %}
+    </p>
+</div>
+{{ page.content | safe }}

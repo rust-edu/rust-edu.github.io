@@ -1,0 +1,986 @@
+/*
+ * Rust Edu site styles: plain CSS, no framework and no build step.
+ *
+ * Header, content and footer share one column, so they have one left edge.
+ * Colors are only in the token blocks, as plain hex, which no browser can lose.
+ * Text meets WCAG 2.1 AA (4.5:1, or 3:1 for large text) and focus outlines 3:1
+ * in both themes. Links in text stay underlined: color alone sets them off from
+ * the text by under 3:1.
+ */
+
+:root {
+    color-scheme: light dark;
+
+    --color-bg: #fbf8f3;
+    --color-glass: #fbf8f3c2;
+    --color-shadow: #2a343926;
+    --color-surface: #f4eee4;
+    --color-text: #2a3439;
+    --color-muted: #5f5b53;
+    --color-link: #0b7261;
+    --color-link-hover: #07594b;
+    --color-rule: #e5ddd0;
+    --color-focus: #a72145;
+    --color-accent: #f74c00;
+    --color-on-accent: #ffffff;
+
+    /* Headings: the crab's orange, then blue, the split complement that the teal
+       of links does not take, then blue's neighbor, violet. */
+    --color-title: #b23d0c;
+    --color-heading: #24528f;
+    --color-subheading: #6b3fa0;
+
+    --radius: 8px;
+}
+
+/* Screen only: paper stays dark on light. The theme button's choice, in
+   data-theme, wins over the system's. */
+@media screen and (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --color-bg: #1b1815;
+        --color-glass: #1b1815c2;
+        --color-shadow: #00000080;
+        --color-surface: #26221e;
+        --color-text: #ece7df;
+        --color-muted: #b5aea3;
+        --color-link: #4fc9ad;
+        --color-link-hover: #86dcc8;
+        --color-rule: #3b352e;
+        --color-focus: #ffc832;
+        --color-title: #ff8f5e;
+        --color-heading: #93b5f2;
+        --color-subheading: #c3a6ee;
+    }
+
+    /* The logo with light lettering takes the place of the one with black, and
+       the theme button's moon that of its sun. Ferris of the home page keeps the
+       line around his cap. */
+    :root:not([data-theme="light"]) .site-logo img,
+    :root:not([data-theme="light"]) .theme-toggle .sun {
+        display: none;
+    }
+
+    :root:not([data-theme="light"]) .site-logo [src$="#dark"],
+    :root:not([data-theme="light"]) .theme-toggle .moon {
+        display: block;
+    }
+
+    :root:not([data-theme="light"]) .site-hero img {
+        mix-blend-mode: normal;
+    }
+}
+
+@media screen {
+    :root[data-theme="light"] {
+        color-scheme: light;
+    }
+
+    :root[data-theme="dark"] {
+        color-scheme: dark;
+
+        --color-bg: #1b1815;
+        --color-glass: #1b1815c2;
+        --color-shadow: #00000080;
+        --color-surface: #26221e;
+        --color-text: #ece7df;
+        --color-muted: #b5aea3;
+        --color-link: #4fc9ad;
+        --color-link-hover: #86dcc8;
+        --color-rule: #3b352e;
+        --color-focus: #ffc832;
+        --color-title: #ff8f5e;
+        --color-heading: #93b5f2;
+        --color-subheading: #c3a6ee;
+    }
+
+    :root[data-theme="dark"] .site-logo img,
+    :root[data-theme="dark"] .theme-toggle .sun {
+        display: none;
+    }
+
+    :root[data-theme="dark"] .site-logo [src$="#dark"],
+    :root[data-theme="dark"] .theme-toggle .moon {
+        display: block;
+    }
+
+    :root[data-theme="dark"] .site-hero img {
+        mix-blend-mode: normal;
+    }
+}
+
+/* Base */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+    overflow-y: scroll;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    max-width: 42rem;
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 0 1rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji";
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+}
+
+a {
+    color: var(--color-link);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.15em;
+}
+
+a:hover {
+    color: var(--color-link-hover);
+    text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+}
+
+img {
+    display: block;
+    height: auto;
+}
+
+strong {
+    font-weight: 600;
+}
+
+.skip-link {
+    position: absolute;
+    z-index: 2;
+    top: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--color-bg);
+}
+
+.skip-link:not(:focus) {
+    transform: translateY(-200%);
+}
+
+/* Header: a bar across the screen, with its logo and menu in the column. The
+   menu of the feeds hangs from it, over the page. */
+
+.site-header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    padding: 0.5rem max(1rem, 50% - 20rem);
+    border-bottom: 1px solid var(--color-rule);
+    background: var(--color-bg);
+}
+
+/* On a screen that is tall enough, the bar stays at the top, and a link to an
+   id stops below it. Where the browser can blur what lies behind, the bar is
+   frosted glass, so the menu reads well over any text or photo. The glass is a
+   layer under the logo and the menu, not the bar itself: with a filter on the
+   bar, the cover that closes the feed menu could not reach beyond the bar. */
+@media screen and (min-height: 30rem) {
+    html {
+        scroll-padding-top: 5rem;
+    }
+
+    .site-header {
+        position: sticky;
+        top: 0;
+    }
+
+    @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+        .site-header {
+            background: none;
+        }
+
+        .site-header::before {
+            content: "";
+            position: absolute;
+            z-index: -1;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: var(--color-glass);
+            -webkit-backdrop-filter: saturate(1.8) blur(20px);
+            backdrop-filter: saturate(1.8) blur(20px);
+        }
+    }
+}
+
+/* Plain paper for a reader who asks for less transparency or their own colors. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+    .site-header {
+        background: var(--color-bg);
+    }
+
+    .site-header::before {
+        content: none;
+    }
+}
+
+/* The drawing's empty margin hangs out of the column, so the R stands on the
+   text's edge, and stays in the link, clear of the focus ring. */
+.site-logo {
+    margin-left: -11px;
+}
+
+/* The logo for the dark theme, whose lettering is light. In both logos the line
+   around the black cap has the light paper's color, so it shows only on dark. */
+.site-logo [src$="#dark"] {
+    display: none;
+}
+
+.site-header ul,
+.site-footer ul {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Not gap: an older browser has no flex gap. */
+.site-header li,
+.site-footer li {
+    margin-right: 1.25rem;
+}
+
+.site-header li:last-child {
+    margin-right: 0;
+}
+
+.site-nav {
+    display: flex;
+    align-items: center;
+}
+
+.site-nav a {
+    padding: 0.25rem 0;
+    color: var(--color-text);
+    font-size: 1rem;
+}
+
+/* Small buttons end the menu: the feeds' buttons, then the theme button. */
+.site-nav .feed-badge,
+.feed-menu summary,
+.theme-toggle {
+    padding: 0.3125rem;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    background: none;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.site-nav > ul + .feed-badge,
+.feed-menu {
+    margin-left: 1.25rem;
+}
+
+.site-nav > .feed-badge,
+.feed-menu .feed-badge + .feed-badge,
+.theme-toggle {
+    margin-left: 0.5rem;
+}
+
+.theme-toggle:hover {
+    border-color: currentColor;
+    color: var(--color-link);
+}
+
+.feed-menu svg,
+.theme-toggle svg {
+    display: block;
+}
+
+/* The feeds' buttons are orange, as the feed's symbol is all over the web: the
+   orange of Ferris, the crab of the logo, with white on it. Under the pointer,
+   and while its menu is open, a button takes the page's background, with orange
+   on it. */
+.site-nav .feed-badge,
+.feed-menu summary {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+}
+
+.site-nav .feed-badge:hover,
+.feed-menu summary:hover,
+.feed-menu[open] summary {
+    background: var(--color-bg);
+    color: var(--color-accent);
+    text-decoration: none;
+}
+
+/* A feed's button says ATOM or RSS. Its line is as high as the drawing of the
+   other buttons, 18px, so all the buttons have one height. */
+.site-nav .feed-badge {
+    display: inline-block;
+    padding: 0.3125rem 0.4375rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 18px;
+    text-transform: uppercase;
+}
+
+/* The symbol alone, with no triangle beside it; the second rule is for Safari. */
+.feed-menu summary {
+    display: block;
+}
+
+.feed-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+/* While the menu is open, a cover that is part of its button lies over the
+   screen, unseen, so a click anywhere beside the menu closes it. */
+.feed-menu[open] summary::before {
+    content: "";
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    cursor: default;
+}
+
+/* The menu of the feeds hangs under the bar, at the column's right edge: the
+   feeds' two buttons, and no words. */
+.feed-menu div {
+    position: absolute;
+    z-index: 2;
+    top: calc(100% + 0.5rem);
+    right: 1rem;
+    right: max(1rem, 50% - 20rem);
+    margin-left: 1rem;
+    padding: 0.5rem;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    background: var(--color-bg);
+    box-shadow: 0 0.5rem 1.5rem var(--color-shadow);
+}
+
+/* A screen with room for them has the feeds' two buttons in the bar. A
+   narrower one has the feed's symbol, whose menu holds the same two. */
+.site-nav > .feed-badge {
+    display: none;
+}
+
+@media screen and (min-width: 37rem) {
+    .site-nav > .feed-badge {
+        display: inline-block;
+    }
+
+    .feed-menu {
+        display: none;
+    }
+}
+
+/* A narrow screen: the menu takes the row under the logo, its two buttons at the
+   right. */
+@media screen and (max-width: 31rem) {
+    .site-nav {
+        flex: 1 0 100%;
+        padding-top: 0.5rem;
+    }
+
+    .feed-menu {
+        margin-left: auto;
+    }
+}
+
+/* Where the bar of a narrow screen stays at the top, only the menu's row stays:
+   the bar goes up by the row of the logo, which is 36px high. On a screen too
+   low for a bar that stays, the bar must not go up: the logo would be gone. */
+@media screen and (max-width: 31rem) and (min-height: 30rem) {
+    .site-header {
+        top: calc(-36px - 0.5rem);
+    }
+}
+
+/* The button shows a sun in the light theme. Its moon is for the dark theme. */
+.theme-toggle .moon {
+    display: none;
+}
+
+.site-nav a,
+.news-list a {
+    display: block;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.site-nav a:hover,
+.news-list a:hover,
+.site-footer a:hover {
+    color: var(--color-link);
+    text-decoration: underline;
+}
+
+/* Content: the HTML that Markdown produces */
+
+main {
+    flex-grow: 1;
+    padding: 3rem 0 4rem;
+}
+
+h1,
+h2,
+h3 {
+    font-weight: 600;
+    line-height: 1.25;
+    text-wrap: balance;
+}
+
+/* Wider splits "Rust-Edu". */
+h1 {
+    max-width: 12.1em;
+    margin: 0 0 1.25rem;
+    color: var(--color-title);
+    font-size: 2rem;
+}
+
+h2 {
+    margin: 3rem 0 0.75rem;
+    color: var(--color-heading);
+    font-size: 1.375rem;
+}
+
+h3 {
+    margin: 2rem 0 0.5rem;
+    color: var(--color-subheading);
+    font-size: 1.125rem;
+}
+
+h2 + h3 {
+    margin-top: 0;
+}
+
+main p,
+main ul,
+main ol,
+pre {
+    margin: 0 0 1.25rem;
+}
+
+main ul,
+main ol {
+    padding-left: 1.5rem;
+}
+
+main li + li {
+    margin-top: 0.5rem;
+}
+
+li ul,
+li ol {
+    margin: 0.5rem 0 0;
+}
+
+li > p {
+    margin-bottom: 0.5rem;
+}
+
+li::marker {
+    color: var(--color-muted);
+}
+
+blockquote {
+    margin: 1.5rem 0;
+    padding-left: 1rem;
+    border-left: 1px solid var(--color-muted);
+}
+
+code,
+pre {
+    background: var(--color-surface);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+code {
+    padding: 0.1em 0.3em;
+    font-size: 0.875em;
+}
+
+pre {
+    overflow-x: auto;
+    padding: 1rem;
+}
+
+pre code {
+    padding: 0;
+}
+
+/* These hold a photo's space while it loads; then its own ratio takes over. */
+main img {
+    width: 100%;
+    aspect-ratio: auto 16 / 9;
+    border-radius: var(--radius);
+}
+
+/* A bold line right above a photo is its label, colored as a sub-heading. */
+main p:has(> strong:only-child):has(+ p > img) {
+    margin-bottom: 0.5rem;
+    color: var(--color-subheading);
+}
+
+main p + p:has(> strong:only-child):has(+ p > img) {
+    margin-top: 2rem;
+}
+
+/* Home: a band across the screen, right under the bar, in the footer's color,
+   with Ferris, the statement and the next steps. The band is the shadow of its
+   part of the column, which the clip lets out to the sides only. */
+
+.site-hero {
+    margin-top: -3rem;
+    padding: 2rem 0 2.25rem;
+    background: var(--color-surface);
+    box-shadow: 0 0 0 100vmax var(--color-surface);
+    -webkit-clip-path: inset(0 -100vmax);
+    clip-path: inset(0 -100vmax);
+}
+
+/* Ferris with his cap is the tab's icon, a square with air around him. The line
+   around his cap has the light paper's color and would show on the light band:
+   `darken` paints the darker of the picture and the band. The dark theme, which
+   needs that line, takes `darken` away. */
+.site-hero img {
+    width: 7rem;
+    margin: -0.5rem 0 0.25rem -0.25rem;
+    mix-blend-mode: darken;
+}
+
+/* The statement in three lines: bold in the site's sans; "academia" in a book's
+   italic, shaded from Ferris's orange to rust; and a small italic aside, whose
+   parenthesis hangs out of the column. Iowan Old Style comes with Apple's
+   systems, Palatino Linotype with Windows, URW Palladio L or P052 with Linux. */
+.site-hero h1 {
+    margin: 0 0 1.25rem -0.025em;
+    color: var(--color-text);
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.04;
+}
+
+.site-hero h1 span,
+.site-hero h1 small {
+    display: block;
+}
+
+.site-hero h1 em,
+.site-hero h1 small {
+    font-family: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", P052, serif;
+    font-style: italic;
+    font-weight: 400;
+}
+
+/* Room at the right keeps the italic's last stroke in the shading. The orange
+   end is 3:1 on the light band, enough for a word this large. */
+.site-hero h1 em {
+    padding-right: 0.08em;
+    color: var(--color-title);
+    font-size: 1.18em;
+    letter-spacing: -0.01em;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    .site-hero h1 em {
+        background: linear-gradient(100deg, var(--color-accent), var(--color-title) 85%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    /* Under the highlight of a selection, the shaded word fades: selected, it
+       has a color of its own instead, and no highlight. */
+    .site-hero h1 em::selection {
+        color: var(--color-title);
+    }
+}
+
+.site-hero h1 small {
+    margin: 0.16em 0 0 -0.3em;
+    color: var(--color-muted);
+    font-size: 0.6em;
+    letter-spacing: 0;
+}
+
+.site-hero p {
+    margin: 0;
+}
+
+.site-hero a {
+    display: inline-block;
+    margin-right: 1.25rem;
+    padding: 0.5rem 0;
+    font-weight: 500;
+}
+
+.site-hero a:first-child {
+    padding: 0.5rem 1.25rem;
+    border-radius: var(--radius);
+    background: var(--color-link);
+    color: var(--color-bg);
+    text-decoration: none;
+}
+
+.site-hero a:first-child:hover {
+    background: var(--color-link-hover);
+}
+
+/* News */
+
+.byline,
+.news-feeds,
+.news-list time,
+.site-footer {
+    color: var(--color-muted);
+    font-size: 0.9375rem;
+}
+
+/* A post's byline, and the line under the heading of /news/ that links to the
+   feeds, which looks like it. */
+.byline,
+.news-feeds {
+    margin-top: -0.75rem;
+}
+
+.news-list {
+    padding: 0;
+    list-style: none;
+}
+
+.news-list li {
+    margin: 0;
+    padding: 0.75rem 0;
+    text-wrap: pretty;
+}
+
+.news-list li + li {
+    border-top: 1px solid var(--color-rule);
+}
+
+.news-list time {
+    font-variant-numeric: tabular-nums;
+}
+
+/* 404: Ferris in a compass ring, a rustc-style E0404 note, and wayfinding cards */
+
+.not-found-art {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 7.5rem;
+    height: 7.5rem;
+    margin: -0.25rem 0 0.75rem;
+    color: var(--color-rule);
+}
+
+.not-found-orbit {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.not-found-art img {
+    width: 78%;
+    aspect-ratio: 1;
+    margin: 0;
+}
+
+.not-found-badge {
+    position: absolute;
+    top: 0.125rem;
+    right: -0.375rem;
+    padding: 0.125rem 0.5rem;
+    border: 2px solid var(--color-surface);
+    border-radius: 999px;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+    transform: rotate(8deg);
+}
+
+.not-found-diag {
+    overflow: hidden;
+    margin: 2.5rem 0 0;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+}
+
+.not-found-diag-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--color-rule);
+    background: var(--color-bg);
+    color: var(--color-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.8125rem;
+}
+
+.not-found-dots {
+    display: inline-flex;
+    align-items: center;
+}
+
+.not-found-dots i {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-right: 0.375rem;
+    border-radius: 50%;
+    background: var(--color-muted);
+}
+
+.not-found-dots i:first-child {
+    background: var(--color-title);
+}
+
+.not-found-dots i:last-child {
+    margin-right: 0;
+    background: var(--color-link);
+}
+
+.not-found-diag pre {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.55;
+}
+
+.diag-err {
+    color: var(--color-title);
+    font-weight: 600;
+}
+
+.diag-pos {
+    color: var(--color-heading);
+}
+
+.diag-tag {
+    color: var(--color-subheading);
+    font-weight: 600;
+}
+
+.not-found-links {
+    display: grid;
+    gap: 0.875rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.not-found-links li {
+    margin: 0;
+}
+
+.not-found-links a {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    color: var(--color-text);
+    text-decoration: none;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.not-found-links strong {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+    color: var(--color-link);
+    font-weight: 600;
+}
+
+.not-found-links strong::after {
+    content: "\2192";
+    color: var(--color-muted);
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.not-found-links span {
+    color: var(--color-muted);
+    font-size: 0.9375rem;
+    line-height: 1.45;
+}
+
+.not-found-links a:hover,
+.not-found-links a:focus-visible {
+    border-color: var(--color-link);
+    background: var(--color-bg);
+}
+
+.not-found-links a:hover strong {
+    color: var(--color-link-hover);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.15em;
+}
+
+.not-found-links a:hover strong::after,
+.not-found-links a:focus-visible strong::after {
+    color: var(--color-link-hover);
+    transform: translateX(0.2rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .not-found-links a,
+    .not-found-links strong::after {
+        transition: none;
+        transform: none;
+    }
+}
+
+/* Footer */
+
+.site-footer {
+    padding: 1rem 0 2rem;
+    border-top: 1px solid var(--color-rule);
+}
+
+.site-footer p {
+    margin: 0 0 0.25rem;
+}
+
+.site-footer a {
+    color: inherit;
+}
+
+/* About 73 characters a line, and dated rows */
+
+@media (min-width: 40rem) {
+    body {
+        font-size: 1.125rem;
+    }
+
+    /* Ferris stands at the right of the statement and of the next steps. */
+    .site-hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 11rem;
+        align-items: center;
+        padding: 2.5rem 0;
+    }
+
+    .site-hero img {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        width: 11rem;
+        margin: 0;
+    }
+
+    .not-found-art {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        width: 11rem;
+        height: 11rem;
+        margin: 0;
+    }
+
+    .not-found-art img {
+        width: 78%;
+    }
+
+    .site-hero h1 {
+        grid-column: 1;
+        grid-row: 1;
+        align-self: end;
+        margin-right: 1.5rem;
+        font-size: 3.5rem;
+    }
+
+    .site-hero p {
+        grid-column: 1;
+        grid-row: 2;
+        align-self: start;
+    }
+
+    .news-list li {
+        display: grid;
+        grid-template-columns: 6.5rem minmax(0, 1fr);
+        align-items: baseline;
+    }
+
+    .not-found-links {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Top rule and footer band. */
+
+body {
+    max-width: none;
+    padding: 0;
+    border-top: 3px solid var(--color-accent);
+}
+
+main,
+.site-footer p,
+.site-footer nav {
+    width: calc(100% - 2rem);
+    max-width: 40rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.skip-link {
+    margin: 0 1rem;
+    margin: 0 max(1rem, 50% - 20rem);
+}
+
+.site-footer {
+    background: var(--color-surface);
+}
+
+/* Paper drops the button's fill, and the shading that colors the italic word,
+   which takes a plain color. */
+
+@media print {
+    .site-hero a:first-child,
+    .not-found-badge {
+        background: none;
+        color: var(--color-text);
+    }
+
+    .site-hero h1 em {
+        background: none;
+        color: var(--color-title);
+    }
+
+    .feed-menu,
+    .theme-toggle {
+        display: none;
+    }
+}

@@ -1,0 +1,1 @@
+Not a layout: only the .html files of layouts/ are.

@@ -1,0 +1,3 @@
+<title>{% if page.home %}Home{% else %}{{ page.title }}{% endif %} - {{ site.title }}</title>
+<ul>{% for item in site.menu %}<li><a href="{{ item.url }}">{{ item.name }}</a></li>{% endfor %}</ul>
+{{ content | safe }}

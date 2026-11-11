@@ -1,0 +1,29 @@
+# The site's settings for the generator in crates/.
+# The site's address, for sitemap.xml and robots.txt; `edu build --base-url` builds for another.
+# It also starts every id and guid of the feeds, under any `--base-url`, and a feed reader knows a
+# post by its id: so it must not change, or the readers show every post again as new.
+base_url: https://rust-edu.org
+title: Rust Edu
+# In the home page's title, in every page's summary for search engines, and in the feeds.
+# The home page's heading says the same words, styled, in layouts/home.html: change both together.
+description: Rust education in academia (and beyond)
+menu:
+  - name: News
+    url: /news/
+  - name: Resources
+    url: /resources/
+  - name: Zulip chat
+    url: /zulip/
+# The next steps under the home page's heading: the first is a button, the rest are plain links.
+hero:
+  - name: Join us on Zulip
+    url: /zulip/
+  - name: Find resources
+    url: /resources/
+footer:
+  - name: Rust Language Website
+    url: https://rust-lang.org
+  - name: Official Rust Book
+    url: https://doc.rust-lang.org/book/
+  - name: 2022 Workshop
+    url: /workshop/
