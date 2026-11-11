@@ -11,7 +11,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::Error;
-use crate::check::{self, Rendered};
+use crate::check::{self, Rendered, RenderedKind};
 use crate::feed::Format;
 use crate::links::{self, Link};
 
@@ -125,9 +125,10 @@ fn save(root: &Path, out: &Path, site: &Site) -> Result<(), Error> {
 pub(crate) fn plan(root: &Path, options: &Options) -> Result<Site, Error> {
     let checked = check::pages(root, options)?;
     let base_url = &checked.base_url;
+    let not_found = links::open_external(&checked.not_found, &checked.external_redirects);
     // The texts of the files of `MADE`, in its order.
     let texts = [
-        rebase(&checked.not_found, base_url.path()),
+        rebase(&not_found, base_url.path()),
         robots(base_url),
         sitemap(base_url, &checked.rendered),
     ];
@@ -144,7 +145,11 @@ pub(crate) fn plan(root: &Path, options: &Options) -> Result<Site, Error> {
     let pages = checked.rendered.len();
     for page in &checked.rendered {
         let path = Path::new(page.url.trim_start_matches('/')).join("index.html");
-        let output = Output::Page(page.path.clone(), rebase(&page.html, base_url.path()));
+        let html = match page.kind {
+            RenderedKind::Page => links::open_external(&page.html, &checked.external_redirects),
+            RenderedKind::Redirect => page.html.clone(),
+        };
+        let output = Output::Page(page.path.clone(), rebase(&html, base_url.path()));
         add(&mut files, path, &page.path, output)?;
     }
     for (dir, sources) in [("content", &checked.files), ("static", &checked.statics)] {
@@ -752,9 +757,17 @@ mod tests {
         };
         let built = site(&root, &built_dir, &options).unwrap();
         assert_eq!((built.pages, built.files), (4, 3));
+        let home = fs::read_to_string(built_dir.join("index.html")).unwrap();
+        assert!(
+            home.contains(
+                "<a target=\"_blank\" rel=\"external noopener\" href=\"/edu/zulip/\">Chat</a>"
+            ) && home.contains("<a href=\"/edu/old/post/\">Old</a>"),
+            "{home}"
+        );
         let zulip = fs::read_to_string(built_dir.join("zulip/index.html")).unwrap();
         assert!(
-            zulip.contains("content=\"0; url=https://chat.example.org/\">"),
+            zulip.contains("content=\"0; url=https://chat.example.org/\">")
+                && zulip.contains("<a href=\"https://chat.example.org/\">Click here</a>"),
             "{zulip}"
         );
         let old = fs::read_to_string(built_dir.join("old/post/index.html")).unwrap();
@@ -826,6 +839,81 @@ mod tests {
             errors[0].to_string(),
             "layouts/404.html:1:13: error: `/missing/` is not a page or file of the site"
         );
+        fs::remove_dir_all(root).unwrap();
+        fs::remove_dir_all(built_dir).unwrap();
+    }
+
+    #[test]
+    fn external_links_in_pages_layouts_and_404_open_in_a_new_tab_while_internal_links_stay() {
+        let root = out("external-links-root");
+        fs::create_dir_all(root.join("content/forum")).unwrap();
+        fs::create_dir_all(root.join("layouts")).unwrap();
+        fs::write(
+            root.join("site.yaml"),
+            "base_url: https://example.org\ntitle: T\ndescription: D\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("layouts/layout.html"),
+            "<a href=\"#main\">Skip</a><main id=\"main\">{{ content | safe }}</main>\
+             <footer><a href=\"https://github.com/rust-edu\">GitHub</a></footer>",
+        )
+        .unwrap();
+        fs::write(root.join("layouts/home.html"), "{{ page.content | safe }}").unwrap();
+        fs::write(
+            root.join("layouts/404.html"),
+            "<p><a href=\"/\">Home</a> <a href=\"/zulip/\">Zulip</a></p>",
+        )
+        .unwrap();
+        fs::write(
+            root.join("content/_index.md"),
+            concat!(
+                "---\ntitle: Home\n---\n",
+                "[Rust](https://www.rust-lang.org/), [Forum](/forum/), ",
+                "[Zulip](/zulip/), [Home](/), and [Email](mailto:a@example.org).\n",
+            ),
+        )
+        .unwrap();
+        fs::write(
+            root.join("content/forum/_index.md"),
+            "---\nredirect_to: https://forum.example.org/\n---\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("urls.yaml"),
+            "redirects:\n  - from: /zulip/\n    to: https://chat.example.org/\n",
+        )
+        .unwrap();
+
+        let built_dir = out("external-links-out");
+        let options = Options {
+            drafts: Drafts::Exclude,
+            base_url: BaseUrl::parse("https://example.github.io/edu/"),
+        };
+        site(&root, &built_dir, &options).unwrap();
+        let home = fs::read_to_string(built_dir.join("index.html")).unwrap();
+        let expected_home = [
+            "<a href=\"#main\">Skip</a>",
+            "<a target=\"_blank\" rel=\"external noopener\" href=\"https://www.rust-lang.org/\">Rust</a>",
+            "<a target=\"_blank\" rel=\"external noopener\" href=\"/edu/forum/\">Forum</a>",
+            "<a target=\"_blank\" rel=\"external noopener\" href=\"/edu/zulip/\">Zulip</a>",
+            "<a href=\"/edu/\">Home</a>",
+            "<a href=\"mailto:a@example.org\">Email</a>",
+            "<a target=\"_blank\" rel=\"external noopener\" href=\"https://github.com/rust-edu\">GitHub</a>",
+        ];
+        for snippet in expected_home {
+            assert!(home.contains(snippet), "missing `{snippet}` in:\n{home}");
+        }
+        let not_found = fs::read_to_string(built_dir.join("404.html")).unwrap();
+        assert!(
+            not_found.contains("<a href=\"/edu/\">Home</a>")
+                && not_found.contains(
+                    "<a target=\"_blank\" rel=\"external noopener\" href=\"/edu/zulip/\">Zulip</a>"
+                ),
+            "{not_found}"
+        );
+        let forum = fs::read_to_string(built_dir.join("forum/index.html")).unwrap();
+        assert!(!forum.contains("target=\"_blank\""), "{forum}");
         fs::remove_dir_all(root).unwrap();
         fs::remove_dir_all(built_dir).unwrap();
     }

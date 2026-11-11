@@ -84,7 +84,8 @@ underlined with `===`, indented code, and web or email addresses not written as 
 - **A heading:** `/workshop/cfp-2022/#schedule`, or `#schedule` on the same page. A heading's id is its text in
   lowercase, letters of any language included, with each run of other characters replaced by `-`
   (`What’s Next?` → `what-s-next`, `Taller en Perú` → `taller-en-perú`).
-- **Another site:** the full `https://` address.
+- **Another site:** the full `https://` address; links to other sites (and redirects to them, such as `/zulip/`)
+  open in a new tab.
 - **Email:** `[contact@rust-edu.org](mailto:contact@rust-edu.org)`.
 
 The automatic check follows every link to a page or file of the site, `site.yaml`'s too, and stops at one that goes

@@ -4,7 +4,7 @@
 //! feeds' posts too; and the other files of `content/` and `static/` are of a type that the site
 //! publishes. `edu build` checks the same, and renders the pages and the feeds that it writes.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
@@ -14,7 +14,7 @@ use crate::Error;
 use crate::build::{self, BaseUrl, Drafts, Options};
 use crate::feed::{self, Feed, Format};
 use crate::file::{self, FileError};
-use crate::links::{self, LinkError, Target};
+use crate::links::{self, Link, LinkError, Target};
 use crate::page::{Kind, Page};
 use crate::render::{self, Layouts};
 use crate::urls::{self, Urls, UrlsError};
@@ -113,14 +113,22 @@ pub(crate) struct Checked {
     pub(crate) layouts: usize,
     pub(crate) rendered: Vec<Rendered>,
     pub(crate) not_found: String,
+    pub(crate) external_redirects: BTreeSet<String>,
     pub(crate) files: Vec<PathBuf>,
     pub(crate) statics: Vec<PathBuf>,
     pub(crate) base_url: BaseUrl,
     pub(crate) feed: Option<Feed>,
 }
 
-/// A page as the build writes it: its path, its URL, its HTML, its `date`, and whether the live
-/// site has it.
+/// Whether a rendered HTML file is a content page or a `<meta http-equiv="refresh">` redirect.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum RenderedKind {
+    Page,
+    Redirect,
+}
+
+/// A page as the build writes it: its path, its URL, its HTML, its `date`, whether the live site
+/// has it, and whether it is a content page or a redirect.
 #[derive(Debug)]
 pub(crate) struct Rendered {
     pub(crate) path: PathBuf,
@@ -128,6 +136,7 @@ pub(crate) struct Rendered {
     pub(crate) html: String,
     pub(crate) date: Option<String>,
     pub(crate) live: bool,
+    pub(crate) kind: RenderedKind,
 }
 
 /// Checks the header and the text of every Markdown page under `content/` in `root`, the settings
@@ -184,10 +193,17 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
         }
     }
     let mut rendered = Vec::new();
+    let mut external_redirects = BTreeSet::new();
     for page in &pages {
-        let html = match &page.redirect_to {
-            Some(to) => Ok(render::redirect(to)),
-            None => render::render(page, &pages, &site.value, &layouts),
+        let (kind, html) = match &page.redirect_to {
+            Some(to) => {
+                external_redirects.insert(page.url.clone());
+                (RenderedKind::Redirect, Ok(render::redirect(to)))
+            }
+            None => (
+                RenderedKind::Page,
+                render::render(page, &pages, &site.value, &layouts),
+            ),
         };
         match html {
             Ok(html) => {
@@ -200,6 +216,7 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
                     html,
                     date,
                     live,
+                    kind,
                 });
             }
             Err(error) => errors.push(error),
@@ -258,12 +275,19 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
         )?;
         urls.check(&targets, &mut errors);
         for redirect in &urls.redirects {
+            match Link::of(&redirect.to) {
+                Link::Away => {
+                    external_redirects.insert(redirect.from.clone());
+                }
+                Link::Top | Link::Here | Link::Other => {}
+            }
             rendered.push(Rendered {
                 path: PathBuf::from(urls::FILE),
                 url: redirect.from.clone(),
                 html: render::redirect(&redirect.to),
                 date: None,
                 live: true,
+                kind: RenderedKind::Redirect,
             });
         }
         match feed::feed(&site, posts) {
@@ -278,6 +302,7 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             layouts,
             rendered,
             not_found,
+            external_redirects,
             files,
             statics,
             base_url,

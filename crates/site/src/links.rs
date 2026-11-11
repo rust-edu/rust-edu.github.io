@@ -1,7 +1,7 @@
 //! The links of the site: each `href` and `src` in the HTML of a page and in the text of each post
 //! of the feed must go to a page or file of the built site, and a `#` to an id of its page.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
@@ -254,6 +254,79 @@ pub(crate) fn prefix<'a>(html: &str, prefix: impl Fn(&str) -> Option<&'a str>) -
     prefixed
 }
 
+/// `html` with `target="_blank"` and `rel="external noopener"` on each `<a>` tag without a
+/// `target` whose `href` goes to another site (`https://` or `http://`) or to a site path in
+/// `external_redirects`.
+pub(crate) fn open_external(html: &str, external_redirects: &BTreeSet<String>) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut last = 0;
+    let mut from = 0;
+    while let Some(start) = html.get(from..).and_then(|rest| rest.find('<')) {
+        let start = from + start;
+        let Some(end) = html.get(start..).and_then(|rest| rest.find('>')) else {
+            break;
+        };
+        let tag_end = start + end + 1;
+        let tag = html.get(start..start + end).unwrap_or_default();
+        if let Some(rewritten) = rewrite_anchor(tag, external_redirects) {
+            out.push_str(html.get(last..start).unwrap_or_default());
+            out.push_str(&rewritten);
+            last = tag_end;
+        }
+        from = tag_end;
+    }
+    out.push_str(html.get(last..).unwrap_or_default());
+    out
+}
+
+/// Rewrites `<a …` (without its closing `>`) to open in a new tab when its `href` is external and
+/// it has no `target` attribute yet, merging any existing `rel` tokens.
+fn rewrite_anchor(tag: &str, external_redirects: &BTreeSet<String>) -> Option<String> {
+    let rest = tag.strip_prefix("<a")?;
+    if !rest.starts_with(|c: char| c.is_ascii_whitespace()) {
+        return None;
+    }
+    let attrs = tag_attributes(tag);
+    if attrs.iter().any(|(name, ..)| *name == "target") {
+        return None;
+    }
+    let &(_, _, raw_href) = attrs.iter().find(|(name, ..)| *name == "href")?;
+    let href = unescape(raw_href);
+    if !is_external(&href, external_redirects) {
+        return None;
+    }
+    let mut out = String::from("<a target=\"_blank\"");
+    if let Some(&(_, rel_at, rel_val)) = attrs.iter().find(|(name, ..)| *name == "rel") {
+        out.push_str(tag.get(2..rel_at).unwrap_or_default());
+        let mut tokens: Vec<&str> = rel_val.split_ascii_whitespace().collect();
+        for required in ["external", "noopener"] {
+            if !tokens.contains(&required) {
+                tokens.push(required);
+            }
+        }
+        out.push_str(&tokens.join(" "));
+        out.push_str(tag.get(rel_at + rel_val.len()..).unwrap_or_default());
+    } else {
+        out.push_str(" rel=\"external noopener\"");
+        out.push_str(rest);
+    }
+    out.push('>');
+    Some(out)
+}
+
+/// Whether `href` goes to an `https://` or `http://` address, or to a site path that forwards to
+/// one.
+fn is_external(href: &str, external_redirects: &BTreeSet<String>) -> bool {
+    match Link::of(href) {
+        Link::Away => href.starts_with("https://") || href.starts_with("http://"),
+        Link::Top => {
+            let path = href.split_once('#').map_or(href, |(path, _)| path);
+            decode(path).is_some_and(|decoded| external_redirects.contains(&decoded))
+        }
+        Link::Here | Link::Other => false,
+    }
+}
+
 /// The ids of the elements of `html`.
 pub(crate) fn ids(html: &str) -> Vec<&str> {
     let attributes = attributes(html).into_iter();
@@ -273,19 +346,29 @@ fn attributes(html: &str) -> Vec<(&str, usize, &str)> {
             break;
         };
         let tag = html.get(start..start + end).unwrap_or_default();
-        let mut at = 0;
-        while let Some(equals) = tag.get(at..).and_then(|rest| rest.find("=\"")) {
-            let (equals, value_at) = (at + equals, at + equals + 2);
-            let before = tag.get(at..equals).unwrap_or_default();
-            let name = before.rsplit(|c: char| c.is_ascii_whitespace()).next();
-            let Some(len) = tag.get(value_at..).and_then(|rest| rest.find('"')) else {
-                break;
-            };
-            let value = tag.get(value_at..value_at + len).unwrap_or_default();
-            attributes.push((name.unwrap_or_default(), start + value_at, value));
-            at = value_at + len + 1;
+        for (name, value_at, value) in tag_attributes(tag) {
+            attributes.push((name, start + value_at, value));
         }
         from = start + end + 1;
+    }
+    attributes
+}
+
+/// The attributes in a single `<…` tag slice: each name, where its value starts inside `tag`, and
+/// the value as written.
+fn tag_attributes(tag: &str) -> Vec<(&str, usize, &str)> {
+    let mut attributes = Vec::new();
+    let mut at = 0;
+    while let Some(equals) = tag.get(at..).and_then(|rest| rest.find("=\"")) {
+        let (equals, value_at) = (at + equals, at + equals + 2);
+        let before = tag.get(at..equals).unwrap_or_default();
+        let name = before.rsplit(|c: char| c.is_ascii_whitespace()).next();
+        let Some(len) = tag.get(value_at..).and_then(|rest| rest.find('"')) else {
+            break;
+        };
+        let value = tag.get(value_at..value_at + len).unwrap_or_default();
+        attributes.push((name.unwrap_or_default(), value_at, value));
+        at = value_at + len + 1;
     }
     attributes
 }
@@ -432,5 +515,85 @@ mod tests {
             unescape("/?a=&quot;1&quot;&amp;b=&#39;&#x27;&lt;&gt;&amp;lt;"),
             "/?a=\"1\"&b=''<>&lt;"
         );
+    }
+
+    #[test]
+    fn external_links_and_external_redirects_open_in_a_new_tab() {
+        let external = BTreeSet::from(["/zulip/".to_owned()]);
+        let cases = [
+            (
+                "<a href=\"https://a.org\">A</a>",
+                "<a target=\"_blank\" rel=\"external noopener\" href=\"https://a.org\">A</a>",
+            ),
+            (
+                "<a\nhref=\"http://a.org\">B</a>",
+                "<a target=\"_blank\" rel=\"external noopener\"\nhref=\"http://a.org\">B</a>",
+            ),
+            (
+                "<a rel=\"external\" href=\"https://a.org/?x=1&amp;y=2\">C</a>",
+                "<a target=\"_blank\" rel=\"external noopener\" href=\"https://a.org/?x=1&amp;y=2\">C</a>",
+            ),
+            (
+                "<a class=\"btn\" rel=\"nofollow noopener\" href=\"https://a.org\">D</a>",
+                "<a target=\"_blank\" class=\"btn\" rel=\"nofollow noopener external\" href=\"https://a.org\">D</a>",
+            ),
+            (
+                "<a href=\"/zulip/\">Zulip</a>",
+                "<a target=\"_blank\" rel=\"external noopener\" href=\"/zulip/\">Zulip</a>",
+            ),
+            (
+                "<a href=\"/zulip/#topic\">Topic</a>",
+                "<a target=\"_blank\" rel=\"external noopener\" href=\"/zulip/#topic\">Topic</a>",
+            ),
+            (
+                "<a href=\"/%7aulip/\">Encoded</a>",
+                "<a target=\"_blank\" rel=\"external noopener\" href=\"/%7aulip/\">Encoded</a>",
+            ),
+        ];
+        for (html, expected) in cases {
+            assert_eq!(open_external(html, &external), expected, "{html}");
+        }
+        let untouched = concat!(
+            "<a href=\"/news/\">News</a>",
+            "<a href=\"/old/\">Old</a>",
+            "<a href=\"#main\">Skip</a>",
+            "<a href=\"mailto:a@b.org\">Mail</a>",
+            "<a target=\"_self\" href=\"https://a.org\">Same</a>",
+            "<a id=\"top\">Top</a>",
+            "<area href=\"https://a.org\">",
+            "<link rel=\"stylesheet\" href=\"https://a.org/s.css\">",
+            "<a data-href=\"https://a.org\" href=\"/news/\">Data</a>",
+            "<code>&lt;a href=\"https://a.org\"&gt;</code>",
+        );
+        assert_eq!(open_external(untouched, &external), untouched);
+    }
+
+    #[test]
+    fn damaged_html_never_panics_when_rewriting_external_links() {
+        let external = BTreeSet::from(["/zulip/".to_owned()]);
+        let sample: Vec<char> =
+            "<a rel=\"external\" href=\"https://a.org/?b=1&amp;c=2\">é</a><a href=\"/zulip/\">z</a>"
+                .chars()
+                .collect();
+        let damage = ['<', '>', '"', '=', ' ', 'a', '/', '%', 'é', '\n'];
+        let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
+        for _ in 0..2_000 {
+            let mut text = sample.clone();
+            for _ in 0..2 {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                let [low, high, how, what, ..] = state.to_le_bytes();
+                let at = usize::from(u16::from_le_bytes([low, high])) % text.len();
+                let c = damage[usize::from(what) % damage.len()];
+                match how % 3 {
+                    0 => text[at] = c,
+                    1 => text.insert(at, c),
+                    _ => _ = text.remove(at),
+                }
+            }
+            let html: String = text.into_iter().collect();
+            let _ = open_external(&html, &external);
+        }
     }
 }
