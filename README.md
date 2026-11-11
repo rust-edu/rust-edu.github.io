@@ -69,7 +69,7 @@ flowchart LR
 ```
 
 - **Standard library only:** `Cargo.lock` lists only the four crates of this workspace (`edition = "2024"`,
-  `rust-version = "1.99.1"`, `unsafe_code = "forbid"`). CI rejects any external crate in `Cargo.lock` and builds and
+  `rust-version = "1.99.1"`, `unsafe_code = "forbid"`). CI rejects any other crate in `Cargo.lock` and builds and
   tests with `--network=none --locked --offline` inside a digest-pinned Docker image.
 - **Strict subsets, no panics:** Each parser accepts the subset of YAML 1.2, CommonMark or the template language that
   the site uses, and rejects anything outside it with `file:line:col` and a hint. Input paths never call `unwrap`,

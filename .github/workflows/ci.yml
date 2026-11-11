@@ -26,6 +26,21 @@ jobs:
             echo "::error file=Cargo.lock::Cargo.lock lists a crate from a registry or git; the generator uses the Rust standard library only"
             exit 1
           fi
+          # A crate copied into crates/ has no source line, so the names are checked too. A new crate
+          # of our own is added to this list on purpose.
+          crates=$(sed -n 's/^name = "\(.*\)"$/\1/p' Cargo.lock | sort | tr '\n' ' ')
+          packages=$(grep -c '^\[\[package\]\]$' Cargo.lock)
+          echo "Cargo.lock: ${crates}"
+          if [ "$crates" != "edu-markdown edu-site edu-template edu-yaml " ] || [ "$packages" != 4 ]; then
+            echo "::error file=Cargo.lock::Cargo.lock lists a crate other than edu-markdown, edu-site, edu-template and edu-yaml; the generator uses the Rust standard library only"
+            exit 1
+          fi
+      - name: The live site is built on the checks
+        run: |
+          if ! grep -qx 'FROM check AS live' Dockerfile; then
+            echo "::error file=Dockerfile::the live stage is not FROM check; that stage is what stops a bad push to main from publishing (see AGENTS.md)"
+            exit 1
+          fi
       - name: The Dockerfile and rust-toolchain.toml name the same Rust
         run: |
           image=$(sed -n 's/^FROM rust:\([0-9.]*\)-.*/\1/p' Dockerfile)
