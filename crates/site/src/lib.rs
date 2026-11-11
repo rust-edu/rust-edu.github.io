@@ -7,6 +7,7 @@ mod check;
 mod feed;
 mod file;
 mod links;
+mod llms;
 mod page;
 mod render;
 mod serve;

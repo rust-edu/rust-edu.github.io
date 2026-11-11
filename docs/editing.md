@@ -104,6 +104,13 @@ too. The build writes the feeds again each time, from the posts, so a new post n
 Links in a post need nothing special: the feeds turn the links to the site and to ids into full addresses. A feed
 reader knows a post by its address, so keep the file name of a post once it is published.
 
+## The page for language models
+
+`/llms.txt` is the site in brief for language models, in the Markdown that <https://llmstxt.org/> proposes: the
+`title` and `description` of `site.yaml`, a link to each page with its title, a link to each news post with its date
+and authors, newest first, and the two feeds, which hold the whole text of every post. It leaves out the redirects and
+the drafts. The build writes it again each time, so a new page or post needs nothing more than its file.
+
 ## Common changes
 
 - **A news post:** add `content/news/<name>.md` with `title`, `date` and `authors`, as in the header example above;
@@ -116,8 +123,8 @@ reader knows a post by its address, so keep the file name of a post once it is p
   none).
 - **Menu, next steps and footer links:** the `menu`, `hero` and `footer` lists of `site.yaml`; the first link of
   `hero` is the button on the home page.
-- **The site's description:** the `description` of `site.yaml`, which the home page's title, search engines and the
-  feeds show, and the same words in the heading of `layouts/home.html`, whose three parts `static/style.css` styles.
+- **The site's description:** the `description` of `site.yaml`, which the home page's title, search engines, the
+  feeds and `/llms.txt` show, and the same words in the heading of `layouts/home.html`, whose three parts `static/style.css` styles.
 - **Moving or removing a page or file:** other sites may link to it, so its address is under `keep` in `urls.yaml`,
   and the check stops while that address goes nowhere. Move the old address of a page to `redirects` in `urls.yaml`
   (with `from` and `to`), or delete its line from `keep` on purpose.

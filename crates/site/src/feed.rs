@@ -32,6 +32,14 @@ impl Format {
         }
     }
 
+    /// The format's name, as `llms.txt` gives it.
+    pub(crate) fn name(self) -> &'static str {
+        match self {
+            Self::Atom => "Atom",
+            Self::Rss => "RSS",
+        }
+    }
+
     /// The time of a post of the day `date`: the day's start in UTC.
     fn time(self, date: &Date) -> String {
         match self {
@@ -55,9 +63,9 @@ impl Format {
 pub(crate) struct Post {
     pub(crate) path: PathBuf,
     pub(crate) url: String,
-    title: String,
-    date: Date,
-    authors: Vec<String>,
+    pub(crate) title: String,
+    pub(crate) date: Date,
+    pub(crate) authors: Vec<String>,
     pub(crate) body: String,
 }
 
@@ -70,6 +78,13 @@ pub(crate) struct Feed {
     id_base: BaseUrl,
     updated: Date,
     posts: Vec<Post>,
+}
+
+impl Feed {
+    /// The posts, newest first.
+    pub(crate) fn posts(&self) -> &[Post] {
+        &self.posts
+    }
 }
 
 /// The posts of `pages`: the pages that each section with `sort_by: date` and no `redirect_to`

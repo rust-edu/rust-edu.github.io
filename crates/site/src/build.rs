@@ -1,8 +1,8 @@
 //! `edu build`: the site as files. Each page becomes `index.html` in the folder of its URL, the
 //! files of `static/` are copied to the top, and the other files of `content/` beside the pages of
-//! their folder; `404.html`, `robots.txt` and `sitemap.xml` go at the top, and the feeds `atom.xml`
-//! and `rss.xml` too when a section with `sort_by: date` and no `redirect_to` lists a live post. A
-//! preview has the drafts too, and works at another address.
+//! their folder; `404.html`, `llms.txt`, `robots.txt` and `sitemap.xml` go at the top, and the
+//! feeds `atom.xml` and `rss.xml` too when a section with `sort_by: date` and no `redirect_to`
+//! lists a live post. A preview has the drafts too, and works at another address.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -14,12 +14,13 @@ use crate::Error;
 use crate::check::{self, Rendered, RenderedKind};
 use crate::feed::Format;
 use crate::links::{self, Link};
+use crate::llms;
 
 /// The file that marks a folder as made by `edu build`, which may then delete it.
 const MARKER: &str = ".edu-output";
 
 /// The files that the build makes at the top of the site, besides the pages.
-pub(crate) const MADE: [&str; 3] = ["404.html", "robots.txt", "sitemap.xml"];
+pub(crate) const MADE: [&str; 4] = ["404.html", "llms.txt", "robots.txt", "sitemap.xml"];
 
 /// How `edu build` builds: with or without drafts, and for the address of `site.yaml` or another.
 #[derive(Debug, PartialEq, Eq)]
@@ -129,6 +130,13 @@ pub(crate) fn plan(root: &Path, options: &Options) -> Result<Site, Error> {
     // The texts of the files of `MADE`, in its order.
     let texts = [
         rebase(&not_found, base_url.path()),
+        llms::write(
+            checked.title.as_deref(),
+            checked.description.as_deref(),
+            &checked.rendered,
+            checked.feed.as_ref(),
+            base_url,
+        ),
         robots(base_url),
         sitemap(base_url, &checked.rendered),
     ];
@@ -303,7 +311,7 @@ mod tests {
     fn each_page_is_index_html_at_its_url_beside_the_files_of_static_and_content() {
         let out = out("valid");
         let built = site(&test_site("valid"), &out, &LIVE).unwrap();
-        assert_eq!((built.pages, built.files), (5, 9));
+        assert_eq!((built.pages, built.files), (5, 10));
         let expected = [
             "2027/index.html",
             "404.html",
@@ -311,6 +319,7 @@ mod tests {
             "chat/index.html",
             "images/logo.svg",
             "index.html",
+            "llms.txt",
             "news/index.html",
             "news/notes.txt",
             "news/post/index.html",
@@ -365,6 +374,99 @@ mod tests {
         fs::remove_dir_all(out).unwrap();
     }
 
+    /// The `llms.txt` of the site `valid` without drafts, with its links at `base_url`.
+    fn valid_llms_txt(base_url: &str) -> String {
+        [
+            "# Test\n",
+            "\n",
+            "> A site for the tests\n",
+            "\n",
+            "## Pages\n",
+            "\n",
+            "- [Home](BASE/)\n",
+            "- [2027](BASE/2027/)\n",
+            "- [News](BASE/news/)\n",
+            "\n",
+            "## Posts\n",
+            "\n",
+            "- [Rust Week: 2027](BASE/news/post/): 2027-03-01, by Jane Doe\n",
+            "\n",
+            "## Optional\n",
+            "\n",
+            "- [Atom feed](BASE/atom.xml): every post with its whole text, newest first\n",
+            "- [RSS feed](BASE/rss.xml): every post with its whole text, newest first\n",
+        ]
+        .concat()
+        .replace("BASE", base_url)
+    }
+
+    #[test]
+    fn llms_txt_links_each_page_by_url_and_each_post_newest_first_but_not_the_redirects() {
+        let out = out("llms");
+        site(&test_site("valid"), &out, &LIVE).unwrap();
+        let llms = fs::read_to_string(out.join("llms.txt")).unwrap();
+        // `/chat/` redirects, so it is not listed.
+        assert_eq!(llms, valid_llms_txt("https://example.org"));
+        fs::remove_dir_all(out).unwrap();
+    }
+
+    #[test]
+    fn a_preview_has_the_llms_txt_of_the_live_site_at_its_own_address() {
+        let out = out("llms-preview");
+        let options = Options {
+            drafts: Drafts::Include,
+            base_url: BaseUrl::parse("https://example.github.io/edu/"),
+        };
+        site(&test_site("valid"), &out, &options).unwrap();
+        let llms = fs::read_to_string(out.join("llms.txt")).unwrap();
+        assert_eq!(llms, valid_llms_txt("https://example.github.io/edu"));
+        fs::remove_dir_all(out).unwrap();
+    }
+
+    #[test]
+    fn llms_txt_escapes_markdown_in_titles_names_and_the_description() {
+        let out = out("llms-feed");
+        site(&test_site("feed"), &out, &LIVE).unwrap();
+        let llms = fs::read_to_string(out.join("llms.txt")).unwrap();
+        let posts = concat!(
+            "## Posts\n",
+            "\n",
+            "- [Second & \\<last>](https://example.org/news/second/): 2026-04-26\n",
+            "- [First](https://example.org/news/first/): 2022-07-11, ",
+            "by Jane Doe and O'Brien & \\<Sons>\n",
+        );
+        assert!(
+            llms.starts_with("# News & notes\n\n> Jane's \"news\" & \\<notes>\n\n## Pages\n"),
+            "{llms}"
+        );
+        assert!(llms.contains(posts), "{llms}");
+        // The draft post and the post in the folder of a draft section are left out.
+        assert!(!llms.contains("Draft") && !llms.contains("Talk"), "{llms}");
+        fs::remove_dir_all(out).unwrap();
+    }
+
+    #[test]
+    fn llms_txt_of_a_site_without_title_description_or_posts_is_headed_by_its_address() {
+        let root = out("llms-plain-root");
+        fs::create_dir_all(root.join("content")).unwrap();
+        fs::create_dir_all(root.join("layouts")).unwrap();
+        fs::write(root.join("site.yaml"), "base_url: https://example.org\n").unwrap();
+        fs::write(root.join("layouts/layout.html"), "{{ content | safe }}").unwrap();
+        fs::write(root.join("layouts/home.html"), "{{ page.content | safe }}").unwrap();
+        fs::write(
+            root.join("content/_index.md"),
+            "---\ntitle: Home\n---\nHi.\n",
+        )
+        .unwrap();
+        let built_dir = out("llms-plain-out");
+        site(&root, &built_dir, &LIVE).unwrap();
+        let llms = fs::read_to_string(built_dir.join("llms.txt")).unwrap();
+        let expected = "# https://example.org\n\n## Pages\n\n- [Home](https://example.org/)\n";
+        assert_eq!(llms, expected);
+        fs::remove_dir_all(root).unwrap();
+        fs::remove_dir_all(built_dir).unwrap();
+    }
+
     #[test]
     fn a_preview_has_the_drafts_and_its_links_and_sitemap_are_for_its_address() {
         let out = out("preview");
@@ -373,7 +475,7 @@ mod tests {
             base_url: BaseUrl::parse("https://example.github.io/edu/"),
         };
         let built = site(&test_site("valid"), &out, &options).unwrap();
-        assert_eq!((built.pages, built.files), (8, 10));
+        assert_eq!((built.pages, built.files), (8, 11));
         let files = files(&out);
         let drafts = ["news/draft/index.html", "wip/index.html", "wip/notes.txt"];
         let is_built = |path: &&str| files.iter().any(|file| file == path);
@@ -403,7 +505,7 @@ mod tests {
     fn the_feed_is_atom_xml_with_the_live_posts_newest_first_and_their_links_absolute() {
         let out = out("feed");
         let built = site(&test_site("feed"), &out, &LIVE).unwrap();
-        assert_eq!((built.pages, built.files), (5, 6));
+        assert_eq!((built.pages, built.files), (5, 7));
         let read = |path| fs::read_to_string(out.join(path)).unwrap();
         let expected = concat!(
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n",
@@ -756,7 +858,7 @@ mod tests {
             base_url: BaseUrl::parse("https://example.github.io/edu/"),
         };
         let built = site(&root, &built_dir, &options).unwrap();
-        assert_eq!((built.pages, built.files), (4, 3));
+        assert_eq!((built.pages, built.files), (4, 4));
         let home = fs::read_to_string(built_dir.join("index.html")).unwrap();
         assert!(
             home.contains(

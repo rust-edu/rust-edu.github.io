@@ -14,6 +14,7 @@ keep:
   - /images/RAACampusTour2.png
   - /images/RAACampusTour3.png
   - /images/RAACampusTour4.png
+  - /llms.txt # the site in brief for language models (llmstxt.org)
   - /news/
   - /news/announcement/
   - /news/call-for-participation/

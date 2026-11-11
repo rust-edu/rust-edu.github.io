@@ -94,7 +94,7 @@ flowchart LR
     `layouts/`, and the YAML header and Markdown text of every page in `content/`, renders every page with them,
     and follows every link between the pages and files of the site and each address of `urls.yaml`, the addresses
     that other sites may link to (`keep`) and the redirects (`redirects`). `edu build` checks the same, then writes
-    the site into `public/`, with a page for each redirect, `404.html`, `robots.txt`, `sitemap.xml`, and `atom.xml`
+    the site into `public/`, with a page for each redirect, `404.html`, `llms.txt`, `robots.txt`, `sitemap.xml`, and `atom.xml`
     and `rss.xml`, the Atom 1.0 and
     RSS 2.0 feeds of the pages of a section with `sort_by: date`. It leaves out the drafts, unless `--drafts`, and
     builds for the `base_url` of `site.yaml`, unless `--base-url` gives another, such as a fork's Pages site; the ids

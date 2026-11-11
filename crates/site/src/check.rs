@@ -105,8 +105,8 @@ pub enum ValueError {
 }
 
 /// What `edu check` checked: how many pages and layouts; and for the build, the pages it rendered,
-/// the files of `content/` that are not pages, the files of `static/`, the site's address, and the
-/// feed if a section with `sort_by: date` lists posts.
+/// the files of `content/` that are not pages, the files of `static/`, the site's address, `title`
+/// and `description`, and the feed if a section with `sort_by: date` lists posts.
 #[derive(Debug)]
 pub(crate) struct Checked {
     pub(crate) pages: usize,
@@ -117,6 +117,8 @@ pub(crate) struct Checked {
     pub(crate) files: Vec<PathBuf>,
     pub(crate) statics: Vec<PathBuf>,
     pub(crate) base_url: BaseUrl,
+    pub(crate) title: Option<String>,
+    pub(crate) description: Option<String>,
     pub(crate) feed: Option<Feed>,
 }
 
@@ -127,13 +129,14 @@ pub(crate) enum RenderedKind {
     Redirect,
 }
 
-/// A page as the build writes it: its path, its URL, its HTML, its `date`, whether the live site
-/// has it, and whether it is a content page or a redirect.
+/// A page as the build writes it: its path, its URL, its HTML, its `title` and `date`, whether the
+/// live site has it, and whether it is a content page or a redirect.
 #[derive(Debug)]
 pub(crate) struct Rendered {
     pub(crate) path: PathBuf,
     pub(crate) url: String,
     pub(crate) html: String,
+    pub(crate) title: Option<String>,
     pub(crate) date: Option<String>,
     pub(crate) live: bool,
     pub(crate) kind: RenderedKind,
@@ -208,12 +211,14 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
         match html {
             Ok(html) => {
                 let (path, url) = (page.path.clone(), page.url.clone());
+                let title = page.title.clone();
                 let date = page.date.as_ref().map(|date| date.text.clone());
                 let live = is_live(&page.path);
                 rendered.push(Rendered {
                     path,
                     url,
                     html,
+                    title,
                     date,
                     live,
                     kind,
@@ -285,6 +290,7 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
                 path: PathBuf::from(urls::FILE),
                 url: redirect.from.clone(),
                 html: render::redirect(&redirect.to),
+                title: None,
                 date: None,
                 live: true,
                 kind: RenderedKind::Redirect,
@@ -306,6 +312,8 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             files,
             statics,
             base_url,
+            title: site.title,
+            description: site.description,
             feed,
         })
     } else {
