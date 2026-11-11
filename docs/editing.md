@@ -97,11 +97,11 @@ It does not check links to other sites.
 `/atom.xml` and `/rss.xml` are feeds of the news posts for feed readers, in the Atom and the RSS format: the same
 posts, newest first, each with its title, date, authors and whole text. Their name and description are the `title`
 and `description` of `site.yaml`, which a site with news posts needs. Every page with the site's layout names both
-for feed readers, the Atom feed first, and has a button with the feed symbol at the end of its menu, which opens a
-short menu with a link to each feed; `/news/` links to both too. The build writes the feeds again each time, from the
-posts, so a new post needs nothing more than its file. Links in a post need nothing special: the feeds turn the links
-to the site and to ids into full addresses. A feed reader knows a post by its address, so keep the file name of a
-post once it is published.
+for feed readers, the Atom feed first, and has an orange button for each feed at the end of its menu. On a narrow
+screen one button with the feed symbol takes their place and opens a short menu with both. `/news/` links to both
+too. The build writes the feeds again each time, from the posts, so a new post needs nothing more than its file.
+Links in a post need nothing special: the feeds turn the links to the site and to ids into full addresses. A feed
+reader knows a post by its address, so keep the file name of a post once it is published.
 
 ## Common changes
 

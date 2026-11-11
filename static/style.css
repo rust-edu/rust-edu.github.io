@@ -265,8 +265,8 @@ strong {
     font-size: 1rem;
 }
 
-/* Two small buttons end the menu: the feed's symbol, which opens the menu of
-   the feeds, then the theme button. */
+/* Small buttons end the menu: the feeds' buttons, then the theme button. */
+.site-nav .feed-badge,
 .feed-menu summary,
 .theme-toggle {
     padding: 0.3125rem;
@@ -277,16 +277,17 @@ strong {
     cursor: pointer;
 }
 
+.site-nav > ul + .feed-badge,
 .feed-menu {
     margin-left: 1.25rem;
 }
 
+.site-nav > .feed-badge,
+.feed-menu .feed-badge + .feed-badge,
 .theme-toggle {
     margin-left: 0.5rem;
 }
 
-.feed-menu summary:hover,
-.feed-menu[open] summary,
 .theme-toggle:hover {
     border-color: currentColor;
     color: var(--color-link);
@@ -295,6 +296,36 @@ strong {
 .feed-menu svg,
 .theme-toggle svg {
     display: block;
+}
+
+/* The feeds' buttons are orange, as the feed's symbol is all over the web: the
+   color of a page's title, on which the paper's color reads well. Under the
+   pointer, and while its menu is open, a button's two colors change places. */
+.site-nav .feed-badge,
+.feed-menu summary {
+    border-color: var(--color-title);
+    background: var(--color-title);
+    color: var(--color-bg);
+}
+
+.site-nav .feed-badge:hover,
+.feed-menu summary:hover,
+.feed-menu[open] summary {
+    background: var(--color-bg);
+    color: var(--color-title);
+    text-decoration: none;
+}
+
+/* A feed's button says ATOM or RSS. Its line is as high as the drawing of the
+   other buttons, 18px, so all the buttons have one height. */
+.site-nav .feed-badge {
+    display: inline-block;
+    padding: 0.3125rem 0.4375rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 18px;
+    text-transform: uppercase;
 }
 
 /* The symbol alone, with no triangle beside it; the second rule is for Safari. */
@@ -327,7 +358,7 @@ strong {
     right: 1rem;
     right: max(1rem, 50% - 20rem);
     margin-left: 1rem;
-    padding: 0.75rem 1rem 0.5rem;
+    padding: 0.75rem 1rem;
     border: 1px solid var(--color-rule);
     border-radius: var(--radius);
     background: var(--color-bg);
@@ -335,9 +366,25 @@ strong {
 }
 
 .feed-menu p {
-    margin: 0 0 0.25rem;
+    margin: 0 0 0.5rem;
     color: var(--color-muted);
     font-size: 0.9375rem;
+}
+
+/* A screen with room for them has the feeds' two buttons in the bar. A
+   narrower one has the feed's symbol, whose menu holds the same two. */
+.site-nav > .feed-badge {
+    display: none;
+}
+
+@media screen and (min-width: 37rem) {
+    .site-nav > .feed-badge {
+        display: inline-block;
+    }
+
+    .feed-menu {
+        display: none;
+    }
 }
 
 /* A narrow screen: the menu takes the row under the logo, its two buttons at the

@@ -37,7 +37,10 @@
                 <li><a href="{{ item.url }}">{{ item.name }}</a></li>
                 {% endfor %}
             </ul>
-            {# The feed's symbol opens a short menu of the two feeds, with no script. /news/ links to both feeds too. #}
+            {# An orange button for each feed, where the screen has room for them. /news/ links to both feeds too. #}
+            <a class="feed-badge" href="/atom.xml" aria-label="Atom feed" title="Atom feed">Atom</a>
+            <a class="feed-badge" href="/rss.xml" aria-label="RSS feed" title="RSS feed">RSS</a>
+            {# A narrower screen has the feed's symbol, which opens a short menu of the same two buttons, with no script. #}
             <details class="feed-menu">
                 {# The tooltip is the drawing's: on the button it would show all over the page while the menu is open. #}
                 <summary aria-label="News feeds">
@@ -49,8 +52,8 @@
                 </summary>
                 <div>
                     <p>Follow the news in a feed reader</p>
-                    <a href="/atom.xml">Atom feed</a>
-                    <a href="/rss.xml">RSS feed</a>
+                    <a class="feed-badge" href="/atom.xml" aria-label="Atom feed" title="Atom feed">Atom</a>
+                    <a class="feed-badge" href="/rss.xml" aria-label="RSS feed" title="RSS feed">RSS</a>
                 </div>
             </details>
             {# A sun in the light theme and a moon in the dark one: style.css shows the one for the theme. #}
