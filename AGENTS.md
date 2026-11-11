@@ -44,7 +44,8 @@ weaken a check or a test to make it pass.
 
 ## Generator
 
-- **Standard library only.** Do not add a crate. CI fails when `Cargo.lock` lists a crate from a registry or git.
+- **Standard library only.** Do not add a crate. CI fails when `Cargo.lock` lists a crate from a registry or git,
+  or any crate but the four `edu-*` crates of `crates/`.
 - **No `unsafe`.** The workspace forbids it.
 - **No panics on input.** Return an error instead of calling `unwrap`, `expect` or `panic!`. Only tests may call them.
 - **Strict parsers.** Each parser accepts only the subset of YAML, Markdown or the template language that the site
@@ -61,7 +62,7 @@ weaken a check or a test to make it pass.
 
 - A push to `main` publishes the site. Make each change on a branch and propose it in a pull request.
 - When an AI agent helps with a change, say in the description of its pull request which tools helped and how.
-- `FROM check AS live` in the `Dockerfile` is what stops a bad push from publishing. Keep it.
+- `FROM check AS live` in the `Dockerfile` is what stops a bad push from publishing. Keep it; CI fails when it changes.
 - `rust-toolchain.toml` and the `FROM` tag of the `Dockerfile` name the same Rust. Change them together; CI fails
   when they differ.
 - `.dockerignore` is an allowlist and the `Dockerfile` copies paths by name, so a new top-level file or folder that
