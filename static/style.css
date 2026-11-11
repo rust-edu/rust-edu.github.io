@@ -21,7 +21,7 @@
     --color-rule: #e5ddd0;
     --color-focus: #a72145;
     --color-accent: #f74c00;
-    --color-on-accent: #000000;
+    --color-on-accent: #ffffff;
 
     /* Headings: the crab's orange, then blue, the split complement that the teal
        of links does not take, then blue's neighbor, violet. */
@@ -309,9 +309,9 @@ strong {
 }
 
 /* The feeds' buttons are orange, as the feed's symbol is all over the web: the
-   orange of Ferris, the crab of the logo, with the black of his cap, which
-   reads well on it. Under the pointer, and while its menu is open, a button's
-   two colors change places. */
+   orange of Ferris, the crab of the logo, with white on it. Under the pointer,
+   and while its menu is open, a button takes the page's background, with orange
+   on it. */
 .site-nav .feed-badge,
 .feed-menu summary {
     border-color: var(--color-accent);
@@ -322,7 +322,7 @@ strong {
 .site-nav .feed-badge:hover,
 .feed-menu summary:hover,
 .feed-menu[open] summary {
-    background: var(--color-on-accent);
+    background: var(--color-bg);
     color: var(--color-accent);
     text-decoration: none;
 }
