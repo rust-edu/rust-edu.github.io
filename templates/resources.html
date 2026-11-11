@@ -1,5 +1,3 @@
-{% import "macros.html" as macros %}
-
 {% extends "base.html" %}
 
 {% block title %}{{ section.title }}{% endblock title %}
@@ -26,7 +24,20 @@
 {% if category.resources %}
 <dl class="resources">
     {% for resource in category.resources %}
-    {{ macros::resource(resource=resource) }}
+    <dt>
+        <a href="{{ resource.url }}" target="_blank">
+            <span class="is-size-5 has-text-weight-semibold">{{ resource.title }}</span>
+            <span class="external-link-icon"><i class="fa-solid fa-arrow-up-right-from-square"></i></span>
+        </a>
+    </dt>
+
+    {% if resource.author %}
+    <dd class="is-italic has-text-grey">{{ resource.author }}</dd>
+    {% endif %}
+
+    {% if resource.description %}
+    <dd class="mt-1">{{ resource.description }}</dd>
+    {% endif %}
     {% endfor %}
 </dl>
 {% endif %}
@@ -39,7 +50,20 @@
     {% if subcategory.resources %}
     <dl class="resources">
         {% for resource in subcategory.resources %}
-        {{ macros::resource(resource=resource) }}
+        <dt>
+            <a href="{{ resource.url }}" target="_blank">
+                <span class="is-size-5 has-text-weight-semibold">{{ resource.title }}</span>
+                <span class="external-link-icon"><i class="fa-solid fa-arrow-up-right-from-square"></i></span>
+            </a>
+        </dt>
+
+        {% if resource.author %}
+        <dd class="is-italic has-text-grey">{{ resource.author }}</dd>
+        {% endif %}
+
+        {% if resource.description %}
+        <dd class="mt-1">{{ resource.description }}</dd>
+        {% endif %}
         {% endfor %}
     </dl>
     {% endif %}
