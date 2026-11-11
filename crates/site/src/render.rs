@@ -47,7 +47,7 @@ pub(crate) fn site(
 
 /// The settings in `text`, the YAML of `site.yaml`, which must have `base_url`; with `base_url`
 /// in its place if given, also as the value `site.base_url` of the layouts. The pages show the
-/// `title` in their title and the home page the `description` as its heading, so neither can be
+/// `title` in their title and the home page the `description` in its title too, so neither can be
 /// blank.
 fn settings(text: &str, base_url: Option<&BaseUrl>) -> Result<Site, PageError> {
     let entries = edu_yaml::parse(text).map_err(PageError::Header)?;
@@ -429,7 +429,7 @@ mod tests {
             "the `title` is empty or only spaces; write the site's name, which the pages show in \
              their title",
             "the `description` is empty or only spaces; write a sentence about the site, which \
-             the home page shows as its heading",
+             the home page shows in its title",
         );
         let not_text = "this value must be text";
         let cases = [
