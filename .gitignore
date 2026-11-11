@@ -1,5 +1,8 @@
-public/
+.DS_Store
+.idea
+
 public.tmp/
 /target
 preview/
 /site/
+/public/
