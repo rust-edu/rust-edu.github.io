@@ -21,6 +21,7 @@
     --color-rule: #e5ddd0;
     --color-focus: #a72145;
     --color-accent: #f74c00;
+    --color-on-accent: #000000;
 
     /* Headings: the crab's orange, then blue, the split complement that the teal
        of links does not take, then blue's neighbor, violet. */
@@ -299,20 +300,21 @@ strong {
 }
 
 /* The feeds' buttons are orange, as the feed's symbol is all over the web: the
-   color of a page's title, on which the paper's color reads well. Under the
-   pointer, and while its menu is open, a button's two colors change places. */
+   orange of Ferris, the crab of the logo, with the black of his cap, which
+   reads well on it. Under the pointer, and while its menu is open, a button's
+   two colors change places. */
 .site-nav .feed-badge,
 .feed-menu summary {
-    border-color: var(--color-title);
-    background: var(--color-title);
-    color: var(--color-bg);
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
 }
 
 .site-nav .feed-badge:hover,
 .feed-menu summary:hover,
 .feed-menu[open] summary {
-    background: var(--color-bg);
-    color: var(--color-title);
+    background: var(--color-on-accent);
+    color: var(--color-accent);
     text-decoration: none;
 }
 
@@ -350,7 +352,8 @@ strong {
     cursor: default;
 }
 
-/* The menu of the feeds hangs under the bar, at the column's right edge. */
+/* The menu of the feeds hangs under the bar, at the column's right edge: the
+   feeds' two buttons, and no words. */
 .feed-menu div {
     position: absolute;
     z-index: 2;
@@ -358,17 +361,11 @@ strong {
     right: 1rem;
     right: max(1rem, 50% - 20rem);
     margin-left: 1rem;
-    padding: 0.75rem 1rem;
+    padding: 0.5rem;
     border: 1px solid var(--color-rule);
     border-radius: var(--radius);
     background: var(--color-bg);
     box-shadow: 0 0.5rem 1.5rem var(--color-shadow);
-}
-
-.feed-menu p {
-    margin: 0 0 0.5rem;
-    color: var(--color-muted);
-    font-size: 0.9375rem;
 }
 
 /* A screen with room for them has the feeds' two buttons in the bar. A
