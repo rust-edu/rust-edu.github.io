@@ -52,7 +52,8 @@
     }
 
     /* The logo with light lettering takes the place of the one with black, and
-       the theme button's moon that of its sun. */
+       the theme button's moon that of its sun. Ferris of the home page keeps the
+       line around his cap. */
     :root:not([data-theme="light"]) .site-logo img,
     :root:not([data-theme="light"]) .theme-toggle .sun {
         display: none;
@@ -61,6 +62,10 @@
     :root:not([data-theme="light"]) .site-logo [src$="#dark"],
     :root:not([data-theme="light"]) .theme-toggle .moon {
         display: block;
+    }
+
+    :root:not([data-theme="light"]) .site-hero img {
+        mix-blend-mode: normal;
     }
 }
 
@@ -95,6 +100,10 @@
     :root[data-theme="dark"] .site-logo [src$="#dark"],
     :root[data-theme="dark"] .theme-toggle .moon {
         display: block;
+    }
+
+    :root[data-theme="dark"] .site-hero img {
+        mix-blend-mode: normal;
     }
 }
 
@@ -536,14 +545,40 @@ main p + p:has(> strong:only-child):has(+ p > img) {
     margin-top: 2rem;
 }
 
-/* Home: the statement keeps the text color beside the crab. */
+/* Home: a band across the screen, right under the bar, in the footer's color,
+   with Ferris, the statement and the next steps. The band is the shadow of its
+   part of the column, which the clip lets out to the sides only. */
 
+.site-hero {
+    margin-top: -3rem;
+    padding: 2rem 0 2.25rem;
+    background: var(--color-surface);
+    box-shadow: 0 0 0 100vmax var(--color-surface);
+    -webkit-clip-path: inset(0 -100vmax);
+    clip-path: inset(0 -100vmax);
+}
+
+/* Ferris with his cap is the tab's icon, a square with air around him. The line
+   around his cap has the light paper's color and would show on the light band:
+   `darken` paints the darker of the picture and the band. The dark theme, which
+   needs that line, takes `darken` away. */
+.site-hero img {
+    width: 7rem;
+    margin: -0.5rem 0 0.25rem -0.25rem;
+    mix-blend-mode: darken;
+}
+
+/* The statement keeps the text color beside him. */
 .site-hero h1 {
     margin: 0 0 1.25rem -0.025em;
     color: var(--color-text);
     font-size: 2.5rem;
     letter-spacing: -0.02em;
     line-height: 1.1;
+}
+
+.site-hero p {
+    margin: 0;
 }
 
 .site-hero a {
@@ -623,8 +658,33 @@ main p + p:has(> strong:only-child):has(+ p > img) {
         font-size: 1.125rem;
     }
 
+    /* Ferris stands at the right of the statement and of the next steps. */
+    .site-hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 11rem;
+        align-items: center;
+        padding: 2.5rem 0;
+    }
+
+    .site-hero img {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        width: 11rem;
+        margin: 0;
+    }
+
     .site-hero h1 {
+        grid-column: 1;
+        grid-row: 1;
+        align-self: end;
+        margin-right: 1.5rem;
         font-size: 3rem;
+    }
+
+    .site-hero p {
+        grid-column: 1;
+        grid-row: 2;
+        align-self: start;
     }
 
     .news-list li {
@@ -634,7 +694,7 @@ main p + p:has(> strong:only-child):has(+ p > img) {
     }
 }
 
-/* Top rule, footer band and crab. */
+/* Top rule and footer band. */
 
 body {
     max-width: none;
@@ -658,21 +718,6 @@ main,
 
 .site-footer {
     background: var(--color-surface);
-}
-
-.site-hero {
-    position: relative;
-}
-
-.site-hero h1 {
-    max-width: 84%;
-}
-
-.site-hero img {
-    position: absolute;
-    top: 0.5rem;
-    right: 0;
-    width: 14%;
 }
 
 /* Paper drops the button's fill. */
