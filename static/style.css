@@ -341,12 +341,8 @@ strong {
 }
 
 /* A narrow screen: the menu takes the row under the logo, its two buttons at the
-   right, and only that row stays at the top. The logo is 36px high. */
+   right. */
 @media screen and (max-width: 31rem) {
-    .site-header {
-        top: calc(-36px - 0.5rem);
-    }
-
     .site-nav {
         flex: 1 0 100%;
         padding-top: 0.5rem;
@@ -354,6 +350,15 @@ strong {
 
     .feed-menu {
         margin-left: auto;
+    }
+}
+
+/* Where the bar of a narrow screen stays at the top, only the menu's row stays:
+   the bar goes up by the row of the logo, which is 36px high. On a screen too
+   low for a bar that stays, the bar must not go up: the logo would be gone. */
+@media screen and (max-width: 31rem) and (min-height: 30rem) {
+    .site-header {
+        top: calc(-36px - 0.5rem);
     }
 }
 
