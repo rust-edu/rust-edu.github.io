@@ -30,7 +30,7 @@ weaken a check or a test to make it pass.
 | `layouts/` | The HTML layout of each kind of page |
 | `static/` | `style.css` and the images |
 | `site.yaml` | The site's address, title and description, and the menu, next-step (`hero`) and footer links |
-| `urls.txt` | The addresses that other sites may link to |
+| `urls.yaml` | The addresses that other sites may link to (`keep`) and the addresses that redirect elsewhere (`redirects`) |
 | `crates/` | The generator: `yaml`, `markdown`, `template` and `site`, which has the `edu` binary |
 | `docs/`, `research/` | The editing guide, and the generator's plan and research notes |
 | `public/`, `site/`, `preview/` | Build output, ignored by git. Never edit it. |
@@ -39,8 +39,8 @@ weaken a check or a test to make it pass.
 
 - Pages have no HTML. Use only the Markdown that `docs/editing.md` lists; the check stops at anything else.
 - `content/` and `static/` hold only the types of file that `docs/editing.md` lists, and no symbolic links.
-- Before you move or remove a page or file, look for its address in `urls.txt`. Keep the old address of a page with
-  an `_index.md` that has `redirect_to`, or delete its line on purpose.
+- Before you move or remove a page or file, look for its address in `urls.yaml`. Move the old address of a page to
+  `redirects`, or delete its line from `keep` on purpose.
 
 ## Generator
 

@@ -1,5 +1,5 @@
 //! Rendering pages: the settings of `site.yaml`, the layouts of `layouts/`, and the values that
-//! the layouts read for each page of `content/`; and the page of a redirect.
+//! the layouts read for each page of `content/`; and `404.html` and the page of a redirect.
 
 use std::cmp::Ordering;
 use std::ffi::OsStr;
@@ -16,6 +16,13 @@ use crate::page::{self, Kind, Order, Page, TOP};
 
 /// The layout that wraps every page's own layout, at `{{ content | safe }}`.
 const LAYOUT: &str = "layout.html";
+
+/// The optional layout of `404.html`, wrapped in `layout.html` when present.
+pub(crate) const NOT_FOUND_LAYOUT: &str = "404.html";
+
+/// The page for an address without a file when `layouts/404.html` is absent, as Zola writes it.
+const NOT_FOUND_HTML: &str =
+    "<!doctype html>\n<title>404 Not Found</title>\n<h1>404 Not Found</h1>\n";
 
 /// The settings of `site.yaml`: the value `site` of the layouts, the site's address, the address
 /// that `site.yaml` itself gives, which names the feed and its posts at any address, and the
@@ -170,15 +177,52 @@ pub(crate) fn render(
     let Some(wrapper) = layouts.get(LAYOUT) else {
         return Err(page.error(TOP, ValueError::NoLayout(LAYOUT.to_owned())));
     };
+    wrap(name, layout, wrapper, &page.path, site, values)
+}
+
+/// Renders `404.html` with `layouts/404.html` wrapped in `layout.html`, or gives the plain
+/// fallback when `layouts/404.html` is absent.
+pub(crate) fn not_found(site: &Value, layouts: &Layouts) -> Result<String, ContentError> {
+    let Some(layout) = layouts.get(NOT_FOUND_LAYOUT) else {
+        return Ok(NOT_FOUND_HTML.to_owned());
+    };
+    let Some(wrapper) = layouts.get(LAYOUT) else {
+        return Err(ContentError {
+            path: Path::new("layouts").join(NOT_FOUND_LAYOUT),
+            error: PageError::Value(TOP, ValueError::NoLayout(LAYOUT.to_owned())),
+        });
+    };
+    let values = Value::Map(vec![
+        ("title".to_owned(), Value::Str("Page not found".to_owned())),
+        ("url".to_owned(), Value::Str("/404.html".to_owned())),
+    ]);
+    wrap(
+        NOT_FOUND_LAYOUT,
+        layout,
+        wrapper,
+        Path::new(NOT_FOUND_LAYOUT),
+        site,
+        values,
+    )
+}
+
+fn wrap(
+    name: &str,
+    layout: &Template,
+    wrapper: &Template,
+    target: &Path,
+    site: &Value,
+    values: Value,
+) -> Result<String, ContentError> {
     let mut context = vec![
         ("site".to_owned(), site.clone()),
         ("page".to_owned(), values),
     ];
     let rendered = layout.render(&Value::Map(context.clone()));
-    let html = rendered.map_err(|error| render_error(name, page, error))?;
+    let html = rendered.map_err(|error| render_error(name, target, error))?;
     context.push(("content".to_owned(), Value::Str(html)));
     let rendered = wrapper.render(&Value::Map(context));
-    rendered.map_err(|error| render_error(LAYOUT, page, error))
+    rendered.map_err(|error| render_error(LAYOUT, target, error))
 }
 
 /// The page of an `_index.md` with `redirect_to`, which sends the browser on to `to` at once:
@@ -193,10 +237,10 @@ pub(crate) fn redirect(to: &str) -> String {
     )
 }
 
-fn render_error(layout: &str, page: &Page, error: edu_template::Error) -> ContentError {
+fn render_error(layout: &str, page: &Path, error: edu_template::Error) -> ContentError {
     let path = Path::new("layouts").join(layout);
     let error = PageError::Render {
-        page: page.path.clone(),
+        page: page.to_owned(),
         error,
     };
     ContentError { path, error }
@@ -536,5 +580,22 @@ mod tests {
         let expected = "error content/news/undated.md:1:1: error: a page in a section with \
                         `sort_by: date` needs a `date`";
         assert_eq!(show(&pages(&texts), "news/_index.md", &layouts), expected);
+    }
+
+    #[test]
+    fn not_found_renders_with_404_html_inside_layout_html_or_uses_the_fallback() {
+        let site = Value::Map(vec![("title".into(), Value::Str("Site".into()))]);
+        assert_eq!(not_found(&site, &parse(&[])).unwrap(), NOT_FOUND_HTML);
+        let wrapper = "<title>{% if page.home %}H{% else %}{{ page.title }} - {{ site.title }}{% endif %}</title>{{ content | safe }}";
+        let inner = "<h1>{{ page.url }}</h1>";
+        let layouts = parse(&[("layout.html", wrapper), ("404.html", inner)]);
+        let expected = "<title>Page not found - Site</title><h1>/404.html</h1>";
+        assert_eq!(not_found(&site, &layouts).unwrap(), expected);
+        let bad = parse(&[("layout.html", wrapper), ("404.html", "{{ page.date }}")]);
+        let error = not_found(&site, &bad).unwrap_err().to_string();
+        assert_eq!(
+            error,
+            "layouts/404.html:1:4: error: unknown variable `page.date` while rendering 404.html"
+        );
     }
 }

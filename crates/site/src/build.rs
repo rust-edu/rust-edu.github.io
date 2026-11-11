@@ -21,9 +21,6 @@ const MARKER: &str = ".edu-output";
 /// The files that the build makes at the top of the site, besides the pages.
 pub(crate) const MADE: [&str; 3] = ["404.html", "robots.txt", "sitemap.xml"];
 
-/// The page for an address without a file, as Zola writes it.
-const NOT_FOUND: &str = "<!doctype html>\n<title>404 Not Found</title>\n<h1>404 Not Found</h1>\n";
-
 /// How `edu build` builds: with or without drafts, and for the address of `site.yaml` or another.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Options {
@@ -111,16 +108,16 @@ pub(crate) fn site(root: &Path, out: &Path, options: &Options) -> Result<Built, 
 /// `out` with `.tmp` added first, which then takes the place of `out`; a folder in the way is
 /// deleted only if an earlier build made it.
 fn save(root: &Path, out: &Path, site: &Site) -> Result<(), Error> {
-    let tmp = out.with_extension("tmp");
-    clear(root, &tmp)?;
-    let written = write(root, &tmp, site);
+    let staging = out.with_extension("tmp");
+    clear(root, &staging)?;
+    let written = write(root, &staging, site);
     if written.is_err() {
         // A folder with the marker is deleted by the next build anyway.
-        let _ = fs::remove_dir_all(root.join(&tmp));
+        let _ = fs::remove_dir_all(root.join(&staging));
     }
     written?;
     clear(root, out)?;
-    fs::rename(root.join(&tmp), root.join(out)).map_err(output_error(out))
+    fs::rename(root.join(&staging), root.join(out)).map_err(output_error(out))
 }
 
 /// The site in `root`, built with `options` in memory, as `edu build` writes it and `edu serve`
@@ -130,7 +127,7 @@ pub(crate) fn plan(root: &Path, options: &Options) -> Result<Site, Error> {
     let base_url = &checked.base_url;
     // The texts of the files of `MADE`, in its order.
     let texts = [
-        NOT_FOUND.to_owned(),
+        rebase(&checked.not_found, base_url.path()),
         robots(base_url),
         sitemap(base_url, &checked.rendered),
     ];
@@ -635,6 +632,10 @@ mod tests {
                 "<img\nsrc=\"/a.png\" alt=\"/a\">",
                 "<img\nsrc=\"/edu/a.png\" alt=\"/a\">",
             ),
+            (
+                "<meta http-equiv=\"refresh\" content=\"0; url=/news/#part\">",
+                "<meta http-equiv=\"refresh\" content=\"0; url=/edu/news/#part\">",
+            ),
         ];
         for (html, rebased) in cases {
             assert_eq!(rebase(html, "/edu"), rebased);
@@ -701,5 +702,131 @@ mod tests {
         let expected = "static/robots.txt would be /robots.txt, which `edu build` writes itself";
         assert_eq!(error.to_string(), expected);
         assert!(!out.exists() && !out.with_extension("tmp").exists());
+    }
+
+    #[test]
+    fn redirects_in_urls_yaml_write_html_pages_rebased_for_the_base_url() {
+        let root = out("urls-yaml-root");
+        fs::create_dir_all(root.join("content/news")).unwrap();
+        fs::create_dir_all(root.join("layouts")).unwrap();
+        fs::write(
+            root.join("site.yaml"),
+            "base_url: https://example.org\ntitle: T\ndescription: D\n",
+        )
+        .unwrap();
+        fs::write(root.join("layouts/layout.html"), "{{ content | safe }}").unwrap();
+        fs::write(
+            root.join("layouts/home.html"),
+            "<main>{{ page.content | safe }}</main>",
+        )
+        .unwrap();
+        fs::write(
+            root.join("layouts/page.html"),
+            "<h2 id=\"part\">Part</h2>{{ page.content | safe }}",
+        )
+        .unwrap();
+        fs::write(
+            root.join("content/_index.md"),
+            "---\ntitle: Home\n---\n[Chat](/zulip/) and [Old](/old/post/).\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("content/news/post.md"),
+            "---\ntitle: Post\n---\nBody.\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("urls.yaml"),
+            concat!(
+                "keep:\n  - /\n  - /news/post/#part\n",
+                "redirects:\n",
+                "  - from: /zulip/\n    to: https://chat.example.org/\n",
+                "  - from: /old/post/\n    to: /news/post/#part\n",
+            ),
+        )
+        .unwrap();
+        let built_dir = out("urls-yaml-out");
+        let options = Options {
+            drafts: Drafts::Exclude,
+            base_url: BaseUrl::parse("https://example.github.io/edu/"),
+        };
+        let built = site(&root, &built_dir, &options).unwrap();
+        assert_eq!((built.pages, built.files), (4, 3));
+        let zulip = fs::read_to_string(built_dir.join("zulip/index.html")).unwrap();
+        assert!(
+            zulip.contains("content=\"0; url=https://chat.example.org/\">"),
+            "{zulip}"
+        );
+        let old = fs::read_to_string(built_dir.join("old/post/index.html")).unwrap();
+        assert!(
+            old.contains("content=\"0; url=/edu/news/post/#part\">")
+                && old.contains("<a href=\"/edu/news/post/#part\">"),
+            "{old}"
+        );
+        let sitemap = fs::read_to_string(built_dir.join("sitemap.xml")).unwrap();
+        assert!(
+            sitemap.contains("<loc>https://example.github.io/edu/old/post/</loc>")
+                && sitemap.contains("<loc>https://example.github.io/edu/zulip/</loc>"),
+            "{sitemap}"
+        );
+        fs::remove_dir_all(root).unwrap();
+        fs::remove_dir_all(built_dir).unwrap();
+    }
+
+    #[test]
+    fn a_404_layout_has_its_links_checked_and_rebased_for_the_base_url() {
+        let root = out("custom-404-root");
+        fs::create_dir_all(root.join("content")).unwrap();
+        fs::create_dir_all(root.join("layouts")).unwrap();
+        fs::create_dir_all(root.join("static")).unwrap();
+        fs::write(
+            root.join("site.yaml"),
+            "base_url: https://example.org\ntitle: T\ndescription: D\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("layouts/layout.html"),
+            "<link rel=\"stylesheet\" href=\"/style.css\"><a href=\"#main\">Skip</a>\
+             <main id=\"main\">{{ content | safe }}</main>",
+        )
+        .unwrap();
+        fs::write(root.join("layouts/home.html"), "{{ page.content | safe }}").unwrap();
+        fs::write(
+            root.join("layouts/404.html"),
+            "<h1>{{ page.title }}</h1><p><a href=\"/\">Home</a></p>",
+        )
+        .unwrap();
+        fs::write(root.join("static/style.css"), "").unwrap();
+        fs::write(root.join("content/_index.md"), "---\ntitle: Home\n---\n").unwrap();
+
+        let built_dir = out("custom-404-out");
+        let options = Options {
+            drafts: Drafts::Exclude,
+            base_url: BaseUrl::parse("https://example.github.io/edu/"),
+        };
+        site(&root, &built_dir, &options).unwrap();
+        let html = fs::read_to_string(built_dir.join("404.html")).unwrap();
+        assert!(
+            html.contains("href=\"/edu/style.css\"")
+                && html.contains("href=\"#main\"")
+                && html.contains("<h1>Page not found</h1><p><a href=\"/edu/\">Home</a></p>"),
+            "{html}"
+        );
+
+        fs::write(
+            root.join("layouts/404.html"),
+            "<p><a href=\"/missing/\">Gone</a></p>\n",
+        )
+        .unwrap();
+        let Err(Error::Content(errors)) = site(&root, &built_dir, &options) else {
+            panic!("expected broken link error in layouts/404.html");
+        };
+        assert_eq!(errors.len(), 1);
+        assert_eq!(
+            errors[0].to_string(),
+            "layouts/404.html:1:13: error: `/missing/` is not a page or file of the site"
+        );
+        fs::remove_dir_all(root).unwrap();
+        fs::remove_dir_all(built_dir).unwrap();
     }
 }

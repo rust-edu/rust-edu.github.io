@@ -684,6 +684,186 @@ main p + p:has(> strong:only-child):has(+ p > img) {
     font-variant-numeric: tabular-nums;
 }
 
+/* 404: Ferris in a compass ring, a rustc-style E0404 note, and wayfinding cards */
+
+.not-found-art {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 7.5rem;
+    height: 7.5rem;
+    margin: -0.25rem 0 0.75rem;
+    color: var(--color-rule);
+}
+
+.not-found-orbit {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.not-found-art img {
+    width: 78%;
+    aspect-ratio: 1;
+    margin: 0;
+}
+
+.not-found-badge {
+    position: absolute;
+    top: 0.125rem;
+    right: -0.375rem;
+    padding: 0.125rem 0.5rem;
+    border: 2px solid var(--color-surface);
+    border-radius: 999px;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+    transform: rotate(8deg);
+}
+
+.not-found-diag {
+    overflow: hidden;
+    margin: 2.5rem 0 0;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+}
+
+.not-found-diag-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--color-rule);
+    background: var(--color-bg);
+    color: var(--color-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.8125rem;
+}
+
+.not-found-dots {
+    display: inline-flex;
+    align-items: center;
+}
+
+.not-found-dots i {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-right: 0.375rem;
+    border-radius: 50%;
+    background: var(--color-muted);
+}
+
+.not-found-dots i:first-child {
+    background: var(--color-title);
+}
+
+.not-found-dots i:last-child {
+    margin-right: 0;
+    background: var(--color-link);
+}
+
+.not-found-diag pre {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.55;
+}
+
+.diag-err {
+    color: var(--color-title);
+    font-weight: 600;
+}
+
+.diag-pos {
+    color: var(--color-heading);
+}
+
+.diag-tag {
+    color: var(--color-subheading);
+    font-weight: 600;
+}
+
+.not-found-links {
+    display: grid;
+    gap: 0.875rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.not-found-links li {
+    margin: 0;
+}
+
+.not-found-links a {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    color: var(--color-text);
+    text-decoration: none;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.not-found-links strong {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+    color: var(--color-link);
+    font-weight: 600;
+}
+
+.not-found-links strong::after {
+    content: "\2192";
+    color: var(--color-muted);
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.not-found-links span {
+    color: var(--color-muted);
+    font-size: 0.9375rem;
+    line-height: 1.45;
+}
+
+.not-found-links a:hover,
+.not-found-links a:focus-visible {
+    border-color: var(--color-link);
+    background: var(--color-bg);
+}
+
+.not-found-links a:hover strong {
+    color: var(--color-link-hover);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.15em;
+}
+
+.not-found-links a:hover strong::after,
+.not-found-links a:focus-visible strong::after {
+    color: var(--color-link-hover);
+    transform: translateX(0.2rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .not-found-links a,
+    .not-found-links strong::after {
+        transition: none;
+        transform: none;
+    }
+}
+
 /* Footer */
 
 .site-footer {
@@ -721,6 +901,18 @@ main p + p:has(> strong:only-child):has(+ p > img) {
         margin: 0;
     }
 
+    .not-found-art {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        width: 11rem;
+        height: 11rem;
+        margin: 0;
+    }
+
+    .not-found-art img {
+        width: 78%;
+    }
+
     .site-hero h1 {
         grid-column: 1;
         grid-row: 1;
@@ -739,6 +931,10 @@ main p + p:has(> strong:only-child):has(+ p > img) {
         display: grid;
         grid-template-columns: 6.5rem minmax(0, 1fr);
         align-items: baseline;
+    }
+
+    .not-found-links {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -772,7 +968,8 @@ main,
    which takes a plain color. */
 
 @media print {
-    .site-hero a:first-child {
+    .site-hero a:first-child,
+    .not-found-badge {
         background: none;
         color: var(--color-text);
     }

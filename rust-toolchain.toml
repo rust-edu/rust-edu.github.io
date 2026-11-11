@@ -2,5 +2,5 @@
 # bumps both in one pull request.
 [toolchain]
 channel = "1.99.1"
-components = ["rustfmt", "clippy"]
+components = ["clippy", "rustfmt", "rust-analyzer"]
 profile = "minimal"

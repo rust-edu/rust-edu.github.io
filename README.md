@@ -69,7 +69,7 @@ flowchart LR
 ```
 
 - **Standard library only:** `Cargo.lock` lists only the four crates of this workspace (`edition = "2024"`,
-  `rust-version = "1.99.1"`, `unsafe_code = "forbid"`). CI rejects any other crate in `Cargo.lock` and builds and
+  `rust-version = "1.99"`, `unsafe_code = "forbid"`). CI rejects any other crate in `Cargo.lock` and builds and
   tests with `--network=none --locked --offline` inside a digest-pinned Docker image.
 - **Strict subsets, no panics:** Each parser accepts the subset of YAML 1.2, CommonMark or the template language that
   the site uses, and rejects anything outside it with `file:line:col` and a hint. Input paths never call `unwrap`,
@@ -88,13 +88,14 @@ flowchart LR
   - `crates/template` (`edu-template`) — layout templates rendered with a `Value` tree (`Str`, `Bool`, `List` and
     ordered `Map`): `{{ path }}` writes text with `&`, `<`, `>`, `"` and `'` escaped, `{{ path | safe }}` writes raw
     HTML such as `page.content`, `{# … #}` is a comment, and `if`/`else`/`for` handle branches and lists, with one
-    outer `layouts/layout.html` wrapping each page layout (`home.html`, `page.html`, `section.html`, `news.html`) at
-    `{{ content | safe }}` instead of `extends` and `block`.
+    outer `layouts/layout.html` wrapping each page layout (`home.html`, `page.html`, `section.html`, `news.html`,
+    `404.html`) at `{{ content | safe }}` instead of `extends` and `block`.
   - `crates/site` (`edu-site`, binary `edu`) — the command-line tool. `edu check` checks `site.yaml`, the layouts in
     `layouts/`, and the YAML header and Markdown text of every page in `content/`, renders every page with them,
-    and follows every link between the pages and files of the site and each address of `urls.txt`, the addresses
-    that other sites may link to. `edu build` checks the same, then writes the site into `public/`, with a page for
-    each `redirect_to`, `404.html`, `robots.txt`, `sitemap.xml`, and `atom.xml` and `rss.xml`, the Atom 1.0 and
+    and follows every link between the pages and files of the site and each address of `urls.yaml`, the addresses
+    that other sites may link to (`keep`) and the redirects (`redirects`). `edu build` checks the same, then writes
+    the site into `public/`, with a page for each redirect, `404.html`, `robots.txt`, `sitemap.xml`, and `atom.xml`
+    and `rss.xml`, the Atom 1.0 and
     RSS 2.0 feeds of the pages of a section with `sort_by: date`. It leaves out the drafts, unless `--drafts`, and
     builds for the `base_url` of `site.yaml`, unless `--base-url` gives another, such as a fork's Pages site; the ids
     of the feeds' posts keep the `base_url` of `site.yaml`. `edu serve` builds the site in memory and serves it at

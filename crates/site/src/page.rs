@@ -230,7 +230,7 @@ impl Page {
 
 /// `/` for `content/_index.md`, `/news/` for `content/news/_index.md`, and `/news/a/` for
 /// `content/news/a.md`; or the first name in the path that Zola would change to make the URL.
-fn url(path: &Path) -> Result<String, String> {
+pub(crate) fn url(path: &Path) -> Result<String, String> {
     let path = path.strip_prefix("content").unwrap_or(path);
     let mut url = String::from("/");
     for name in path.with_extension("").iter() {
@@ -249,7 +249,7 @@ fn url(path: &Path) -> Result<String, String> {
 
 /// Whether Zola keeps `name` as it is in a URL: lowercase ASCII letters and digits, with single
 /// `-` between them.
-fn is_slug(name: &str) -> bool {
+pub(crate) fn is_slug(name: &str) -> bool {
     let is_part = |part: &str| {
         let is_letter = |b: u8| b.is_ascii_lowercase() || b.is_ascii_digit();
         !part.is_empty() && part.bytes().all(is_letter)

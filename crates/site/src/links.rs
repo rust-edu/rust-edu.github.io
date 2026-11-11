@@ -1,6 +1,5 @@
 //! The links of the site: each `href` and `src` in the HTML of a page and in the text of each post
-//! of the feed, and each address of `urls.txt`, must go to a page or file of the built site, and a
-//! `#` to an id of its page.
+//! of the feed must go to a page or file of the built site, and a `#` to an id of its page.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -12,10 +11,7 @@ use crate::Error;
 use crate::check::{ContentError, PageError, Rendered, read};
 use crate::feed::Post;
 use crate::page::TOP;
-use crate::render::Layouts;
-
-/// The addresses that other sites link to, one per line, which the site must keep.
-const URLS: &str = "urls.txt";
+use crate::render::{self, Layouts};
 
 /// Why a link would not work on the site.
 #[derive(Debug, PartialEq, Eq)]
@@ -71,26 +67,43 @@ pub(crate) struct Target<'a> {
     pub(crate) ids: Option<Vec<&'a str>>,
 }
 
-/// Checks each link of `pages` and of the text of `posts`, which the live site has and a layout may
-/// leave out of its page, and each address of `urls.txt` in `root` if there is one, against
-/// `targets`, the files of the built site by their path in it. An error goes to `errors` once, at
-/// the first place where its link is written: the page, `site.yaml` or one of `layouts`.
+/// Checks each link of `pages`, of the text of `posts`, which the live site has and a layout may
+/// leave out of its page, and of `not_found` against `targets`, the files of the built site by
+/// their path in it. An error goes to `errors` once, at the first place where its link is written:
+/// the page, `site.yaml` or one of `layouts`.
 pub(crate) fn check(
     root: &Path,
     pages: &[Rendered],
     posts: &[Post],
+    not_found: &str,
     targets: &BTreeMap<String, Target<'_>>,
     layouts: &Layouts,
     errors: &mut Vec<ContentError>,
 ) -> Result<(), Error> {
-    let pages = pages
-        .iter()
-        .map(|page| (&page.path, &page.url, page.live, &page.html));
-    let posts = posts
-        .iter()
-        .map(|post| (&post.path, &post.url, true, &post.body));
-    for (page, url, live, html) in pages.chain(posts) {
-        let file = key(url);
+    let not_found_layout = Path::new("layouts").join(render::NOT_FOUND_LAYOUT);
+    let pages = pages.iter().map(|page| {
+        (
+            page.path.as_path(),
+            key(&page.url),
+            page.live,
+            page.html.as_str(),
+        )
+    });
+    let posts = posts.iter().map(|post| {
+        (
+            post.path.as_path(),
+            key(&post.url),
+            true,
+            post.body.as_str(),
+        )
+    });
+    let not_found = std::iter::once((
+        not_found_layout.as_path(),
+        render::NOT_FOUND_LAYOUT.to_owned(),
+        true,
+        not_found,
+    ));
+    for (page, file, live, html) in pages.chain(posts).chain(not_found) {
         for (_, link) in links(html) {
             let link = unescape(link);
             let Err(kind) = resolve(&link, &file, live, targets) else {
@@ -109,27 +122,6 @@ pub(crate) fn check(
             }
         }
     }
-    let path = Path::new(URLS);
-    if !root.join(path).is_file() {
-        return Ok(());
-    }
-    let text = read(root, path)?;
-    for (line, url) in text.lines().enumerate() {
-        if url.is_empty() || url.starts_with('#') {
-            continue;
-        }
-        if let Err(kind) = resolve(url, "", true, targets) {
-            let pos = Pos {
-                line: line + 1,
-                col: 1,
-            };
-            let error = PageError::Link(pos, kind);
-            errors.push(ContentError {
-                path: path.to_owned(),
-                error,
-            });
-        }
-    }
     Ok(())
 }
 
@@ -141,7 +133,7 @@ pub(crate) fn key(url: &str) -> String {
 
 /// Whether `link`, on the page whose file in the built site is `page`, goes to a file of
 /// `targets`; from a page of the live site, `live`, only to one that the live site has.
-fn resolve(
+pub(crate) fn resolve(
     link: &str,
     page: &str,
     live: bool,
@@ -233,11 +225,18 @@ fn pos(text: &str, at: usize) -> Pos {
     Pos { line, col }
 }
 
-/// Each link of `html`, the value of an `href` or `src` as written, and where it starts.
+/// Each link of `html`, the value of an `href` or `src` as written, or the URL of a `<meta
+/// http-equiv="refresh" content="0; url=…">` redirect, and where it starts.
 pub(crate) fn links(html: &str) -> impl Iterator<Item = (usize, &str)> {
-    let attributes = attributes(html).into_iter();
-    let links = attributes.filter(|(name, ..)| matches!(*name, "href" | "src"));
-    links.map(|(_, at, value)| (at, value))
+    attributes(html)
+        .into_iter()
+        .filter_map(|(name, at, value)| match name {
+            "href" | "src" => Some((at, value)),
+            "content" => value
+                .strip_prefix("0; url=")
+                .map(|url| (at + "0; url=".len(), url)),
+            _ => None,
+        })
 }
 
 /// `html` with the text that `prefix` gives for a link, if any, put before that link.

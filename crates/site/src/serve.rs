@@ -11,7 +11,7 @@ use std::thread;
 use std::time::{Duration, SystemTime};
 
 use crate::build::{self, Options, Output, Site};
-use crate::{check, count, links, report};
+use crate::{check, count, links, report, urls};
 
 /// How long the server waits for the request of a connection, which a browser may open early.
 const TIMEOUT: Duration = Duration::from_secs(5);
@@ -119,7 +119,7 @@ fn refresh<'a>(built: &'a mut Option<Built>, root: &Path, options: &Options) -> 
 
 /// The files of `root` that the site is built from, as they are now.
 fn sources(root: &Path) -> Sources {
-    let mut paths = vec![PathBuf::from("site.yaml"), PathBuf::from("urls.txt")];
+    let mut paths = vec![PathBuf::from("site.yaml"), PathBuf::from(urls::FILE)];
     for dir in ["content", "layouts", "static"] {
         // A folder that cannot be read stops the build, which says why.
         let _ = check::walk(root, Path::new(dir), &mut paths);
@@ -417,6 +417,12 @@ mod tests {
         fs::create_dir(root.join("static")).unwrap();
         fs::write(root.join("static/new.css"), "a {}\n").unwrap();
         assert!(get("/new.css").ends_with("\r\n\r\na {}\n"));
+        fs::write(
+            root.join("urls.yaml"),
+            "redirects:\n  - from: /old/\n    to: https://example.org/\n",
+        )
+        .unwrap();
+        assert!(get("/old/").contains("url=https://example.org/\">"));
         fs::write(&page, "---\ntitle: Home\n").unwrap();
         let error = get("/");
         assert!(

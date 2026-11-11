@@ -3,10 +3,11 @@
 !Cargo.toml
 !Cargo.lock
 !clippy.toml
+!rustfmt.toml
 !rust-toolchain.toml
 !crates
 !content
 !layouts
 !site.yaml
-!urls.txt
+!urls.yaml
 !static

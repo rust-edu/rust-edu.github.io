@@ -17,9 +17,10 @@ use crate::file::{self, FileError};
 use crate::links::{self, LinkError, Target};
 use crate::page::{Kind, Page};
 use crate::render::{self, Layouts};
+use crate::urls::{self, Urls, UrlsError};
 
 /// A file of the site with an error: a page, another file of `content/` or `static/`,
-/// `site.yaml`, a layout or `urls.txt`.
+/// `site.yaml`, a layout or `urls.yaml`.
 #[derive(Debug)]
 pub struct ContentError {
     /// The file, relative to the site root.
@@ -30,9 +31,9 @@ pub struct ContentError {
 /// What is wrong with a file; in a page, positions count lines from the top of the page.
 #[derive(Debug)]
 pub enum PageError {
-    /// An error in the YAML of a page's header or of `site.yaml`.
+    /// An error in the YAML of a page's header, of `site.yaml` or of `urls.yaml`.
     Header(edu_yaml::Error),
-    /// A value of a page's header that the site cannot use, and where it is.
+    /// A value of a page's header or of `site.yaml` that the site cannot use, and where it is.
     Value(edu_yaml::Pos, ValueError),
     Text(edu_markdown::Error),
     /// An error in a layout's text.
@@ -44,6 +45,8 @@ pub enum PageError {
     },
     /// A link that would not work, and where it is written.
     Link(edu_yaml::Pos, LinkError),
+    /// A value in `urls.yaml` that the site cannot use, and where it is.
+    Urls(edu_yaml::Pos, UrlsError),
     /// A file of `content/` or `static/` that is not a page and that the site does not publish,
     /// and where in it the reason is.
     File(edu_yaml::Pos, FileError),
@@ -109,6 +112,7 @@ pub(crate) struct Checked {
     pub(crate) pages: usize,
     pub(crate) layouts: usize,
     pub(crate) rendered: Vec<Rendered>,
+    pub(crate) not_found: String,
     pub(crate) files: Vec<PathBuf>,
     pub(crate) statics: Vec<PathBuf>,
     pub(crate) base_url: BaseUrl,
@@ -156,6 +160,12 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
     }
     let site = render::site(root, options.base_url.as_ref(), &mut errors)?;
     let layouts = Layouts::read(root, &mut errors)?;
+    let section_redirects: Vec<String> = pages
+        .iter()
+        .filter(|page| page.redirect_to.is_some())
+        .map(|page| page.url.clone())
+        .collect();
+    let urls = Urls::read(root, &paths, &section_redirects, &mut errors)?;
     // An error in `site.yaml` or in a layout would fail every page.
     let (Some(site), Some(layouts)) = (site, layouts) else {
         return Err(Error::Content(errors));
@@ -195,6 +205,13 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             Err(error) => errors.push(error),
         }
     }
+    let not_found = match render::not_found(&site.value, &layouts) {
+        Ok(html) => html,
+        Err(error) => {
+            errors.push(error);
+            String::new()
+        }
+    };
     // The links are checked once every page renders, since a link to a page with an error would
     // go nowhere.
     let mut feed = None;
@@ -204,6 +221,10 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             let (live, ids) = (page.live, Some(links::ids(&page.html)));
             targets.insert(links::key(&page.url), Target { live, ids });
         }
+        for redirect in &urls.redirects {
+            let (live, ids) = (true, Some(Vec::new()));
+            targets.insert(links::key(&redirect.from), Target { live, ids });
+        }
         for (dir, files) in [("content", &files), ("static", &statics)] {
             for file in files {
                 let path = file.strip_prefix(dir).unwrap_or(file);
@@ -212,8 +233,8 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             }
         }
         for name in build::MADE {
-            let (live, ids) = (true, None);
-            targets.insert(name.to_owned(), Target { live, ids });
+            let ids = (name == render::NOT_FOUND_LAYOUT).then(|| links::ids(&not_found));
+            targets.insert(name.to_owned(), Target { live: true, ids });
         }
         let posts = feed::posts(&pages, is_live).unwrap_or_else(|error| {
             errors.push(error);
@@ -226,7 +247,25 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
                 targets.insert(format.file().to_owned(), Target { live, ids });
             }
         }
-        links::check(root, &rendered, &posts, &targets, &layouts, &mut errors)?;
+        links::check(
+            root,
+            &rendered,
+            &posts,
+            &not_found,
+            &targets,
+            &layouts,
+            &mut errors,
+        )?;
+        urls.check(&targets, &mut errors);
+        for redirect in &urls.redirects {
+            rendered.push(Rendered {
+                path: PathBuf::from(urls::FILE),
+                url: redirect.from.clone(),
+                html: render::redirect(&redirect.to),
+                date: None,
+                live: true,
+            });
+        }
         match feed::feed(&site, posts) {
             Ok(made) => feed = made,
             Err(error) => errors.push(error),
@@ -238,6 +277,7 @@ pub(crate) fn pages(root: &Path, options: &Options) -> Result<Checked, Error> {
             pages,
             layouts,
             rendered,
+            not_found,
             files,
             statics,
             base_url,
@@ -326,6 +366,7 @@ impl fmt::Display for ContentError {
             PageError::Text(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
             PageError::Layout(error) => write!(f, "{path}:{}: error: {}", error.pos, error.kind),
             PageError::Link(pos, kind) => write!(f, "{path}:{pos}: error: {kind}"),
+            PageError::Urls(pos, kind) => write!(f, "{path}:{pos}: error: {kind}"),
             PageError::File(pos, kind) => write!(f, "{path}:{pos}: error: {kind}"),
             PageError::Render { page, error } => {
                 let page = page.display();
@@ -538,8 +579,9 @@ mod tests {
             "content/a.md:11:72: error: `#café` goes to an id that its page does not have",
             "content/a.md:11:93: error: `/news/café/` is not a page or file of the site",
             "content/draft.md:5:24: error: `/a/#none` goes to an id that its page does not have",
-            "urls.txt:5:1: error: `/gone.pdf` is not a page or file of the site",
-            "urls.txt:6:1: error: a link to a page ends with `/`: `/a/`",
+            "urls.yaml:6:5: error: `/gone.pdf` is not a page or file of the site",
+            "urls.yaml:7:5: error: a link to a page ends with `/`: `/a/`",
+            "urls.yaml:13:9: error: `/missing/` is not a page or file of the site",
         ];
         assert_eq!(errors, expected);
     }
@@ -638,9 +680,12 @@ mod tests {
         refused("site.yaml", |root| move_and_link(root, "site.yaml"));
         refused("layouts", |root| move_and_link(root, "layouts"));
         refused("static", |root| move_and_link(root, "static"));
-        refused("urls.txt", |root| {
-            fs::write(root.join("elsewhere/urls.txt"), "/\n").unwrap();
-            symlink("elsewhere/urls.txt", root.join("urls.txt")).unwrap();
+        refused("urls.yaml", |root| {
+            fs::write(root.join("elsewhere/urls.yaml"), "keep:\n  - /\n").unwrap();
+            symlink("elsewhere/urls.yaml", root.join("urls.yaml")).unwrap();
+        });
+        refused("urls.yaml", |root| {
+            symlink("nowhere/urls.yaml", root.join("urls.yaml")).unwrap();
         });
         // A link whose name starts with `.` is not part of the site, as no such file is.
         let root = temp_site("hidden");

@@ -12,7 +12,7 @@ later; no HTML, templates or tools are needed for content.
 | `/news/<name>/` | `content/news/<name>.md` |
 | `/resources/` | `content/resources/_index.md` |
 | `/workshop/` and its pages | `content/workshop/` |
-| `/zulip/` | `content/zulip/_index.md` (only a redirect to the Zulip chat) |
+| `/zulip/` | `urls.yaml` (`redirects`, forwarding to the Zulip chat) |
 
 The file name becomes the URL: `content/news/rust-week-2027.md` is served at `/news/rust-week-2027/`. Name files in
 lowercase kebab-case. Images go in `static/images/` and are linked as `/images/<file>`; other files (PDFs, LaTeX)
@@ -49,7 +49,7 @@ The text of the page starts here.
 | `draft` | every file but the home page | `draft: true` keeps the page off the live site, and in an `_index.md` everything in its folder too; pull request builds still include it at its address, but the news list leaves it out. |
 | `template` | `content/news/_index.md` | The layout of the news list, a file of `layouts/`. |
 | `sort_by` | `content/news/_index.md` | `date`, the only value. The pages of a section with it that are not drafts are the posts of the feeds, `/atom.xml` and `/rss.xml`. |
-| `redirect_to` | `content/zulip/_index.md` | The full address, starting with `https://`, that `/zulip/` forwards to. |
+| `redirect_to` | an `_index.md` | The full address, starting with `https://`, that the section forwards to (prefer `redirects` in `urls.yaml`, which needs no folder in `content/`). |
 
 `title`, `template` and `draft` go in any file, `date` and `authors` only in pages, and `sort_by` and `redirect_to`
 only in `_index.md` files. The automatic check (see below) stops at any other key, because the site's generator
@@ -117,9 +117,9 @@ reader knows a post by its address, so keep the file name of a post once it is p
   `hero` is the button on the home page.
 - **The site's description:** the `description` of `site.yaml`, which the home page's title, search engines and the
   feeds show, and the same words in the heading of `layouts/home.html`, whose three parts `static/style.css` styles.
-- **Moving or removing a page or file:** other sites may link to it, so its address is in `urls.txt`, and the check
-  stops while that address goes nowhere. Delete its line there on purpose, or keep the old address of a page with an
-  `_index.md` at it that has `redirect_to`.
+- **Moving or removing a page or file:** other sites may link to it, so its address is under `keep` in `urls.yaml`,
+  and the check stops while that address goes nowhere. Move the old address of a page to `redirects` in `urls.yaml`
+  (with `from` and `to`), or delete its line from `keep` on purpose.
 
 ## Proposing a change on GitHub
 

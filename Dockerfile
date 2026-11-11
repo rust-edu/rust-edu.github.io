@@ -6,21 +6,21 @@
 # pins the image, since tags are re-pushed. Dependabot bumps the tag, the digest and
 # rust-toolchain.toml in one pull request.
 FROM rust:1.99.1-slim-trixie@sha256:b8e062b1c3a80183df83d9ba187cadd2b5ab84bc78d453dbfeb2fccd5f982247 AS toolchain
-# The image installs Rust's minimal profile, which lacks these two.
-RUN rustup component add clippy rustfmt
+# The image installs Rust's minimal profile, which lacks the components of rust-toolchain.toml.
+RUN rustup component add clippy rustfmt rust-analyzer
 WORKDIR /src
 
 # Format, lint and build, then check the pages and test, with no network: the generator uses the
 # standard library only.
 FROM toolchain AS check
-COPY Cargo.toml Cargo.lock clippy.toml rust-toolchain.toml ./
+COPY Cargo.toml Cargo.lock clippy.toml rustfmt.toml rust-toolchain.toml ./
 COPY crates/ crates/
 RUN --network=none cargo fmt --all --check
 RUN --network=none cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 RUN --network=none cargo build --workspace --release --locked --offline
 # The settings, the layouts, the static files and then the pages come last, so that editing one
 # reuses every layer above.
-COPY site.yaml urls.txt ./
+COPY site.yaml urls.yaml ./
 COPY layouts/ layouts/
 COPY static/ static/
 COPY content/ content/
@@ -50,7 +50,7 @@ COPY --from=drafts /src/public /
 # `edu serve` on the files of the site, which compose.yaml mounts at /site, read-only: the server
 # builds the site in memory.
 FROM toolchain AS serve
-COPY Cargo.toml Cargo.lock clippy.toml rust-toolchain.toml ./
+COPY Cargo.toml Cargo.lock clippy.toml rustfmt.toml rust-toolchain.toml ./
 COPY crates/ crates/
 RUN --network=none cargo build --release --locked --offline \
     && install -m 0755 target/release/edu /usr/local/bin/edu
