@@ -24,16 +24,36 @@ jobs:
         with:
           persist-credentials: false
       - name: Check the guards, then format, lint and build in Docker, check the pages and test
-        # Each error of the guards and of `edu check`, `file:line:col: error: …` (in the build, after
-        # its step and time), is also written as an annotation, which GitHub shows on that line of
-        # the pull request.
+        # Each error of the guards and of `edu check`, `file:line:col: error: …`, is also written as
+        # an annotation, which GitHub shows on that line of the pull request. For example, this line
+        # of the build stays in the log as it is:
+        #   #18 0.057 content/_index.md:37:32: error: `/nope/` is not a page or file of the site
+        # and this line follows it, which GitHub reads as a command and shows on line 37 of the page:
+        #   ::error file=content/_index.md,line=37,col=32::`/nope/` is not a page or file of the site
         run: |
+          # A pipe ends with the result of its last command, and `sed` always succeeds. With
+          # `pipefail`, the step fails when `make ci` fails.
           set -o pipefail
+          # `2>&1` sends the errors of `make ci` through the pipe too, since Docker writes its build
+          # there. `sed -u` writes each line as it comes, so the log shows the build while it runs,
+          # and `-E` allows `+` and `( )` in the patterns. `sed` runs the commands below on each line.
           make ci 2>&1 | sed -uE '
+            # Print the line as it is, so the log holds all of the output.
             p
+            # Docker starts each line of a step with the number of the step and its time, as in
+            # "#18 0.057 ". Remove them, so that an error starts with the name of its file.
             s/^#[0-9]+ [0-9.]+ //
+            # Stop here unless the line is an error with a file, a line and a column: "!d" deletes
+            # every other line, which "p" has already printed. The name of a file has no space, so
+            # the copy of the error in the summary of Docker, which follows a time, gives no second
+            # annotation.
             /^[^: ]+:[0-9]+:[0-9]+: error: /!d
+            # GitHub reads "%0A" in a command as a new line, and with it an error could start a
+            # command of its own. Write each "%" as "%25", which GitHub reads as a plain "%".
             s/%/%25/g
+            # Write the error as the command of GitHub for an annotation. `sed` prints what is left
+            # of a line after its last command, so the error is in the log twice: as it was, and as
+            # the command.
             s/^([^:]+):([0-9]+):([0-9]+): error: (.*)$/::error file=\1,line=\2,col=\3::\4/'
       # A preview for the reviewers of a pull request: the site with its drafts, as a download.
       - name: Build the site with its drafts
