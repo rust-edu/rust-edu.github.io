@@ -112,10 +112,11 @@ flowchart LR
 ```
 
 ### Check locally
-CI runs the format and lint checks, `edu check`, then the tests and two builds that must be the same, inside the
-pinned Docker image; the same check runs locally with:
+CI runs `make ci`: the guards of `Cargo.lock`, the live stage and the Rust version (see [AGENTS.md](AGENTS.md)), then,
+inside the pinned Docker image, the format and lint checks, `edu check`, the tests and two builds that must be the
+same. The same command runs locally, with Docker:
 ```bash
-docker build --target check .
+make ci
 ```
 With [Rust](https://www.rust-lang.org/tools/install) installed, `rust-toolchain.toml` selects Rust 1.99.1:
 ```bash
@@ -130,7 +131,7 @@ cargo run -p edu-site -- build
 ### Preview of a pull request
 The checks of each pull request attach the site with its drafts as `site-preview`; its links start at the top of a
 site, so serve the unpacked folder at the root of an address, as with `python3 -m http.server -d site-preview 1111`,
-rather than opening its files.
+rather than opening its files. `make preview` writes the same site into `preview/`.
 
 ### Deploy
 `.github/workflows/deploy.yml` runs on each push to `main`: it checks and builds the site in Docker and publishes it
