@@ -15,8 +15,10 @@ Read these before you change anything:
 
 | Command | What it does |
 |---|---|
-| `make check` | Checks format and lint, checks every page and link, then runs the tests. It must pass before a change is done. |
-| `make ci` | Runs the same checks in CI's pinned Docker image, and builds the site twice to see that both builds are the same. It needs Docker. |
+| `make check` | Runs the guards, checks format and lint, checks every page and link, then runs the tests. It must pass before a change is done. |
+| `make guards` | Checks three rules of this file that the build cannot see: `Cargo.lock` lists only our crates, the live stage is `FROM check`, and the `Dockerfile` and `rust-toolchain.toml` name the same Rust. |
+| `make ci` | Runs what CI runs on a pull request: the guards, then the same checks in CI's pinned Docker image, where the site is built twice to see that both builds are the same. It needs Docker. |
+| `make preview` | Builds the site with its drafts into `preview/`, as CI does for the reviewers of a pull request. It needs Docker. |
 | `make serve` | Serves the site with its drafts at <http://127.0.0.1:1111>, and builds it again on a reload after a change. It runs until stopped, so start it in the background. |
 
 An error of the page check names the file, line and column of the mistake, usually with a hint. Fix the cause; do not
@@ -44,8 +46,8 @@ weaken a check or a test to make it pass.
 
 ## Generator
 
-- **Standard library only.** Do not add a crate. CI fails when `Cargo.lock` lists a crate from a registry or git,
-  or any crate but the four `edu-*` crates of `crates/`.
+- **Standard library only.** Do not add a crate. The guards fail, on a laptop and in CI, when `Cargo.lock` lists a
+  crate from a registry or git, or any crate but the four `edu-*` crates of `crates/`.
 - **No `unsafe`.** The workspace forbids it.
 - **No panics on input.** Return an error instead of calling `unwrap`, `expect` or `panic!`. Only tests may call them.
 - **Strict parsers.** Each parser accepts only the subset of YAML, Markdown or the template language that the site
@@ -62,9 +64,13 @@ weaken a check or a test to make it pass.
 
 - A push to `main` publishes the site. Make each change on a branch and propose it in a pull request.
 - When an AI agent helps with a change, say in the description of its pull request which tools helped and how.
-- `FROM check AS live` in the `Dockerfile` is what stops a bad push from publishing. Keep it; CI fails when it changes.
-- `rust-toolchain.toml` and the `FROM` tag of the `Dockerfile` name the same Rust. Change them together; CI fails
-  when they differ.
+- `FROM check AS live` in the `Dockerfile` is what stops a bad push from publishing. Keep it; the guards fail when it
+  changes.
+- `rust-toolchain.toml` and the `FROM` tag of the `Dockerfile` name the same Rust. Change them together; the guards
+  fail when they differ.
+- CI runs `make ci` and `make preview`. `ci.yml` adds only what belongs to GitHub: when the checks run, what they may
+  read, the errors shown on the lines of a pull request, and the preview as a download. Put a new check in the
+  `Makefile`, so that it runs on a laptop too.
 - `.dockerignore` is an allowlist and the `Dockerfile` copies paths by name, so a new top-level file or folder that
   the build needs has to be added to both.
 - The GitHub Actions are pinned by commit and the Docker image by digest. Keep them pinned.

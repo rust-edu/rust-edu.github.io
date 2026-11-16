@@ -202,7 +202,7 @@ names, the site built before and after is byte-identical.
    an input with the text or the refusal that it must give: a row for each case of the scan's rule, and one for each
    refusal with its line and column. `Cargo.toml` gains the member and the dependency, and the crate's own manifest
    takes the workspace's lints, as the other four do. CI fails when `Cargo.lock` names any crate but the four, so
-   the same PR changes that list, its count and its message in `.github/workflows/ci.yml`, the *Standard library
+   the same PR changes that list, which is `CRATES` in the `Makefile`, the *Standard library
    only* lines and the `crates/` row of `AGENTS.md`, and in `README.md` the *Standard library only* line, the
    heading and the entries of the list of crates, and the diagram of *How it works*. It adds a bullet to the
    *Generator* list of `AGENTS.md`: the minifier only deletes, and what its scan does not follow is an error; it
