@@ -13,7 +13,7 @@ To change only the content, see [docs/editing.md](docs/editing.md): every page i
 ### ✅ Requirements
 - [Docker](https://docs.docker.com/get-started/get-docker/) with Compose, which runs the generator in the image that
   CI and the deploy use
-- or [Rust](https://www.rust-lang.org/tools/install), with Rust 1.99.1 selected by `rust-toolchain.toml`
+- or [Rust](https://www.rust-lang.org/tools/install), with the toolchain pinned in `rust-toolchain.toml`
 
 ## 📦 Installation Steps
 Clone the repository:
@@ -118,7 +118,7 @@ same. The same command runs locally, with Docker:
 ```bash
 make ci
 ```
-With [Rust](https://www.rust-lang.org/tools/install) installed, `rust-toolchain.toml` selects Rust 1.99.1:
+With [Rust](https://www.rust-lang.org/tools/install) installed, `rust-toolchain.toml` selects the pinned toolchain:
 ```bash
 cargo run -p edu-site -- check
 cargo test
