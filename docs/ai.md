@@ -12,9 +12,10 @@ Most of the generator in `crates/`, its tests, the layouts, the stylesheet and t
 kenesparta/rust-edu.github.io. The docs include the plans and research notes of [design/](design/README.md). The
 changes to the logo that keep its colors in the dark theme, and the tab icon drawn from it, were made with Claude Code
 and the model Claude Fable 5.2, as was the sorting of the docs into those for people, those for AI coding agents and
-the design notes. An earlier plan from August 2026, which Plan 0002 replaced, was drafted with Claude Fable 5; the fork
-keeps it at the tag `archive/initial-project-plan`. Gemini CLI was used only for reviews and questions, and none of
-its output is in the repository.
+the design notes. The white lettering and page-colored hover of the feed buttons, `urls.yaml` and the 404 page were
+made with Antigravity (Google DeepMind). An earlier plan from August 2026, which Plan 0002 replaced, was drafted with
+Claude Fable 5; the fork keeps it at the tag `archive/initial-project-plan`. Gemini CLI was used only for reviews and
+questions, and none of its output is in the repository.
 
 ## When you use an AI tool
 
