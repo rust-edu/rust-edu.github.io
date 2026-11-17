@@ -1,7 +1,7 @@
 # Editing rust-edu.org
 
-For anyone who writes or changes a page of the site. To run, check or deploy the site, see the
-[README](../README.md).
+For anyone who writes or changes a page of the site. To write a news post, [new-post.md](new-post.md) is the short
+way; to run, check or deploy the site, see the [README](../README.md).
 
 Every page of the site is one Markdown file under `content/`. A change merged into `main` is live a few minutes
 later; no HTML, templates or tools are needed for content.
@@ -110,7 +110,7 @@ reader knows a post by its address, so keep the file name of a post once it is p
 ## Common changes
 
 - **A news post:** add `content/news/<name>.md` with `title`, `date` and `authors`, as in the header example above;
-  it goes into the feeds too.
+  it goes into the feeds too. [new-post.md](new-post.md) goes through it step by step.
 - **A photo:** save it in `static/images/`, 960 pixels wide, in the 16:9 shape, as WebP of at most 90 KB. It shows at
   the full width of the text, so a narrower image is stretched, and another shape moves the text below it when it
   loads, a portrait photo by a third of a phone's screen or more.

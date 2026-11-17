@@ -12,7 +12,8 @@ These are written for people:
 
 | To | Read |
 |---|---|
-| Change a page, or add a news post or a resource | [docs/editing.md](docs/editing.md) |
+| Write a news post, the site's blog | [docs/new-post.md](docs/new-post.md) |
+| Change another page, or add a resource | [docs/editing.md](docs/editing.md) |
 | Run, check, preview or deploy the site | this file |
 | Understand or change the generator in `crates/` | [docs/generator.md](docs/generator.md) |
 | See which AI tools were used here, and how | [docs/ai.md](docs/ai.md) |
@@ -103,8 +104,8 @@ needs *Settings → Pages → Source* set to *GitHub Actions*; a fork with that 
 address. *Actions → Deploy to GitHub Pages → Run workflow* runs it again by hand. Locally,
 `docker build --target site -o site .` writes the same site, for rust-edu.org, into `site/`.
 
-A push to `main` publishes the site, so make each change on a branch and propose it in a pull request. These keep a
-bad change from going live:
+A push to `main` publishes the site, so make each change on a branch and propose it in a pull request, whose
+description starts from `.github/pull_request_template.md`. These keep a bad change from going live:
 
 - `FROM check AS live` in the `Dockerfile` builds the live site on the stage that ran the checks, which is what
   stops a bad push from publishing. Keep it; the guards fail when it changes.

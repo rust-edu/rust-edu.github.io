@@ -11,16 +11,19 @@ Most of the generator in `crates/`, its tests, the layouts, the stylesheet and t
 [pull request](https://github.com/kenesparta/rust-edu.github.io/pulls?q=is%3Apr+is%3Amerged) on the fork
 kenesparta/rust-edu.github.io. The docs include the plans and research notes of [design/](design/README.md). The
 changes to the logo that keep its colors in the dark theme, and the tab icon drawn from it, were made with Claude Code
-and the model Claude Fable 5.2, as was the sorting of the docs into those for people, those for AI coding agents and
-the design notes. The white lettering and page-colored hover of the feed buttons, `urls.yaml` and the 404 page were
-made with Antigravity (Google DeepMind). An earlier plan from August 2026, which Plan 0002 replaced, was drafted with
-Claude Fable 5; the fork keeps it at the tag `archive/initial-project-plan`. Gemini CLI was used only for reviews and
-questions, and none of its output is in the repository.
+and the model Claude Fable 5.2, as were the sorting of the docs into those for people, those for AI coding agents and
+the design notes, the guide to a news post and the template of a pull request. The white lettering and page-colored
+hover of the feed buttons, `urls.yaml` and the 404 page were made with Antigravity (Google DeepMind). An earlier plan
+from August 2026, which Plan 0002 replaced, was drafted with Claude Fable 5; the fork keeps it at the tag
+`archive/initial-project-plan`. Gemini CLI was used only for reviews and questions, and none of its output is in the
+repository.
 
 ## When you use an AI tool
 
-Say in the description of your pull request which tools helped and how. The checks and the review are the same for
-every change, whoever or whatever wrote it.
+Say in the description of your pull request which tools helped and how; its template has the heading *AI
+acknowledgement* for this. The checks and the review are the same for every change, whoever or whatever wrote it.
+
+To have an assistant draft a news post, give it [new-post.md](new-post.md): the page is written for you and for it.
 
 ## The files for AI coding agents
 

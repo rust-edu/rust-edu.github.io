@@ -10,6 +10,8 @@ The docs for people hold the facts and each rule in full; this file holds, in sh
 them before you change anything:
 
 - [README.md](README.md): where things are, the commands, and how the site is checked and deployed.
+- [docs/new-post.md](docs/new-post.md), to write a news post: the steps, a whole post, and the rules for an
+  assistant.
 - [docs/editing.md](docs/editing.md), before a change to a page: where each page lives, the keys of a page's
   header, and the Markdown that the site accepts.
 - [docs/generator.md](docs/generator.md), before a change to `crates/`: how the generator works, and the rules of a
@@ -28,11 +30,13 @@ rule for everyone goes into the docs for people first; where they and this file 
 - An error of the page check names the file, line and column of the mistake, usually with a hint. Fix the cause; do
   not weaken a check or a test to make it pass.
 - A push to `main` publishes the site. Make each change on a branch and propose it in a pull request.
-- Say in the description of the pull request which AI tools helped and how.
+- Write the description of the pull request from `.github/pull_request_template.md`: keep its headings, and say
+  under *AI acknowledgement* which AI tools helped and how.
 - `public/`, `site/` and `preview/` are build output, ignored by git. Never edit them.
 
 ## Pages
 
+- To add a news post, follow `docs/new-post.md`.
 - Pages have no HTML. Use only the Markdown that `docs/editing.md` lists; the check stops at anything else.
 - `content/` and `static/` hold only the types of file that `docs/editing.md` lists, and no symbolic links.
 - Before you move or remove a page or file, look for its address in `urls.yaml`. Move the old address of a page to
