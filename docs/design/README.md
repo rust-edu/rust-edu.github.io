@@ -2,8 +2,8 @@
 
 A record of how the site and its generator were designed: what was measured, which options were weighed and what was
 decided. These notes are history, not a guide. Nobody needs them to edit a page or to maintain the site, and they are
-not instructions, for a person or for an AI coding agent. They were written with AI tools; [../ai.md](../ai.md) says
-which and how.
+not instructions, for a person or for an AI coding agent. They were written with AI tools;
+[../ai/README.md](../ai/README.md) says which and how.
 
 Each note describes the repository on the day it was written, so the paths, line numbers and figures in it may no
 longer match. Where a note disagrees with the code or with the guides ([README](../../README.md),
@@ -35,5 +35,6 @@ A research note collects the facts that a plan stands on.
 ## Where these notes go
 
 The last column follows [issue #17](https://github.com/rust-edu/rust-edu.github.io/issues/17), which moves the
-generator into a repository of its own: the notes marked "the generator" move there with `crates/` and
-[generator.md](../generator.md), and Plan 0003 stays here with the site.
+generator into a repository of its own: the notes marked "the generator" move there with `crates/`,
+[generator.md](../generator.md) and the *Generator* section of [`AGENTS.md`](../../AGENTS.md), and Plan 0003 stays
+here with the site.

@@ -8,7 +8,6 @@ the source of its website, <https://rust-edu.org/>: the pages are Markdown files
 generator, written in Rust with only the standard library, builds them.
 
 ## 📚 Documentation
-These are written for people:
 
 | To | Read |
 |---|---|
@@ -16,11 +15,7 @@ These are written for people:
 | Change another page, or add a resource | [docs/editing.md](docs/editing.md) |
 | Run, check, preview or deploy the site | this file |
 | Understand or change the generator in `crates/` | [docs/generator.md](docs/generator.md) |
-| See which AI tools were used here, and how | [docs/ai.md](docs/ai.md) |
 | Look up why the site is built this way | [docs/design/](docs/design/README.md): plans and research notes, a record and not a guide |
-
-[AGENTS.md](AGENTS.md) is written for AI coding agents. A person does not need it: each of its rules is also in the
-docs above, in full.
 
 ## 🚀 Setting Up on Local Machine
 To contribute or run this website locally, follow the steps below.
@@ -58,7 +53,7 @@ With Rust installed, `make serve` does the same.
 | `site.yaml` | The site's address, title and description, and the menu, next-step (`hero`) and footer links |
 | `urls.yaml` | The addresses that other sites may link to (`keep`) and the addresses that redirect elsewhere (`redirects`) |
 | `crates/` | The generator: `yaml`, `markdown`, `template` and `site`, which has the `edu` binary |
-| `docs/` | The guides of the table above, and the plans and research notes in `docs/design/` |
+| `docs/` | The contributor guides above, [docs/design/](docs/design/README.md) (plans and research notes), and [docs/ai/](docs/ai/README.md) (AI policy and LLM specs) |
 | `public/`, `site/`, `preview/` | Build output, ignored by git. Never edit it. |
 
 ## 🦀 The Generator
@@ -122,9 +117,9 @@ description starts from `.github/pull_request_template.md`. These keep a bad cha
 
 ## 🤖 AI Acknowledgement
 Most of the generator in `crates/`, its tests, the layouts, the stylesheet and the docs were written with Claude Code
-(Anthropic), at the direction of Ken Esparta, who read each change in its pull request. [docs/ai.md](docs/ai.md) has
-the whole acknowledgement, with the models and what each tool did, and says what is asked of a contributor who uses an
-AI tool.
+(Anthropic), at the direction of Ken Esparta, who read each change in its pull request. [docs/ai/](docs/ai/README.md)
+has the whole acknowledgement, with the models and what each tool did, explains what is asked of a contributor who uses
+an AI tool, and lists the separate documentation written for LLMs.
 
 ## 📬 Get Involved
 Interested in contributing or learning more?

@@ -1,11 +1,10 @@
 # Write a news post
 
-The news of rust-edu.org is its blog: <https://rust-edu.org/news/>. A post is one Markdown file, and adding that file
-is all it takes: the news list and the feeds pick it up by themselves. You need a GitHub account, and nothing
-installed.
+For anyone who writes a post for the site's blog, <https://rust-edu.org/news/>. To change another page, see
+[editing.md](editing.md); to run, check or deploy the site, see the [README](../README.md).
 
-This page is for a person who writes a post. It is also complete enough for an AI assistant to write one from it:
-see [With an AI assistant](#with-an-ai-assistant).
+A post is one Markdown file, and adding that file is all it takes: the news list and the feeds pick it up by
+themselves. You need a GitHub account, and nothing installed.
 
 ## A whole post
 
@@ -39,7 +38,8 @@ To start it by hand instead, open the folder `content/news/` on GitHub and choos
 
 The name of the file becomes the address of the post, so:
 
-- use lowercase letters and digits joined by `-`, and end it with `.md`: `rust-week-2027.md`;
+- use lowercase ASCII letters (`a`–`z`) and digits (`0`–`9`) joined by single `-`, and end it with `.md`:
+  `rust-week-2027.md`;
 - keep it once the post is published, since feed readers know a post by its address.
 
 ## 2. Fill in the header
@@ -48,9 +48,9 @@ The file starts with a header between two lines of `---`:
 
 | Line | What to write |
 |---|---|
-| `title:` | The title of the post. Put it in double quotes when it has a colon in it: `title: "Campus Tour: Rust Africa"`. |
+| `title:` | The title of the post. Put it in double quotes when it contains `: ` or ` #`, ends with `:`, or starts with punctuation: `title: "Campus Tour: Rust Africa"`. |
 | `date:` | The day of the post, as year, month and day: `2027-03-01`. The news list is sorted by it, newest first. |
-| `authors:` | Who wrote it: one name per line, each after two spaces and `- `. |
+| `authors:` | Who wrote it: one name per line, each after two spaces and `- ` (put a name in double quotes if it has `: ` or ` #`, or starts with punctuation). |
 | `draft: true` | Only while the post is not ready: it keeps the post off the live site. Take the line out to publish. |
 
 Nothing else goes in the header.
@@ -99,40 +99,3 @@ these differently from GitHub's preview, so the check stops at them. [editing.md
 
 To see the post as the site shows it before you propose it, run `docker compose up` in the repository, with
 [Docker](https://docs.docker.com/get-started/get-docker/) installed, and open <http://127.0.0.1:1111/news/>.
-
-## With an AI assistant
-
-An assistant can draft the file from your notes; you are still the author, so read what it wrote and check each
-name, date and link. Give it this page and your notes, for example:
-
-```
-Read https://raw.githubusercontent.com/rust-edu/rust-edu.github.io/main/docs/new-post.md and follow it exactly to
-write a news post for rust-edu.org from my notes. Give me the name of the file and the whole file in one block of
-code. Ask me for what is missing; do not make anything up.
-
-My notes: …
-```
-
-Then say in the pull request which tool helped and how, under *AI acknowledgement*; [ai.md](ai.md) says why.
-
-### Rules for the assistant
-
-1. **One file.** Write `content/news/<name>.md`, where `<name>` is lowercase letters and digits joined by `-`.
-   Change no other file, except to add a photo to `static/images/`.
-2. **The header first.** The file starts with a line `---`, then `title`, `date` as `YYYY-MM-DD` and `authors` as
-   a list, then a line `---`. `draft: true` is the only other key. Put the title in double quotes when it has `: `
-   in it or `:` at its end.
-3. **Only the Markdown of step 3.** Start the headings at `##`. Do not write HTML or an HTML comment, a table, a
-   footnote, a task list, `~~strikethrough~~`, a horizontal rule, a heading underlined with `===`, code indented by
-   four spaces, three `*` or `_` in a row (bold italic is `**_text_**`), a link with a title
-   (`[text](url "title")`), a reference link (`[text][1]`), or a character reference other than `&amp;`, `&lt;`,
-   `&gt;` and `&quot;`: type the character itself, such as `é` or `—`.
-4. **Links that lead somewhere.** A link to a page of the site starts with `/` and ends with `/`, as in
-   `/news/campus-tour/`, and that page has to exist; never write a relative link such as `../news/`. A link to
-   another site is the full `https://` address. Write a bare address as `<https://example.org/>`.
-5. **Only the author's facts.** Do not make up a name, a date, a quote, a number or a link. Ask for the title, the
-   date and the authors when the notes do not give them.
-6. **Check it.** If you can run commands in the repository, run `make check` and fix what it reports until it
-   passes. If you cannot, read the file once more against rules 1 to 4.
-7. **Hand it over.** Give the author the path of the file and the whole file, and remind them to say in the pull
-   request which tool helped and how.

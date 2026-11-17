@@ -1,7 +1,6 @@
 <!--
-Thank you for the change! This text starts the description of your pull request. A person or an AI
-agent fills it in the same way: write under each heading, tick what is true, and delete a line that
-does not apply. Comments like this one are not shown.
+Thank you for the change! Write under each heading below, tick what is true, and delete any check
+line that does not apply. Comments like this one are not shown when you submit.
 -->
 
 ## What changes
