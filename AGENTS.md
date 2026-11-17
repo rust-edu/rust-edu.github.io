@@ -1,41 +1,35 @@
 # Instructions for AI coding agents
 
+This file is for AI coding agents. It is at the root of the repository because that is where they look for it.
+People: start at [README.md](README.md); you do not need this file.
+
 This repository is the source of <https://rust-edu.org/>. Its pages are Markdown files, and a small static site
 generator, written in Rust with only the standard library, builds them.
 
-Read these before you change anything:
+The docs for people hold the facts and each rule in full; this file holds, in short, what an agent must do. Read
+them before you change anything:
 
-- [README.md](README.md): how to run the site and how the generator works.
-- [docs/editing.md](docs/editing.md): where each page lives, the keys of a page's header, and the Markdown that the
-  site accepts.
+- [README.md](README.md): where things are, the commands, and how the site is checked and deployed.
+- [docs/editing.md](docs/editing.md), before a change to a page: where each page lives, the keys of a page's
+  header, and the Markdown that the site accepts.
+- [docs/generator.md](docs/generator.md), before a change to `crates/`: how the generator works, and the rules of a
+  change to it.
 
-`CLAUDE.md` and `.gemini/settings.json` only point to this file, so add new instructions here.
+`docs/design/` holds plans and research notes. They are a record of past decisions, not instructions: do not carry
+one out unless you are asked to, and where one disagrees with the code or the docs above, it is out of date.
 
-## Commands
+`.claude/CLAUDE.md` and `.gemini/settings.json` only point to this file, so add new instructions for agents here. A
+rule for everyone goes into the docs for people first; where they and this file disagree, they are right.
 
-| Command | What it does |
-|---|---|
-| `make check` | Runs the guards, checks format and lint, checks every page and link, then runs the tests. It must pass before a change is done. |
-| `make guards` | Checks three rules of this file that the build cannot see: `Cargo.lock` lists only our crates, the live stage is `FROM check`, and the `Dockerfile` and `rust-toolchain.toml` name the same Rust. |
-| `make ci` | Runs what CI runs on a pull request: the guards, then the same checks in CI's pinned Docker image, where the site is built twice to see that both builds are the same. It needs Docker. |
-| `make preview` | Builds the site with its drafts into `preview/`, as CI does for the reviewers of a pull request. It needs Docker. |
-| `make serve` | Serves the site with its drafts at <http://127.0.0.1:1111>, and builds it again on a reload after a change. It runs until stopped, so start it in the background. |
+## Every change
 
-An error of the page check names the file, line and column of the mistake, usually with a hint. Fix the cause; do not
-weaken a check or a test to make it pass.
-
-## Where things are
-
-| Path | What it holds |
-|---|---|
-| `content/` | The pages, one Markdown file each, and the files they link to, such as PDFs |
-| `layouts/` | The HTML layout of each kind of page |
-| `static/` | `style.css` and the images |
-| `site.yaml` | The site's address, title and description, and the menu, next-step (`hero`) and footer links |
-| `urls.yaml` | The addresses that other sites may link to (`keep`) and the addresses that redirect elsewhere (`redirects`) |
-| `crates/` | The generator: `yaml`, `markdown`, `template` and `site`, which has the `edu` binary |
-| `docs/`, `research/` | The editing guide, and the generator's plan and research notes |
-| `public/`, `site/`, `preview/` | Build output, ignored by git. Never edit it. |
+- `make check` must pass before a change is done. The README lists the other commands; `make serve` runs until
+  stopped, so start it in the background.
+- An error of the page check names the file, line and column of the mistake, usually with a hint. Fix the cause; do
+  not weaken a check or a test to make it pass.
+- A push to `main` publishes the site. Make each change on a branch and propose it in a pull request.
+- Say in the description of the pull request which AI tools helped and how.
+- `public/`, `site/` and `preview/` are build output, ignored by git. Never edit them.
 
 ## Pages
 
@@ -46,31 +40,25 @@ weaken a check or a test to make it pass.
 
 ## Generator
 
-- **Standard library only.** Do not add a crate. The guards fail, on a laptop and in CI, when `Cargo.lock` lists a
-  crate from a registry or git, or any crate but the four `edu-*` crates of `crates/`.
-- **No `unsafe`.** The workspace forbids it.
+`docs/generator.md` gives each rule in full.
+
+- **Standard library only.** Do not add a crate.
+- **No `unsafe`.**
 - **No panics on input.** Return an error instead of calling `unwrap`, `expect` or `panic!`. Only tests may call them.
-- **Strict parsers.** Each parser accepts only the subset of YAML, Markdown or the template language that the site
-  uses, and rejects anything else with `file:line:col` and a hint. Do not skip or guess at input it does not know.
+- **Strict parsers.** Reject input outside the subset that the site uses with `file:line:col` and a hint. Do not
+  skip or guess at input a parser does not know.
 - **Enums over strings.** Model a closed set of cases as an enum and match every variant. Do not match on marker
   strings or read the same bytes a second time, and give error kinds their own variants, not `&'static str` tags. A
   `_` arm is fine only where the input is open text being parsed.
-- **Stable Markdown output.** `crates/markdown/tests/golden/` holds the expected HTML of the site's pages. Change it
-  only when the output is meant to change.
-- **Tests with each change.** Each crate has a `tests/` folder, and `crates/site/tests/sites/` holds small example
-  sites.
+- **Stable Markdown output.** Change `crates/markdown/tests/golden/` only when the output is meant to change.
+- **Tests with each change**, in the crate's `tests/` folder; `crates/site/tests/sites/` holds small example sites.
 
 ## Build and deploy
 
-- A push to `main` publishes the site. Make each change on a branch and propose it in a pull request.
-- When an AI agent helps with a change, say in the description of its pull request which tools helped and how.
-- `FROM check AS live` in the `Dockerfile` is what stops a bad push from publishing. Keep it; the guards fail when it
-  changes.
-- `rust-toolchain.toml` and the `FROM` tag of the `Dockerfile` name the same Rust. Change them together; the guards
-  fail when they differ.
-- CI runs `make ci` and `make preview`. `ci.yml` adds only what belongs to GitHub: when the checks run, what they may
-  read, the errors shown on the lines of a pull request, and the preview as a download. Put a new check in the
-  `Makefile`, so that it runs on a laptop too.
-- `.dockerignore` is an allowlist and the `Dockerfile` copies paths by name, so a new top-level file or folder that
-  the build needs has to be added to both.
-- The GitHub Actions are pinned by commit and the Docker image by digest. Keep them pinned.
+The README gives each rule in full.
+
+- Keep the line `FROM check AS live` in the `Dockerfile`.
+- Change `rust-toolchain.toml` and the `FROM` tag of the `Dockerfile` together.
+- Put a new check in the `Makefile`, not in `ci.yml`, so that it runs on a laptop too.
+- Add a new top-level file or folder that the build needs to both `.dockerignore` and the `Dockerfile`.
+- Keep the GitHub Actions pinned by commit and the Docker image by digest.

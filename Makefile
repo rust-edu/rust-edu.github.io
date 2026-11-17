@@ -1,4 +1,4 @@
-# One command for each job, for people and for AI coding agents; see AGENTS.md.
+# One command for each job; README.md lists them.
 # `make` alone runs `check`, since `serve` runs until it is stopped.
 .PHONY: check guards guard-lock guard-live guard-rust ci preview serve
 
@@ -13,7 +13,7 @@ check: guards ## Check the guards, format and lint, check every page and link, t
 	cargo run --locked -p edu-site -- check
 	cargo test --workspace --locked
 
-# The rules of AGENTS.md that neither cargo nor the Docker build can check. An error has the shape
+# The rules of README.md that neither cargo nor the Docker build can check. An error has the shape
 # of an error of `edu check`, `file:line:col: error: …`, which ci.yml shows on that line of a pull
 # request.
 guards: guard-lock guard-live guard-rust ## Check Cargo.lock, the live stage and the Rust version
@@ -42,7 +42,7 @@ guard-lock:
 guard-live:
 	@if ! grep -qx 'FROM check AS live' Dockerfile; then \
 	  line=$$(grep -n ' AS live' Dockerfile | head -n 1 | cut -d: -f1); \
-	  echo "Dockerfile:$${line:-1}:1: error: the live stage is not FROM check; that stage is what stops a bad push to main from publishing (see AGENTS.md)" >&2; \
+	  echo "Dockerfile:$${line:-1}:1: error: the live stage is not FROM check; that stage is what stops a bad push to main from publishing (see README.md)" >&2; \
 	  exit 1; \
 	fi
 
