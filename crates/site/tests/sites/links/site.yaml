@@ -1,0 +1,7 @@
+base_url: https://example.org
+title: Links
+menu:
+  - name: Home
+    url: /
+  - name: Gone
+    url: /gone/

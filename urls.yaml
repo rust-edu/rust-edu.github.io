@@ -1,0 +1,41 @@
+# The public addresses of rust-edu.org: each page and file that Zola 0.22.1 deployed before the
+# site moved to its own generator (docs/Plan-0002—Own-Markdown-Site-Generator.md), the news feeds,
+# and the addresses that redirect elsewhere.
+#
+# `edu check` stops when an address under `keep` is no longer a page or file of the live site; a
+# page address may end with `#` and an id of that page. When a page moves on purpose, move its old
+# address to `redirects` (with `to` set to the new `/path/` or `https://` address), or delete its
+# line here on purpose.
+keep:
+  - /
+  - /404.html
+  - /atom.xml # the Atom feed of the news, which feed readers follow
+  - /images/RAACampusTour1.png
+  - /images/RAACampusTour2.png
+  - /images/RAACampusTour3.png
+  - /images/RAACampusTour4.png
+  - /llms.txt # the site in brief for language models (llmstxt.org)
+  - /news/
+  - /news/announcement/
+  - /news/call-for-participation/
+  - /news/campus-tour/
+  - /resources/
+  - /robots.txt
+  - /rss.xml # the RSS feed of the news, beside /atom.xml
+  - /rust-edu-banner.svg
+  - /sitemap.xml
+  - /style.css
+  - /workshop/
+  - /workshop/cfp-2022/
+  - /workshop/code-of-conduct/
+  - /workshop/paper-format-latex/
+  - /workshop/paper-format-latex/rust-edu-workshop.cls
+  - /workshop/paper-format-latex/sample.bib
+  - /workshop/paper-format-latex/sample.pdf
+  - /workshop/paper-format-latex/sample.tex
+  - /workshop/proceedings.pdf
+  - /workshop/statement-template.pdf
+
+redirects:
+  - from: /zulip/
+    to: https://rust-edu.zulip.cs.pdx.edu

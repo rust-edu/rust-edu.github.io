@@ -1,0 +1,6 @@
+base_url: https://example.org
+title: Test
+description: A site for the tests
+menu:
+  - name: Home
+    url: /

@@ -1,0 +1,59 @@
+<div class="site-hero not-found-hero">
+    <div class="not-found-art" aria-hidden="true">
+        <svg class="not-found-orbit" width="176" height="176" viewBox="0 0 176 176">
+            <circle cx="88" cy="88" r="80" fill="none" stroke="currentColor" stroke-width="1.25" stroke-dasharray="4 6"/>
+            <path d="M88 3v9M88 164v9M3 88h9M164 88h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        {# Ferris with his cap is the tab's icon, shared with the home page. #}
+        <img src="/favicon.svg" alt="" width="176" height="176">
+        <span class="not-found-badge">404?</span>
+    </div>
+    <h1>Page not found <span>in <em>the stacks</em></span> <small>(error 404)</small></h1>
+    <p>
+        <a href="/">Back to home</a>
+        <a href="/resources/">Find resources</a>
+    </p>
+</div>
+
+<div class="not-found-diag" role="region" aria-label="Compiler-style 404 diagnostic">
+    <div class="not-found-diag-bar">
+        <span class="not-found-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>rustc --explain E0404</span>
+    </div>
+    <pre><code><span class="diag-err">error[E0404]</span>: cannot find this page in crate `rust_edu`
+  <span class="diag-pos">--&gt;</span> rust-edu.org:1:5
+   <span class="diag-pos">|</span>
+ <span class="diag-pos">1 |</span> use rust_edu::requested_page;
+   <span class="diag-pos">|</span>               <span class="diag-err">^^^^^^^^^^^^^^</span> no such page in the root
+   <span class="diag-pos">|</span>
+   <span class="diag-pos">=</span> <span class="diag-tag">note</span>: the link may be outdated, or the address may have a typo
+   <span class="diag-pos">=</span> <span class="diag-tag">help</span>: head back to <a href="/">/</a> or explore one of the sections below</code></pre>
+</div>
+
+<h2>Where to go from here</h2>
+<ul class="not-found-links">
+    <li>
+        <a href="/resources/">
+            <strong>Resources</strong>
+            <span>Courses, textbooks, exercises, and teaching materials shared by educators.</span>
+        </a>
+    </li>
+    <li>
+        <a href="/news/">
+            <strong>News</strong>
+            <span>Announcements, campus tours, and community reports, also on Atom and RSS.</span>
+        </a>
+    </li>
+    <li>
+        <a href="/workshop/">
+            <strong>2022 Workshop</strong>
+            <span>Talks and proceedings from the Rust Education Workshop.</span>
+        </a>
+    </li>
+    <li>
+        <a href="/zulip/">
+            <strong>Zulip chat</strong>
+            <span>Ask questions and meet educators and researchers teaching with Rust.</span>
+        </a>
+    </li>
+</ul>

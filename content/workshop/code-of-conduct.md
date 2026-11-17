@@ -1,6 +1,6 @@
-+++
-title = "Rust Education Workshop: Code of Conduct"
-+++
+---
+title: "Rust Education Workshop: Code of Conduct"
+---
 
 The Rust Education Workshop is intended to be an inclusive,
 welcoming workshop for everyone. In particular, we do not

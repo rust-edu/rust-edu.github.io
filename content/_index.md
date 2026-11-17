@@ -1,6 +1,6 @@
-+++
-title = "Rust Edu"
-+++
+---
+title: Rust Edu
+---
 
 ## Who are we?
 
@@ -10,9 +10,7 @@ While we are initially focused on colleges and universities, in the longer term 
 
 We believe that we can work with the Rust community to provide tools and educational support for technology students and faculty to learn and build in new and better ways, while also helping to drive the adoption of Rust as a key technology for decades to come. 
 
-<div class="buttons is-centered my-5">
-  <a href="/news/announcement" class="is">Read the full announcement</a>
-</div>
+[Read the full announcement](/news/announcement/)
 
 ## Our goals
 
@@ -28,8 +26,8 @@ To spread Rust use and development through academic curricula and communities th
 
 ## How can I help?
 
-We welcome any educators, sponsors, and potential collaborators who share our vision for the future of Rust education to get in touch with us at <a href="mailto:contact@rust-edu.org">contact@rust-edu.org</a>.
-We also have a [Zulip instance](https://zulip.rust-edu.org), where you can chat with the Rust Edu team and community.
+We welcome any educators, sponsors, and potential collaborators who share our vision for the future of Rust education to get in touch with us at [contact@rust-edu.org](mailto:contact@rust-edu.org).
+We also have a [Zulip instance](/zulip/), where you can chat with the Rust Edu team and community.
 
 ## Code of Conduct
 

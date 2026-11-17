@@ -1,0 +1,13 @@
+# Addresses that must keep working.
+keep:
+  - /
+  - /a/#part
+  - /style.css
+  - /gone.pdf
+  - /a
+  - /sitemap.xml
+redirects:
+  - from: /old/
+    to: /a/#part
+  - from: /broken-redirect/
+    to: /missing/

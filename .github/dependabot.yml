@@ -1,0 +1,29 @@
+# Pull requests that keep the pinned versions current: each week, the actions, whose pins are
+# commits with their version in a comment on the same line, in one pull request; and the Docker
+# image with rust-toolchain.toml in another. The two name the same Rust (ci.yml fails when they
+# differ), so they form one group, and a Rust release bumps both in one pull request.
+version: 2
+
+multi-ecosystem-groups:
+  rust:
+    schedule:
+      interval: "weekly"
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    patterns: ["*"]
+    multi-ecosystem-group: "rust"
+
+  - package-ecosystem: "rust-toolchain"
+    directory: "/"
+    patterns: ["*"]
+    multi-ecosystem-group: "rust"
