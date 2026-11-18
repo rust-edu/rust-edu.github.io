@@ -5,6 +5,8 @@
 
 Rust Edu is an organization dedicated to supporting Rust education in the academic environment. This website is built by its own small static site generator, written in Rust with only the standard library.
 
+To report a suspected vulnerability in the site, generator, or deployment workflow, see the [security policy](SECURITY.md).
+
 ## 🚀 Setting Up on Local Machine
 To contribute or run this website locally, follow the steps below.
 
