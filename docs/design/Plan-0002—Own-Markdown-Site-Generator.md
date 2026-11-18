@@ -3,10 +3,10 @@
 **Date:** 2026-10-28 · **Status:** steps 0–8 done · **Supersedes:** Spec 0001 and Plan 0001 (archived at tag
 [`archive/initial-project-plan`](https://github.com/kenesparta/rust-edu.github.io/tree/archive/initial-project-plan/docs)
 on the fork kenesparta/rust-edu.github.io) · **Research:**
-[0001 inventory](../research/0001-current-site-inventory.md) ·
-[0002 generator](../research/0002-std-only-generator-design.md) ·
-[0003 Docker and Pages](../research/0003-docker-build-and-pages-deploy.md) ·
-[0004 August plan](../research/0004-prior-plan-salvage.md)
+[0001 inventory](research/0001-current-site-inventory.md) ·
+[0002 generator](research/0002-std-only-generator-design.md) ·
+[0003 Docker and Pages](research/0003-docker-build-and-pages-deploy.md) ·
+[0004 August plan](research/0004-prior-plan-salvage.md)
 
 **Goal:** anyone can update rust-edu.org by editing Markdown on GitHub. Our own small Rust generator builds the site
 (standard library only: no crates, submodules, Sass or Zola) inside Docker, and GitHub Pages serves it.

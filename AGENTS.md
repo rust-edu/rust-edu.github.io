@@ -1,76 +1,102 @@
 # Instructions for AI coding agents
 
-This repository is the source of <https://rust-edu.org/>. Its pages are Markdown files, and a small static site
-generator, written in Rust with only the standard library, builds them.
+This file is for AI coding agents. It is at the root of the repository because that is where coding agents look for it.
+People: start at [README.md](README.md); you do not need this file.
 
-Read these before you change anything:
+This repository is the source of <https://rust-edu.org/>: Markdown content rendered by a custom static site generator
+written in Rust using only the standard library.
 
-- [README.md](README.md): how to run the site and how the generator works.
-- [docs/editing.md](docs/editing.md): where each page lives, the keys of a page's header, and the Markdown that the
-  site accepts.
+- **Self-contained agent docs:** This file (plus [docs/ai/new-post.md](docs/ai/new-post.md) when drafting a news post)
+  gives agents the repository map, commands and exact parser/code rules in machine-oriented form so you do not need to
+  read the human tutorials first.
+- **Source of truth:** `.claude/CLAUDE.md` and `.gemini/settings.json` only point here; put agent instructions in this
+  file. Rules for everyone belong in the human docs ([README.md](README.md), [docs/editing.md](docs/editing.md),
+  [docs/generator.md](docs/generator.md)) first; if this file and the human docs or code ever disagree, the human docs
+  and code win.
+- **Design history is not instructions:** `docs/design/` holds historical plans and research notes. Do not execute any
+  plan unless explicitly asked, and treat the code and current docs as right wherever `docs/design/` disagrees.
 
-`CLAUDE.md` and `.gemini/settings.json` only point to this file, so add new instructions here.
+## Repository layout
 
-## Commands
+- `content/`: Markdown pages (`_index.md` for `/` and section indexes, `<slug>.md` for pages) and co-located static
+  assets (PDFs, LaTeX).
+- `layouts/`: HTML templates (`layout.html` outer wrapper + `home.html`, `page.html`, `section.html`, `news.html`,
+  `404.html`). `layout.html` holds the theme toggle's two inline scripts, the site's only JS.
+- `static/`: `style.css` (plain CSS with light/dark token blocks), images (`static/images/`), `favicon.svg`, `CNAME`.
+- `site.yaml`: `base_url`, `title`, `description`, and `menu`, `hero` and `footer` link lists.
+- `urls.yaml`: `keep` (preserved public paths checked by `edu check`) and `redirects` (`from` / `to` pairs).
+- `crates/`: Workspace of four `std`-only crates: `yaml` (`edu-yaml`), `markdown` (`edu-markdown`), `template`
+  (`edu-template`) and `site` (`edu-site`, binary `edu` with `check`, `build`, `serve`).
+- `docs/`: Human guides (`new-post.md`, `editing.md`, `generator.md`), `docs/ai/` (AI policy and
+  [docs/ai/new-post.md](docs/ai/new-post.md)), and `docs/design/` (historical plans and research notes).
+- `public/`, `site/`, `preview/`: Build outputs ignored by git. **Never edit them.**
 
-| Command | What it does |
-|---|---|
-| `make check` | Runs the guards, checks format and lint, checks every page and link, then runs the tests. It must pass before a change is done. |
-| `make guards` | Checks three rules of this file that the build cannot see: `Cargo.lock` lists only our crates, the live stage is `FROM check`, and the `Dockerfile` and `rust-toolchain.toml` name the same Rust. |
-| `make ci` | Runs what CI runs on a pull request: the guards, then the same checks in CI's pinned Docker image, where the site is built twice to see that both builds are the same. It needs Docker. |
-| `make preview` | Builds the site with its drafts into `preview/`, as CI does for the reviewers of a pull request. It needs Docker. |
-| `make serve` | Serves the site with its drafts at <http://127.0.0.1:1111>, and builds it again on a reload after a change. It runs until stopped, so start it in the background. |
+## Commands and workflow
 
-An error of the page check names the file, line and column of the mistake, usually with a hint. Fix the cause; do not
-weaken a check or a test to make it pass.
+- `make check`: Runs `make guards`, `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings`,
+  `cargo run --locked -p edu-site -- check`, and `cargo test --workspace --locked`. **Must pass before a change is done.**
+- `make guards`: Verifies `Cargo.lock` contains only our four crates with no external `source`, `Dockerfile` has
+  `FROM check AS live`, and `Dockerfile` + `rust-toolchain.toml` pin the same Rust version.
+- `make ci` / `make preview`: Runs the full PR check (including reproducibility diff of two builds) and draft preview
+  build inside the digest-pinned Docker image.
+- `make serve`: Runs `edu serve --drafts` at `http://127.0.0.1:1111` until stopped; start it in the background.
+- **Fix causes, never weaken checks:** `edu check` and `make guards` report `file:line:col: error: …` with hints. Fix
+  the underlying mistake; never weaken a check, lint or test to make it pass.
+- **Branch & PR workflow:** Pushing to `main` deploys the live site. Make every change on a branch and propose a pull
+  request structured with the headings of `.github/pull_request_template.md` (`## What changes`, `## Checks`,
+  `## AI acknowledgement`), stating under *AI acknowledgement* which AI tools and models helped and how.
 
-## Where things are
+## Pages, YAML and Markdown
 
-| Path | What it holds |
-|---|---|
-| `content/` | The pages, one Markdown file each, and the files they link to, such as PDFs |
-| `layouts/` | The HTML layout of each kind of page |
-| `static/` | `style.css` and the images |
-| `site.yaml` | The site's address, title and description, and the menu, next-step (`hero`) and footer links |
-| `urls.yaml` | The addresses that other sites may link to (`keep`) and the addresses that redirect elsewhere (`redirects`) |
-| `crates/` | The generator: `yaml`, `markdown`, `template` and `site`, which has the `edu` binary |
-| `docs/`, `research/` | The editing guide, and the generator's plan and research notes |
-| `public/`, `site/`, `preview/` | Build output, ignored by git. Never edit it. |
+- **News posts:** Follow [docs/ai/new-post.md](docs/ai/new-post.md).
+- **Slugs & URLs:** `content/_index.md` -> `/`, `content/<sec>/_index.md` -> `/<sec>/`, `content/<sec>/<slug>.md` ->
+  `/<sec>/<slug>/`. Every folder name and `<slug>` must match `^[a-z0-9]+(-[a-z0-9]+)*$` (lowercase ASCII letters and
+  digits joined by single `-`).
+- **Allowed non-page files (`content/` and `static/`):** `.avif`, `.bib`, `.cls`, `.css`, `.gif`, `.ico`, `.jpeg`,
+  `.jpg`, `.pdf`, `.png`, `.svg` (valid UTF-8 XML without `<script>`, event attributes, `javascript:` URLs or HTML),
+  `.tex`, `.txt`, `.webp`, plus `static/CNAME`. No `.html`, `.js`, extensionless files or symbolic links; dot-files are
+  ignored. Photos in `static/images/`: 960 px wide, 16:9, WebP <= 90 KB.
+- **YAML subset (`edu-yaml`):** Page headers start at line 1 with `---` and close with `---`. Block maps and `- ` lists
+  only; spaces only (no tabs). Double-quote any scalar that contains `: ` or ` #` (starts a comment), ends with `:`, or
+  starts with `` & * ! [ { | > ? - % @ ` , : ] } ' " ``. Double-quote escapes: `\"`, `\\`, `\n`, `\t` only.
+- **Allowed frontmatter keys** (any other key fails `edu check`):
+  - Any page or `_index.md`: `title` (non-blank; required unless `redirect_to` is set), `template` (file in
+    `layouts/`), `draft` (`true` or `false`; `draft: true` forbidden on `content/_index.md`).
+  - Content pages only (not `_index.md`): `date` (`YYYY-MM-DD`, valid calendar date >= `1900-01-01`; required inside
+    `sort_by: date` sections), `authors` (list of non-blank strings).
+  - `_index.md` only: `sort_by` (`date` only; non-draft pages feed `/atom.xml` and `/rss.xml`), `redirect_to`
+    (`https://` or `http://`; prefer `redirects` in `urls.yaml`).
+- **Markdown subset (`edu-markdown`):** Start headings at `##` (`title` is `<h1>`). Allowed: paragraphs, `##`–`######`
+  headings (with >= 1 letter/digit), ```` ``` ```` / `~~~` fenced code, `>` quotes, `-`/`*`/`+` or `1.` lists (one
+  marker per list, continuation/nested blocks aligned to item text column, depth <= 8), `*`/`_` italic, `**`/`__` bold
+  (`**_text_**` for bold-italic, never `***`), `` `code` ``, `[text](url)` (no titles, no spaces in URL),
+  `![alt](url)`, `<url>`/`<email>` autolinks, `\` escapes, `&amp;`/`&lt;`/`&gt;`/`&quot;`, hard breaks (`  ` or `\`).
+  Rejected: HTML/comments, tables, footnotes, task lists, `~~strikethrough~~`, horizontal rules, setext headings,
+  4-space indented code, `{#id}`, reference links, bare URLs/emails, other HTML entities, tabs, noncharacters.
+- **Links & `urls.yaml`:** Internal page links must start and end with `/` (`/news/campus-tour/`) and resolve to a
+  non-draft page; file links use `/path/file.ext`; heading ids are lowercase letters/digits (any script) with other
+  runs collapsed to `-`; external links start with `https://`, `http://` or `mailto:`; never use relative links. Before
+  moving or removing any page or file, check `urls.yaml`: move old page URLs to `redirects` (`from` / `to`) or
+  deliberately remove from `keep`.
 
-## Pages
+## Generator (`crates/`)
 
-- Pages have no HTML. Use only the Markdown that `docs/editing.md` lists; the check stops at anything else.
-- `content/` and `static/` hold only the types of file that `docs/editing.md` lists, and no symbolic links.
-- Before you move or remove a page or file, look for its address in `urls.yaml`. Move the old address of a page to
-  `redirects`, or delete its line from `keep` on purpose.
-
-## Generator
-
-- **Standard library only.** Do not add a crate. The guards fail, on a laptop and in CI, when `Cargo.lock` lists a
-  crate from a registry or git, or any crate but the four `edu-*` crates of `crates/`.
-- **No `unsafe`.** The workspace forbids it.
-- **No panics on input.** Return an error instead of calling `unwrap`, `expect` or `panic!`. Only tests may call them.
-- **Strict parsers.** Each parser accepts only the subset of YAML, Markdown or the template language that the site
-  uses, and rejects anything else with `file:line:col` and a hint. Do not skip or guess at input it does not know.
-- **Enums over strings.** Model a closed set of cases as an enum and match every variant. Do not match on marker
-  strings or read the same bytes a second time, and give error kinds their own variants, not `&'static str` tags. A
-  `_` arm is fine only where the input is open text being parsed.
-- **Stable Markdown output.** `crates/markdown/tests/golden/` holds the expected HTML of the site's pages. Change it
-  only when the output is meant to change.
-- **Tests with each change.** Each crate has a `tests/` folder, and `crates/site/tests/sites/` holds small example
-  sites.
+- **Standard library only.** Do not add any external or extra workspace crate (`Cargo.lock` lists only `edu-markdown`,
+  `edu-site`, `edu-template`, `edu-yaml`).
+- **No `unsafe`** (`unsafe_code = "forbid"`).
+- **No panics on input.** Return `Result` errors; never call `unwrap`, `expect` or `panic!` outside tests.
+- **Strict parsers.** Reject anything outside the supported YAML, Markdown or template subset with `file:line:col` and
+  a hint; never skip or guess at unknown syntax.
+- **Enums over strings.** Model closed sets as enums and match every variant exhaustively. Do not match on marker
+  strings or re-scan already parsed bytes, and give error kinds dedicated enum variants rather than `&'static str`
+  tags. Use `_` wildcard arms only when matching open input text being parsed.
+- **Stable Markdown output.** Update `crates/markdown/tests/golden/` only when rendered HTML is intentionally changed.
+- **Tests with each change**, in the crate's `tests/` folder and `crates/site/tests/sites/` fixture sites.
 
 ## Build and deploy
 
-- A push to `main` publishes the site. Make each change on a branch and propose it in a pull request.
-- When an AI agent helps with a change, say in the description of its pull request which tools helped and how.
-- `FROM check AS live` in the `Dockerfile` is what stops a bad push from publishing. Keep it; the guards fail when it
-  changes.
-- `rust-toolchain.toml` and the `FROM` tag of the `Dockerfile` name the same Rust. Change them together; the guards
-  fail when they differ.
-- CI runs `make ci` and `make preview`. `ci.yml` adds only what belongs to GitHub: when the checks run, what they may
-  read, the errors shown on the lines of a pull request, and the preview as a download. Put a new check in the
-  `Makefile`, so that it runs on a laptop too.
-- `.dockerignore` is an allowlist and the `Dockerfile` copies paths by name, so a new top-level file or folder that
-  the build needs has to be added to both.
-- The GitHub Actions are pinned by commit and the Docker image by digest. Keep them pinned.
+- Keep `FROM check AS live` in `Dockerfile`.
+- Update `rust-toolchain.toml` and the `FROM rust:<version>-...` tag + digest in `Dockerfile` together.
+- Add new checks as targets in `Makefile`, not inline in `.github/workflows/ci.yml`, so they run locally too.
+- Add any new top-level file or folder needed by the Docker build to both `.dockerignore` and `Dockerfile`.
+- Keep GitHub Actions pinned by commit SHA and Docker images pinned by digest.

@@ -1,5 +1,8 @@
 # Editing rust-edu.org
 
+For anyone who writes or changes a page of the site. To write a news post, [new-post.md](new-post.md) is the short
+way; to run, check or deploy the site, see the [README](../README.md).
+
 Every page of the site is one Markdown file under `content/`. A change merged into `main` is live a few minutes
 later; no HTML, templates or tools are needed for content.
 
@@ -15,8 +18,8 @@ later; no HTML, templates or tools are needed for content.
 | `/zulip/` | `urls.yaml` (`redirects`, forwarding to the Zulip chat) |
 
 The file name becomes the URL: `content/news/rust-week-2027.md` is served at `/news/rust-week-2027/`. Name files in
-lowercase kebab-case. Images go in `static/images/` and are linked as `/images/<file>`; other files (PDFs, LaTeX)
-sit next to the page that links them.
+lowercase ASCII kebab-case (`a`–`z` and `0`–`9` joined by single `-`). Images go in `static/images/` and are linked as
+`/images/<file>`; other files (PDFs, LaTeX) sit next to the page that links them.
 
 Besides its pages, the site publishes images (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.avif`, `.ico` and
 `.svg`), `.pdf` and `.txt` files, LaTeX files (`.tex`, `.cls` and `.bib`), stylesheets (`.css`) and
@@ -43,7 +46,7 @@ The text of the page starts here.
 
 | Key | Used in | Meaning |
 |---|---|---|
-| `title` | every file but a redirect | The page title, shown as its only top-level heading; the home page's heading is the words of the `description` of `site.yaml`, styled in `layouts/home.html`, instead. Quote it when it contains `: `, as in `title: "Campus Tour: Rust Africa"`. It cannot be empty or only spaces. |
+| `title` | every file but a redirect | The page title, shown as its only top-level heading; the home page's heading is the words of the `description` of `site.yaml`, styled in `layouts/home.html`, instead. Quote it when it contains `: ` or ` #`, ends with `:`, or starts with punctuation, as in `title: "Campus Tour: Rust Africa"`. It cannot be empty or only spaces. |
 | `date` | news posts | `YYYY-MM-DD`, a day of the calendar from 1900 on; the news list and the feeds are sorted by it, newest first, so every news post needs one. The feeds give it as the post's time, at midnight UTC. |
 | `authors` | news posts | One name per line, none of them empty or only spaces; shown in the byline as "A and B on Mar 1, 2027". |
 | `draft` | every file but the home page | `draft: true` keeps the page off the live site, and in an `_index.md` everything in its folder too; pull request builds still include it at its address, but the news list leaves it out. |
@@ -104,17 +107,10 @@ too. The build writes the feeds again each time, from the posts, so a new post n
 Links in a post need nothing special: the feeds turn the links to the site and to ids into full addresses. A feed
 reader knows a post by its address, so keep the file name of a post once it is published.
 
-## The page for language models
-
-`/llms.txt` is the site in brief for language models, in the Markdown that <https://llmstxt.org/> proposes: the
-`title` and `description` of `site.yaml`, a link to each page with its title, a link to each news post with its date
-and authors, newest first, and the two feeds, which hold the whole text of every post. It leaves out the redirects and
-the drafts. The build writes it again each time, so a new page or post needs nothing more than its file.
-
 ## Common changes
 
 - **A news post:** add `content/news/<name>.md` with `title`, `date` and `authors`, as in the header example above;
-  it goes into the feeds too.
+  it goes into the feeds too. [new-post.md](new-post.md) goes through it step by step.
 - **A photo:** save it in `static/images/`, 960 pixels wide, in the 16:9 shape, as WebP of at most 90 KB. It shows at
   the full width of the text, so a narrower image is stretched, and another shape moves the text below it when it
   loads, a portrait photo by a third of a phone's screen or more.
@@ -124,7 +120,8 @@ the drafts. The build writes it again each time, so a new page or post needs not
 - **Menu, next steps and footer links:** the `menu`, `hero` and `footer` lists of `site.yaml`; the first link of
   `hero` is the button on the home page.
 - **The site's description:** the `description` of `site.yaml`, which the home page's title, search engines, the
-  feeds and `/llms.txt` show, and the same words in the heading of `layouts/home.html`, whose three parts `static/style.css` styles.
+  feeds and [`/llms.txt`](ai/README.md#the-page-for-language-models) show, and the same words in the heading of
+  `layouts/home.html`, whose three parts `static/style.css` styles.
 - **Moving or removing a page or file:** other sites may link to it, so its address is under `keep` in `urls.yaml`,
   and the check stops while that address goes nowhere. Move the old address of a page to `redirects` in `urls.yaml`
   (with `from` and `to`), or delete its line from `keep` on purpose.
