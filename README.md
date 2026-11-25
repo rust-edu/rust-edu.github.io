@@ -17,6 +17,8 @@ generator, written in Rust with only the standard library, builds them.
 | Understand or change the generator in `crates/` | [docs/generator.md](docs/generator.md) |
 | Look up why the site is built this way | [docs/design/](docs/design/README.md): plans and research notes, a record and not a guide |
 
+To report a suspected vulnerability in the site, generator, or deployment workflow, see the [security policy](SECURITY.md).
+
 ## 🚀 Setting Up on Local Machine
 To contribute or run this website locally, follow the steps below.
 
