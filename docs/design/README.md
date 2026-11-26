@@ -18,6 +18,7 @@ A plan sets a goal and the steps to it. Its status is the one written at the top
 | [0002 — Own Markdown Site Generator](Plan-0002—Own-Markdown-Site-Generator.md) | Replacing Zola with a generator on the Rust standard library, built in Docker and published by GitHub Pages | steps 0–8 done | the generator |
 | [0003 — Visual Refresh and Page Speed](Plan-0003—Visual-Refresh-and-Page-Speed.md) | A simpler look and lighter pages, in the stylesheet, the layouts and the images | proposed | the site |
 | [0004 — Minifier Crate](Plan-0004—Minifier-Crate.md) | A fifth crate that publishes the stylesheet without its comments and indentation | proposed | the generator |
+| [0005 — Generator Workspace Separation](Plan-0005—Generator-Workspace-Separation.md) | A reusable generator workspace in this repository, a pinned release for the website, and separate CI checks | proposed | the generator and site |
 
 ## Research
 
@@ -34,7 +35,6 @@ A research note collects the facts that a plan stands on.
 
 ## Where these notes go
 
-The last column follows [issue #17](https://github.com/rust-edu/rust-edu.github.io/issues/17), which moves the
-generator into a repository of its own: the notes marked "the generator" move there with `crates/`,
-[generator.md](../generator.md) and the *Generator* section of [`AGENTS.md`](../../AGENTS.md), and Plan 0003 stays
-here with the site.
+The last column identifies the owner of each note. Plan 0005 proposes moving the generator notes
+and [generator guide](../generator.md) into `generator/` in this repository. Plan 0003 belongs
+with the website. [Issue #17](https://github.com/rust-edu/rust-edu.github.io/issues/17) tracks the decision.
