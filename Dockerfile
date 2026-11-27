@@ -18,6 +18,7 @@ COPY crates/ crates/
 RUN --network=none cargo fmt --all --check
 RUN --network=none cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 RUN --network=none cargo build --workspace --release --locked --offline
+RUN --network=none cargo test --workspace --locked --offline
 # The settings, the layouts, the static files and then the pages come last, so that editing one
 # reuses every layer above.
 COPY site.yaml urls.yaml ./
@@ -25,8 +26,8 @@ COPY layouts/ layouts/
 COPY static/ static/
 COPY content/ content/
 RUN --network=none target/release/edu check
-# The tests run once the pages pass: one of them builds this site, for the ids of its feeds.
-RUN --network=none cargo test --workspace --locked --offline
+COPY tests/check-feed-ids.sh tests/check-feed-ids.sh
+RUN --network=none sh tests/check-feed-ids.sh /src/target/release/edu
 RUN --network=none target/release/edu build && mv public /tmp/first \
     && target/release/edu build && diff -r /tmp/first public
 
