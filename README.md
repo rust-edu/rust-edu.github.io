@@ -101,8 +101,29 @@ needs *Settings → Pages → Source* set to *GitHub Actions*; a fork with that 
 address. *Actions → Deploy to GitHub Pages → Run workflow* runs it again by hand. Locally,
 `docker build --target site -o site .` writes the same site, for rust-edu.org, into `site/`.
 
-A push to `main` publishes the site, so make each change on a branch and propose it in a pull request, whose
-description starts from `.github/pull_request_template.md`. These keep a bad change from going live:
+### Branch workflow
+
+Start each change on a short-lived branch from the latest `main`. Use a prefix that describes the work and a short
+name, such as `feat/news-search`, `bug/feed-order`, `chore/update-toolchain`, `docs/preview-guide`, or
+`content/rust-week-2027` for a news post.
+
+For a clone of this repository, start a post branch with:
+
+```sh
+git fetch origin main
+git switch --no-track -c content/rust-week-2027 origin/main
+```
+
+If `origin` is your fork, fetch `main` from the upstream repository and branch from `upstream/main`. Push your
+finished branch to your fork. You can also use GitHub's editor to create a branch from `main`.
+
+Commit the change, run `make check` locally, then push the branch and open a pull request targeting `main`.
+Use the [pull request template](.github/pull_request_template.md). If another change lands first, choose
+**Update branch** on the PR or merge the latest upstream `main` into your branch and push it. Once the work is
+complete and the required `generator` check passes on the up-to-date branch, merge the PR into `main`. That merge
+triggers the site deployment.
+
+### Build safeguards
 
 - `FROM check AS live` in the `Dockerfile` builds the live site on the stage that ran the checks, which is what
   stops a bad push from publishing. Keep it; the guards fail when it changes.

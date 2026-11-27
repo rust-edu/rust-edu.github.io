@@ -36,9 +36,22 @@ needs shared Codex settings, those belong in `.codex/config.toml` and apply when
 
 ### Drafting a news post with an assistant
 
-An assistant can draft a news post from your notes; you are still the author, so read what it wrote and check each
-name, date and link. Give it [new-post.md](new-post.md) (the LLM specification in this folder, separate from the human
-guide [../new-post.md](../new-post.md)) and your notes:
+In Codex, open this checkout and use the repository skill with your own details:
+
+```text
+$new-news-post Create a draft news post from these notes.
+Title: …
+Publication date (YYYY-MM-DD): …
+Authors: …
+Notes and links: …
+```
+
+The skill creates `content/news/<slug>.md` and checks it with `make check`. Review the draft's names, dates and
+links, and remove `draft: true` when it is ready to publish. The [author guide](../new-post.md) gives a complete
+example and explains how to propose the file on GitHub.
+
+For a chat assistant without a checkout, paste the following prompt with your notes. Attach the
+[post specification](new-post.md) if the assistant cannot open the link.
 
 ```text
 Read https://raw.githubusercontent.com/rust-edu/rust-edu.github.io/main/docs/ai/new-post.md and follow it to write a
@@ -53,13 +66,14 @@ My notes: …
 | File | Read by | What it holds |
 |---|---|---|
 | [`AGENTS.md`](../../AGENTS.md) | OpenAI Codex and other coding agents | Shared repository instructions, commands and checks. |
+| [`new-news-post/SKILL.md`](../../.agents/skills/new-news-post/SKILL.md) | Codex and assistants following the repository instructions | Workflow for creating and checking a news post from author notes. |
 | [`docs/ai/new-post.md`](new-post.md) | LLMs / AI assistants | Standalone prompt and format specification for drafting a news post in `content/news/`. |
 | `.claude/CLAUDE.md` | Claude Code | One line (`@../AGENTS.md`) that imports `AGENTS.md`. |
 | `.gemini/settings.json` | Gemini CLI | One setting that names `AGENTS.md` as the context file. |
 
-`AGENTS.md` is at the root of the repository because that is where coding agents look for it, as <https://agents.md/>
-describes; `.claude/CLAUDE.md` and `.gemini/settings.json` sit in the folders of their tools, and the remaining AI
-documentation lives here under `docs/ai/`.
+`AGENTS.md` follows the [repository instruction convention](https://agents.md/). Claude and Gemini point to
+the root file from their tool folders. Codex discovers project skills in `.agents/skills/`. The news-post skill uses the same
+[post specification](new-post.md) as the chat prompt. [Codex skills guide](https://developers.openai.com/codex/skills/).
 
 People do not need the agent files: the human documentation — [README.md](../../README.md),
 [docs/new-post.md](../new-post.md), [docs/editing.md](../editing.md) and [docs/generator.md](../generator.md) — covers
