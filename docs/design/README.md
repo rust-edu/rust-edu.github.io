@@ -19,6 +19,7 @@ A plan sets a goal and the steps to it. Its status is the one written at the top
 | [0003 — Visual Refresh and Page Speed](Plan-0003—Visual-Refresh-and-Page-Speed.md) | A simpler look and lighter pages, in the stylesheet, the layouts and the images | proposed | the site |
 | [0004 — Minifier Crate](Plan-0004—Minifier-Crate.md) | A fifth crate that publishes the stylesheet without its comments and indentation | proposed | the generator |
 | [0005 — Generator Workspace Separation](Plan-0005—Generator-Workspace-Separation.md) | A reusable generator workspace in this repository, a pinned release for the website, and separate CI checks | proposed | the generator and site |
+| [0006 — Published URL Checks](Plan-0006—Published-URL-Checks.md) | Keep posts automatic and report public paths that disappear in a pull request | proposed | the site |
 
 ## Research
 

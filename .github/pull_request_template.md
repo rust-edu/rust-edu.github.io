@@ -16,7 +16,7 @@ issue. For a change to the look of the site, add a picture of before and after.
 
 - [ ] The check of this pull request passes, or `make check` passes on my computer.
 - [ ] I looked at the result: GitHub's *Preview* tab, the `site-preview` that the checks attach, or `docker compose up`.
-- [ ] A page or file that moved or went away has its old address under `redirects` in `urls.yaml`, or its line left `keep` on purpose.
+- [ ] For a moved or removed page or download, I preserved its old address or explained the retirement and updated any affected `keep` entry.
 - [ ] A change to `crates/` comes with its tests and adds no crate.
 
 ## AI acknowledgement

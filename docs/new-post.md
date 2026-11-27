@@ -3,8 +3,8 @@
 For anyone who writes a post for the site's blog, <https://rust-edu.org/news/>. To change another page, see
 [editing.md](editing.md); to run, check or deploy the site, see the [README](../README.md).
 
-A post is one Markdown file, and adding that file is all it takes: the news list and the feeds pick it up by
-themselves. You need a GitHub account, and nothing installed.
+A post is one Markdown file. Its filename gives it a URL, and the news list and feeds pick it up automatically.
+You can leave `urls.yaml` alone when adding a post. You need a GitHub account, and nothing installed.
 
 ## A whole post
 

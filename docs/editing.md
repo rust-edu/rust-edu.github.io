@@ -122,9 +122,14 @@ reader knows a post by its address, so keep the file name of a post once it is p
 - **The site's description:** the `description` of `site.yaml`, which the home page's title, search engines, the
   feeds and [`/llms.txt`](ai/README.md#the-page-for-language-models) show, and the same words in the heading of
   `layouts/home.html`, whose three parts `static/style.css` styles.
-- **Moving or removing a page or file:** other sites may link to it, so its address is under `keep` in `urls.yaml`,
-  and the check stops while that address goes nowhere. Move the old address of a page to `redirects` in `urls.yaml`
-  (with `from` and `to`), or delete its line from `keep` on purpose.
+- **When a published page moves,** update links to its new address and add a `from` / `to` pair under `redirects` in
+  [urls.yaml](../urls.yaml) so old bookmarks still work. If its old address appears in `keep`, move it out of that list.
+  For a title change, editing `title` in place preserves the URL and the post's feed ID.
+- **To protect a particular address,** add it to `keep` when the site should fail its checks if that page, file or
+  heading disappears. The list includes addresses carried over from Zola. New posts acquire their URLs automatically.
+- **When moving a download,** keep a copy at the old file path if readers still need it. Redirect sources take page paths
+  such as `/news/old-name/`. If deliberately retiring a protected address, remove its `keep` entry and explain the
+  removal in the PR.
 
 ## Proposing a change on GitHub
 
