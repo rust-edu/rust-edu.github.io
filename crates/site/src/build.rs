@@ -666,40 +666,35 @@ mod tests {
     }
 
     #[test]
-    fn the_feeds_of_rust_edu_org_keep_the_ids_of_their_posts_at_any_address() {
-        // The site of this repository, two folders above this crate.
-        let root = Path::new(env!("CARGO_MANIFEST_DIR")).ancestors().nth(2);
-        let out = out("rust-edu");
+    fn relocating_a_feed_preserves_its_ids_and_rebases_its_alternate_links() {
+        let out = out("relocated-feed");
         let options = Options {
             drafts: Drafts::Include,
-            base_url: BaseUrl::parse("https://example.github.io/rust-edu/"),
+            base_url: BaseUrl::parse("https://preview.example.net/site/"),
         };
-        let built = site(root.unwrap(), &out, &options);
-        // A mistake in a page fails this test too, which then names it as `edu check` does.
-        if let Err(Error::Content(errors)) = &built {
-            let errors: Vec<String> = errors.iter().map(ToString::to_string).collect();
-            let errors = errors.join("\n");
-            panic!("this site has errors, as `edu check` says:\n{errors}");
-        }
-        built.unwrap();
-        let read = |path| fs::read_to_string(out.join(path)).unwrap();
-        let (feed, rss) = (read("atom.xml"), read("rss.xml"));
-        let ids = values(&feed, "<id>", "</id>");
+        site(&test_site("feed"), &out, &options).unwrap();
+        let atom = fs::read_to_string(out.join("atom.xml")).unwrap();
+        let rss = fs::read_to_string(out.join("rss.xml")).unwrap();
+        let ids = values(&atom, "<id>", "</id>");
+        assert_eq!(
+            ids,
+            [
+                "https://example.org/atom.xml",
+                "https://example.org/news/second/",
+                "https://example.org/news/first/",
+            ]
+        );
         let alternate = "<link rel=\"alternate\" type=\"text/html\" href=\"";
-        let links = values(&feed, alternate, "\"/>");
+        assert_eq!(
+            values(&atom, alternate, "\"/>"),
+            [
+                "https://preview.example.net/site/",
+                "https://preview.example.net/site/news/second/",
+                "https://preview.example.net/site/news/first/",
+            ]
+        );
         let guids = values(&rss, "<guid isPermaLink=\"false\">", "</guid>");
-        // A feed reader knows the feed and each post by its id, and shows a post with a new id
-        // again: the ids stay at the `base_url` of `site.yaml` under any other address.
-        assert_eq!(ids.first(), Some(&"https://rust-edu.org/atom.xml"));
-        // A post's link and its id name the same page: at this build's address, and at
-        // rust-edu.org.
-        assert_eq!(links.len(), ids.len(), "{feed}");
-        for (link, id) in links.iter().zip(&ids).skip(1) {
-            let address = link.strip_prefix("https://example.github.io/rust-edu");
-            assert!(address.is_some(), "{link}\n{feed}");
-            assert_eq!(id.strip_prefix("https://rust-edu.org"), address, "{feed}");
-        }
-        assert_eq!(ids.get(1..), Some(guids.as_slice()), "{rss}");
+        assert_eq!(guids, ids[1..]);
         fs::remove_dir_all(out).unwrap();
     }
 

@@ -6,6 +6,7 @@
 !rustfmt.toml
 !rust-toolchain.toml
 !crates
+!tests/check-feed-ids.sh
 !content
 !layouts
 !site.yaml
