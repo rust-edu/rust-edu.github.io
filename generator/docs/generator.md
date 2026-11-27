@@ -1,7 +1,8 @@
 # The generator
 
-For people who maintain or change the generator in `crates/`. To change a page, see [editing.md](editing.md); to
-run, check or deploy the site, see the [README](../README.md).
+For people who maintain or change the generator. Paths to crates in this guide start at the repository root.
+To change a website page, see the [editing guide](../../docs/editing.md). For local checks and deployment,
+see the [website README](../../README.md).
 
 The site is built by its own small generator, which uses only the Rust standard library. It replaced Zola;
 [Plan 0002](design/Plan-0002—Own-Markdown-Site-Generator.md) records why and how.
@@ -75,7 +76,7 @@ flowchart LR
 - **Only the site's own files:** The generator refuses symbolic links, which could bring files from outside the
   repository into the site, and leaves out files and folders whose names start with `.`, such as `.DS_Store`.
 
-[editing.md](editing.md) lists the types of file, the keys of a page's header and the Markdown, as an editor sees
+[The website editing guide](../../docs/editing.md) lists the types of file, the keys of a page's header and the Markdown, as an editor sees
 them.
 
 ## Rules for a change
@@ -100,5 +101,5 @@ These hold for every change to `crates/`, whoever writes it.
 - **Tests with each change.** Each crate has a `tests/` folder, and `crates/site/tests/sites/` holds small example
   sites.
 
-`make check` must pass before a change is done; the [README](../README.md#check-locally) lists it with the other
+`make check` must pass before a change is done; the [README](../../README.md#check-locally) lists it with the other
 commands. When a check or a test fails, fix the cause; do not weaken the check to make it pass.

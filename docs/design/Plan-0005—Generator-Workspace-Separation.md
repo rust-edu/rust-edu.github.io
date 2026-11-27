@@ -1,6 +1,7 @@
 # Plan 0005 — Separate the generator from the website content
 
-Proposed on 2026-11-26 for [issue #17](https://github.com/rust-edu/rust-edu.github.io/issues/17).
+Reviewed in [PR #24](https://github.com/rust-edu/rust-edu.github.io/pull/24) for [issue #17](https://github.com/rust-edu/rust-edu.github.io/issues/17).
+The generator guide and design notes now live under `generator/docs/`. The workspace move is next.
 
 An editor should be able to fix a news post and preview it with the same generator that builds the
 live site. A Rust developer should be able to install `edu`, build another site, and contribute a
@@ -11,16 +12,16 @@ The existing `edu-site` package already provides the `edu` binary and the librar
 The work is to give those four crates their own workspace directory and release process, make
 their tests independent of rust-edu.org, and let the website choose which release to use.
 
-The first decision for maintainers is whether to adopt the same-repository layout. If they accept
-it, align the title and remaining checklist in issue #17 with that decision and open the move PR.
+Maintainers accepted the same-repository layout for the initial move. Bart Massey requested a separate
+repository once the generator works independently. [Maintainer follow-up](https://github.com/rust-edu/rust-edu.github.io/pull/24#issuecomment-7202075215)
 
-## 1. Move the workspace in one pull request
+## 1. Move the documentation and workspace
 
 - Move the Cargo workspace manifest, lockfile, four crates and their tests to `generator/`.
   Give the workspace a README covering installation, the library entry point and the site directory
   that `edu check`, `edu build` and `edu serve` operate on.
-- Move the generator guide, design plans 0002 and 0004, and the six research notes alongside the
-  crates. Fix links and contributor instructions in the same PR. The site owns `content/`,
+- The documentation PR moved the generator guide, design plans 0002 and 0004, and the six research
+  notes into `generator/docs/`. Update the contributor instructions when the workspace moves. The site owns `content/`,
   `layouts/`, `static/`, `site.yaml`, `urls.yaml`, the editing guides and visual plan 0003.
 - Update the root Makefile, Docker stages and Docker context allowlist in the move. Keep the shared
   Rust toolchain pin at the root, where native builds and the existing Dependabot configuration use it.
@@ -71,14 +72,15 @@ deployment for website inputs, the release pin and relevant build tooling. Keep 
 the candidate suite without triggering a Pages deployment, and a mixed change runs both jobs.
 A broken site link must fail the site job and a failing parser test must fail the generator job.
 
-## Repository history and a possible future split
+## Repository history and the later repository split
 
 Use ordinary move commits on a branch. This preserves existing commit and PR references and gives
 reviewers a path for future generator changes (`git log -- generator/`). The commit that introduced
 the generator, `cd5d5e0`, also touched 11 content files. Dropping that commit would lose site edits.
 
-If maintainers later want a dedicated `rust-edu` repository, they can export the workspace at a
-reviewed tag, verify the CLI and libraries there, and switch the site's source and pin in one PR.
+Once the workspace, release pin and separate checks are working, maintainers can export the workspace
+at a reviewed tag to a dedicated `rust-edu` repository, verify the CLI and libraries there, and switch
+the site's source and pin in one PR.
 An archive and rewrite of website history is a separate maintainer decision. Before any rewrite,
 preserve the old `main` tip under an archive ref, rehearse the path-by-path split in a disposable
 clone, compare both trees and site output, and agree on a rollback and contributor cutover.

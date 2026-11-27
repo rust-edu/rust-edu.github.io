@@ -1,6 +1,6 @@
 # Plan 0003 — Visual Refresh and Page Speed
 
-**Date:** 2026-11-09 · **Status:** proposed · **Follows:** [Plan 0002](Plan-0002—Own-Markdown-Site-Generator.md)
+**Date:** 2026-11-09 · **Status:** proposed · **Follows:** [Plan 0002](../../generator/docs/design/Plan-0002—Own-Markdown-Site-Generator.md)
 
 **Goal:** a simpler, modern rust-edu.org that loads fast on slow phones and networks: one column of text, a home page
 that says what Rust Edu is and what to do next, no added effects, and about a third fewer bytes on a first visit to
@@ -251,7 +251,7 @@ author takes these lines and gives the medians in the PR.
 - The newest post on the home page, a description for each page, a 404 page written in Markdown (step 7 names it).
 - Speculation rules, view transitions, AVIF, `srcset`, minified CSS or HTML (on step 4's files, about 0.8 KB once
   for the stylesheet and 0.06 KB a page), `theme-color`, web fonts, a CDN. *Noted 2026-11-11:
-  [Plan 0004](Plan-0004—Minifier-Crate.md) proposes a minifier for the stylesheet and, as an option, for the
+  [Plan 0004](../../generator/docs/design/Plan-0004—Minifier-Crate.md) proposes a minifier for the stylesheet and, as an option, for the
   layouts' HTML, with the sizes of that day.*
 - Where `/zulip/` leads (Zulip's log-in page, which also offers *Sign up*).
 

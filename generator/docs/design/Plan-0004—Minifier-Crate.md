@@ -1,7 +1,7 @@
 # Plan 0004 — Minifier Crate
 
 **Date:** 2026-11-11 · **Status:** proposed · **Follows:** [Plan 0002](Plan-0002—Own-Markdown-Site-Generator.md) and
-[Plan 0003](Plan-0003—Visual-Refresh-and-Page-Speed.md)
+[Plan 0003](../../../docs/design/Plan-0003—Visual-Refresh-and-Page-Speed.md)
 
 **Goal:** the site publishes its stylesheet without comments and indentation, and its two inline scripts without
 their comments. A fifth crate, `edu-minify`, on the standard library alone, does the first (steps 2 to 4); three
