@@ -123,6 +123,8 @@ Most of the generator in `crates/`, its tests, the layouts, the stylesheet and t
 has the whole acknowledgement, with the models and what each tool did, explains what is asked of a contributor who uses
 an AI tool, and lists the separate documentation written for LLMs.
 
+See [Using Codex](docs/ai/README.md#using-codex) to start a session with this repository’s instructions.
+
 ## 📬 Get Involved
 Interested in contributing or learning more?
 * 🌐 Visit: [https://rust-edu.org/](https://rust-edu.org/)

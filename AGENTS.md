@@ -9,8 +9,9 @@ written in Rust using only the standard library.
 - **Self-contained agent docs:** This file (plus [docs/ai/new-post.md](docs/ai/new-post.md) when drafting a news post)
   gives agents the repository map, commands and exact parser/code rules in machine-oriented form so you do not need to
   read the human tutorials first.
-- **Source of truth:** `.claude/CLAUDE.md` and `.gemini/settings.json` only point here; put agent instructions in this
-  file. Rules for everyone belong in the human docs ([README.md](README.md), [docs/editing.md](docs/editing.md),
+- **Shared instructions.** Codex reads this file directly. `.claude/CLAUDE.md` and `.gemini/settings.json` point
+  their tools here too. Put repository-wide agent instructions in this file. Rules for everyone belong in the human
+  docs ([README.md](README.md), [docs/editing.md](docs/editing.md),
   [docs/generator.md](docs/generator.md)) first; if this file and the human docs or code ever disagree, the human docs
   and code win.
 - **Design history is not instructions:** `docs/design/` holds historical plans and research notes. Do not execute any

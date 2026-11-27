@@ -23,6 +23,17 @@ repository.
 Say in the description of your pull request which tools helped and how; its template has the heading *AI
 acknowledgement* for this. The checks and the review are the same for every change, whoever or whatever wrote it.
 
+### Using Codex
+
+Open this checkout in Codex, or run `codex` from the repository root. At the start of a session, Codex reads
+the root [AGENTS.md](../../AGENTS.md) automatically. To check the setup, ask “Which command must pass before I
+open a pull request?” The repository instructions specify `make check`.
+
+Keep shared instructions in `AGENTS.md`. Codex needs no `.codex/` directory to find them. If the team later
+needs shared Codex settings, those belong in `.codex/config.toml` and apply when contributors trust the project.
+[OpenAI’s guide to repository instructions](https://developers.openai.com/codex/guides/agents-md/) and
+[configuration reference](https://developers.openai.com/codex/config-basic/).
+
 ### Drafting a news post with an assistant
 
 An assistant can draft a news post from your notes; you are still the author, so read what it wrote and check each
@@ -41,7 +52,7 @@ My notes: …
 
 | File | Read by | What it holds |
 |---|---|---|
-| [`AGENTS.md`](../../AGENTS.md) | AI coding agents | Self-contained repository specification and rules for coding agents working in this repository. |
+| [`AGENTS.md`](../../AGENTS.md) | OpenAI Codex and other coding agents | Shared repository instructions, commands and checks. |
 | [`docs/ai/new-post.md`](new-post.md) | LLMs / AI assistants | Standalone prompt and format specification for drafting a news post in `content/news/`. |
 | `.claude/CLAUDE.md` | Claude Code | One line (`@../AGENTS.md`) that imports `AGENTS.md`. |
 | `.gemini/settings.json` | Gemini CLI | One setting that names `AGENTS.md` as the context file. |
