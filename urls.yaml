@@ -1,5 +1,5 @@
 # The public addresses of rust-edu.org: each page and file that Zola 0.22.1 deployed before the
-# site moved to its own generator (docs/design/Plan-0002—Own-Markdown-Site-Generator.md), the news
+# site moved to its own generator (generator/docs/design/Plan-0002—Own-Markdown-Site-Generator.md), the news
 # feeds, and the addresses that redirect elsewhere.
 #
 # `edu check` stops when an address under `keep` is no longer a page or file of the live site; a

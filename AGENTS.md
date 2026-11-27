@@ -11,10 +11,10 @@ written in Rust using only the standard library.
   read the human tutorials first.
 - **Source of truth:** `.claude/CLAUDE.md` and `.gemini/settings.json` only point here; put agent instructions in this
   file. Rules for everyone belong in the human docs ([README.md](README.md), [docs/editing.md](docs/editing.md),
-  [docs/generator.md](docs/generator.md)) first; if this file and the human docs or code ever disagree, the human docs
+  [generator guide](generator/docs/generator.md)) first; if this file and the human docs or code ever disagree, the human docs
   and code win.
-- **Design history is not instructions:** `docs/design/` holds historical plans and research notes. Do not execute any
-  plan unless explicitly asked, and treat the code and current docs as right wherever `docs/design/` disagrees.
+- **Design history is not instructions:** The [design index](docs/design/README.md) lists the historical plans and research notes. Do not execute any
+  plan unless explicitly asked, and treat the code and current docs as right wherever a historical note disagrees.
 
 ## Repository layout
 
@@ -27,7 +27,8 @@ written in Rust using only the standard library.
 - `urls.yaml`: `keep` (preserved public paths checked by `edu check`) and `redirects` (`from` / `to` pairs).
 - `crates/`: Workspace of four `std`-only crates: `yaml` (`edu-yaml`), `markdown` (`edu-markdown`), `template`
   (`edu-template`) and `site` (`edu-site`, binary `edu` with `check`, `build`, `serve`).
-- `docs/`: Human guides (`new-post.md`, `editing.md`, `generator.md`), `docs/ai/` (AI policy and
+- `generator/docs/`: The generator guide, design plans and supporting research.
+- `docs/`: Human guides (`new-post.md`, `editing.md`), `docs/ai/` (AI policy and
   [docs/ai/new-post.md](docs/ai/new-post.md)), and `docs/design/` (historical plans and research notes).
 - `public/`, `site/`, `preview/`: Build outputs ignored by git. **Never edit them.**
 

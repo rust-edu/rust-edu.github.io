@@ -14,7 +14,7 @@ generator, written in Rust with only the standard library, builds them.
 | Write a news post, the site's blog | [docs/new-post.md](docs/new-post.md) |
 | Change another page, or add a resource | [docs/editing.md](docs/editing.md) |
 | Run, check, preview or deploy the site | this file |
-| Understand or change the generator in `crates/` | [docs/generator.md](docs/generator.md) |
+| Understand or change the generator in `crates/` | [generator guide](generator/docs/generator.md) |
 | Look up why the site is built this way | [docs/design/](docs/design/README.md): plans and research notes, a record and not a guide |
 
 To report a suspected vulnerability in the site, generator, or deployment workflow, see the [security policy](SECURITY.md).
@@ -60,7 +60,7 @@ With Rust installed, `make serve` does the same.
 
 ## 🦀 The Generator
 A small generator in `crates/`, four crates on the Rust standard library alone, checks every page and link and
-builds the site. [docs/generator.md](docs/generator.md) explains how it works and gives the rules of a change to it.
+builds the site. [generator guide](generator/docs/generator.md) explains how it works and gives the rules of a change to it.
 
 ## 🔧 Checking and Deploying
 

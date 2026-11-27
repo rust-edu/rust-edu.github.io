@@ -51,12 +51,12 @@ describes; `.claude/CLAUDE.md` and `.gemini/settings.json` sit in the folders of
 documentation lives here under `docs/ai/`.
 
 People do not need the agent files: the human documentation — [README.md](../../README.md),
-[docs/new-post.md](../new-post.md), [docs/editing.md](../editing.md) and [docs/generator.md](../generator.md) — covers
+[docs/new-post.md](../new-post.md), [docs/editing.md](../editing.md) and [generator guide](../../generator/docs/generator.md) — covers
 every workflow and rule for human readers, while `AGENTS.md` and `docs/ai/new-post.md` present those same rules in a
 compact, machine-oriented form for LLMs. A new rule goes into the human docs first, and into `AGENTS.md` when an agent
 must follow it too; where the two disagree, the human docs and the code are right.
-[Plan 0005](../design/Plan-0005—Generator-Workspace-Separation.md) proposes a generator workspace in this
-repository and describes how contributor instructions and the generator guide would move with it.
+[Plan 0005](../design/Plan-0005—Generator-Workspace-Separation.md) tracks the move of the workspace and its contributor instructions.
+The generator guide now lives under `generator/docs/`.
 
 ## The page for language models
 
