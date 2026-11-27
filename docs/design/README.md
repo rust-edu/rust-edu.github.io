@@ -35,6 +35,7 @@ A research note collects the facts that a plan stands on.
 
 ## Where these notes go
 
-The last column identifies the owner of each note. Plan 0005 proposes moving the generator notes
-and [generator guide](../generator.md) into `generator/` in this repository. Plan 0003 belongs
-with the website. [Issue #17](https://github.com/rust-edu/rust-edu.github.io/issues/17) tracks the decision.
+The last column identifies the owner of each note. Plan 0005 proposes moving the notes marked "the
+generator" and the [generator guide](../generator.md) into `generator/docs/` in this repository,
+while keeping Plan 0003 and Plan 0005 here under `docs/design/` with the website and repository
+workflow. [Issue #17](https://github.com/rust-edu/rust-edu.github.io/issues/17) tracks the decision.
