@@ -26,8 +26,8 @@ Read the [call for participation](/news/call-for-participation/), and write to
 [contact@rust-edu.org](mailto:contact@rust-edu.org) with any question.
 ```
 
-Saved as `content/news/rust-week-2027.md`, this is the page `/news/rust-week-2027/`. The four steps below make one
-like it.
+Saved as `content/news/rust-week-2027.md`, this is the page `/news/rust-week-2027/`. Follow the four steps below
+to write one yourself, or give your notes to the [news-post skill or chat prompt](ai/README.md#drafting-a-news-post-with-an-assistant).
 
 ## 1. Start the file
 
@@ -83,8 +83,8 @@ these differently from GitHub's preview, so the check stops at them. [editing.md
 ## 4. Propose it
 
 1. Look at the *Preview* tab of GitHub's editor, which shows the header as a table.
-2. Choose *Commit changes… → Propose changes → Create pull request*. Without write access to the repository,
-   GitHub first asks to *Fork this repository*; say yes.
+2. Choose *Commit changes…* and save to a new branch such as `content/rust-week-2027`. If GitHub asks you to fork
+   the repository, create the branch in your fork. Open a pull request targeting this repository's `main`.
 3. Fill in the description of the pull request, which starts from a short template.
 4. A check reads the post. When something is wrong, it names the file, the line and the column, and says what to
    write instead:
@@ -95,7 +95,8 @@ these differently from GitHub's preview, so the check stops at them. [editing.md
 
    Fix that line in the pull request, and the check runs again. On your first pull request here, the check waits
    until a maintainer lets it run.
-5. A maintainer reads the post and merges it. A few minutes later it is on the site and in the feeds.
+5. Update your branch if `main` moves. After the check passes, a maintainer can merge the post. Published posts
+   then appear on the site and in the feeds. See the [branch workflow](../README.md#branch-workflow).
 
 To see the post as the site shows it before you propose it, run `docker compose up` in the repository, with
 [Docker](https://docs.docker.com/get-started/get-docker/) installed, and open <http://127.0.0.1:1111/news/>.

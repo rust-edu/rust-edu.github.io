@@ -15,8 +15,9 @@ Human contributors: read [../new-post.md](../new-post.md) instead.
    - If you have shell access in this repository, run `make check` and fix every `file:line:col` error until it passes.
    - If you do not have shell access, check every line of the output against the YAML, Markdown and link constraints
      below before returning it.
-4. **Delivery:** Output the target path (`content/news/<slug>.md`) and the complete file contents in a single code
-   block, and remind the author to declare which AI tool helped and how under *AI acknowledgement* in the pull request.
+4. **Delivery:** In a checkout, create the file and report its path and the check result. For a paste-ready draft,
+   give the target path, then put the complete Markdown file in one code block. Remind the author to
+   say which AI tool helped and how under *AI acknowledgement* in the pull request.
 
 ## YAML header specification
 

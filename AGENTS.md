@@ -9,8 +9,9 @@ written in Rust using only the standard library.
 - **Self-contained agent docs:** This file (plus [docs/ai/new-post.md](docs/ai/new-post.md) when drafting a news post)
   gives agents the repository map, commands and exact parser/code rules in machine-oriented form so you do not need to
   read the human tutorials first.
-- **Source of truth:** `.claude/CLAUDE.md` and `.gemini/settings.json` only point here; put agent instructions in this
-  file. Rules for everyone belong in the human docs ([README.md](README.md), [docs/editing.md](docs/editing.md),
+- **Shared instructions.** Codex reads this file directly. `.claude/CLAUDE.md` and `.gemini/settings.json` point
+  their tools here too. Put repository-wide agent instructions in this file. Rules for everyone belong in the human
+  docs ([README.md](README.md), [docs/editing.md](docs/editing.md),
   [docs/generator.md](docs/generator.md)) first; if this file and the human docs or code ever disagree, the human docs
   and code win.
 - **Design history is not instructions:** `docs/design/` holds historical plans and research notes. Do not execute any
@@ -42,13 +43,15 @@ written in Rust using only the standard library.
 - `make serve`: Runs `edu serve --drafts` at `http://127.0.0.1:1111` until stopped; start it in the background.
 - **Fix causes, never weaken checks:** `edu check` and `make guards` report `file:line:col: error: …` with hints. Fix
   the underlying mistake; never weaken a check, lint or test to make it pass.
-- **Branch & PR workflow:** Pushing to `main` deploys the live site. Make every change on a branch and propose a pull
-  request structured with the headings of `.github/pull_request_template.md` (`## What changes`, `## Checks`,
+- Follow the [branch workflow](README.md#branch-workflow). Start each new change on a prefixed branch from current
+  `main`. Keep it up to date and merge through a pull request to `main` after the required `generator` check passes.
+  Structure the PR with the headings of `.github/pull_request_template.md` (`## What changes`, `## Checks`,
   `## AI acknowledgement`), stating under *AI acknowledgement* which AI tools and models helped and how.
 
 ## Pages, YAML and Markdown
 
-- **News posts:** Follow [docs/ai/new-post.md](docs/ai/new-post.md).
+- For a new blog or news entry, use the [new-news-post skill](.agents/skills/new-news-post/SKILL.md).
+  It follows the [post specification](docs/ai/new-post.md).
 - **Slugs & URLs:** `content/_index.md` -> `/`, `content/<sec>/_index.md` -> `/<sec>/`, `content/<sec>/<slug>.md` ->
   `/<sec>/<slug>/`. Every folder name and `<slug>` must match `^[a-z0-9]+(-[a-z0-9]+)*$` (lowercase ASCII letters and
   digits joined by single `-`).
